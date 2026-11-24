@@ -42,7 +42,7 @@ function drawTeam(){
  const team=document.getElementById('team-members'),pending=document.getElementById('team-pending');
  if(!team||!pending)return;
  team.replaceChildren();pending.replaceChildren();
- const own=current.role==='owner',canInvite=own||current.role==='manager';
+ const own=current.role==='owner',canInvite=own;
  document.getElementById('team-invite-zone').hidden=!canInvite;
  document.getElementById('team-role').querySelector('option[value=manager]').disabled=!own;
  for(const member of current.membres||[]){
