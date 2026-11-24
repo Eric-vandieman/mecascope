@@ -48,6 +48,7 @@ export default async function handler(req,res){
    if(email){
     const apiKey=process.env.RESEND_API_KEY;
     if(apiKey && process.env.MECASCOPE_MAIL_FROM){
+     try{
      const sender=await rpc('meca_identite_inviteur');
      const inviter=sender?.contact||user.user_metadata?.contact||user.email||'Le responsable';
      const garage=sender?.garage||'votre établissement';
@@ -56,7 +57,8 @@ export default async function handler(req,res){
      const htmlBody='<div style="font-family:Arial;background:#0d1720;color:#fff;padding:30px"><h1 style="color:#ffad58">Mécascope</h1><h2>Invitation à rejoindre une équipe</h2><p>'+safe(inviter)+' vous invite à rejoindre l’équipe de <b>'+safe(garage)+'</b> sur Mécascope.</p><p>Rôle proposé : '+safe(role==='manager'?'Responsable':'Collaborateur')+'</p><p><a style="background:#ef932c;color:#101820;padding:13px 20px;border-radius:8px;display:inline-block" href="'+safe(link)+'">Rejoindre l’équipe</a></p><p>Ce lien personnel expire dans 7 jours.</p></div>';
      const sent=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+apiKey,'Content-Type':'application/json'},body:JSON.stringify({from:process.env.MECASCOPE_MAIL_FROM,to:[email],subject:'Mécascope — '+inviter+' vous invite à rejoindre son équipe',html:htmlBody,text:textBody}),signal:AbortSignal.timeout(12000)});
      if(sent.ok)emailSent=true;
-     else emailError='L’invitation existe, mais l’envoi du courriel a échoué.';
+     else emailError='L’invitation existe, mais l’envoi du courriel a échoué. Vérifiez la configuration du domaine Mécascope.';
+     }catch{emailError='L’invitation existe, mais le service d’envoi n’a pas répondu. Partagez le lien ou le QR code.'}
     }else emailError='L’invitation existe. L’expéditeur officiel Mécascope n’est pas encore configuré : partagez le lien ou le QR code.';
    }
    return res.status(200).json({id,link,email,role,emailSent,emailError,permissions:perms,message:emailSent?'Invitation envoyée par Mécascope.':emailError||'Invitation générée. Valable 7 jours, utilisable une seule fois.'});
