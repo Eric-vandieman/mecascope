@@ -32,10 +32,13 @@
       ? (p.etablissement||p.contact||'Mon compte professionnel')
       : ([selected.prenom,selected.nom].filter(Boolean).join(' ')||selected.email||'Mon compte');
     label.textContent=displayName;
-    login.href=professional?'/compte.html#professionnel':'/mon-espace.html';
+    login.href=professional?'/espace-pro.html':'/mon-espace.html';
     login.title=professional?'Accéder à mon espace professionnel':'Accéder à mon tableau de bord particulier';
     login.setAttribute('aria-label',login.title+' — '+displayName);
     login.classList.add('meca-logged-in');
+    header.querySelectorAll('a[href="/compte.html#professionnel"]').forEach(a=>{
+      a.href='/espace-pro.html';
+    });
     if(register)register.hidden=true;
     if(!logout){
       logout=document.createElement('button');
