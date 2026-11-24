@@ -991,3 +991,9 @@ body.meca-auth-body{background:#071017 url('/fond-tarifs-client.webp') center ce
 .meca-auth-panel:has(.meca-private-layout){width:min(1100px,calc(100vw - 24px));max-width:1100px}
 .meca-private-content .meca-team-form button{justify-self:start}
 @media(max-width:760px){.meca-private-layout{grid-template-columns:1fr}.meca-private-nav{flex-direction:row;flex-wrap:wrap}.meca-private-nav button{font-size:12px;padding:10px}}
+
+
+/* Récupération de la confirmation des comptes particuliers. */
+.meca-resend-confirmation{display:inline-flex;align-items:center;justify-content:center;margin:12px 0 0;max-width:100%;white-space:normal}
+.meca-resend-confirmation:disabled{opacity:.6;cursor:wait}
+.meca-auth-resend-hint{color:#c8d1d8;font-size:12px;line-height:1.5;margin:8px 0 12px}
