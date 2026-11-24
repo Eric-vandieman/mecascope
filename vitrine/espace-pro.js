@@ -108,7 +108,7 @@ document.getElementById('team-invite-form').addEventListener('submit',async even
  event.preventDefault();const form=event.currentTarget,button=form.querySelector('button[type=submit]');
  button.disabled=true;labelStatus('team-feedback','Création de l’invitation…');
  try{
-  const email=form.email.value.trim(),role=form.role.value;
+  const email=form.elements.namedItem('email').value.trim(),role=form.elements.namedItem('role').value;
   const invite=await request('invite',{email,role});
   const result=document.getElementById('team-invite-result');
   document.getElementById('team-invite-link').value=invite.link;
