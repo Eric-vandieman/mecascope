@@ -477,3 +477,39 @@ html{scroll-behavior:smooth}#demande{scroll-margin-top:90px}.btn{text-decoration
 }
 .meca-showcase:before{background:none!important;}
 .meca-showcase-photo{display:none!important;}
+
+
+/* Accueil : photo fournie visible de haut en bas pendant le défilement. */
+html:has(.meca-home-decor){background-color:#071017}
+body:has(.meca-home-decor){background:transparent}
+.shell.meca-home-decor{
+ background:#071017 url('/fond-accueil-original.webp') center center / cover fixed no-repeat !important;
+}
+.meca-home-decor .meca-showcase{
+ background:transparent !important;
+ background-image:none !important;
+}
+.meca-home-decor .meca-showcase:before{background:none!important}
+.meca-home-decor .meca-showcase-photo{display:none!important}
+.meca-home-decor .meca-search-section{
+ background:rgba(5,10,15,.28)!important;
+ background-image:none!important;
+}
+.meca-home-decor section.home-section,
+.meca-home-decor section.section,
+.meca-home-decor .v15-section{
+ background:rgba(5,10,15,.20)!important;
+ background-image:none!important;
+}
+.meca-home-decor .home-section .container,
+.meca-home-decor .section .container{position:relative}
+.meca-home-decor footer{
+ background:rgba(5,10,15,.72)!important;
+ background-image:none!important;
+}
+@media(max-width:760px){
+ .shell.meca-home-decor{
+  background-attachment:scroll!important;
+  background-position:center top!important;
+ }
+}
