@@ -24,7 +24,12 @@ export default async function handler(req,res){
   if(!response.ok)return res.status(401).json({message:'Session expirée'});
   const user=await response.json();
   if(user.user_metadata?.profil==='particulier')return res.status(403).json({message:'Accès professionnel uniquement'});
-  const action=req.method==='GET'?'dashboard':req.body?.action;
+  const action=req.method==='GET'?(req.query?.view==='credits'?'credits':'dashboard'):req.body?.action;
+  if(action==='credits'){
+   const value=await rpc('meca_solde_credits');
+   if(!Number.isSafeInteger(value)||value<0)return res.status(409).json({message:'Solde indisponible pour ce compte.'});
+   return res.status(200).json({credits:value});
+  }
   if(action==='dashboard'){
    let data=await rpc('meca_tableau_bord');
    if(!data?.garage){
