@@ -192,6 +192,17 @@ document.getElementById('pro-new-search').addEventListener('submit',async event=
 document.getElementById('team-copy').addEventListener('click',async()=>{
  const link=document.getElementById('team-invite-link');try{await navigator.clipboard.writeText(link.value);labelStatus('team-feedback','Lien copié.')}catch{link.select();document.execCommand('copy');labelStatus('team-feedback','Lien sélectionné : copiez-le.')}
 });
+// Mettre à jour automatiquement l'équipe lorsqu'un invité accepte son accès.
+window.addEventListener('focus',()=>{
+  if(!workspace.hidden && !document.querySelector('[data-workspace-panel="equipe"]').hidden){
+    refresh().catch(error=>labelStatus('team-feedback',error.message));
+  }
+});
+setInterval(()=>{
+  if(document.visibilityState==='visible'&&!workspace.hidden&&!document.querySelector('[data-workspace-panel="equipe"]').hidden){
+    refresh().catch(()=>{});
+  }
+},30000);
 document.getElementById('workspace-logout').addEventListener('click',async()=>{
  await fetch(service,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})}).catch(()=>{});location.replace('/');
 });
