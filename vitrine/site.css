@@ -940,3 +940,29 @@ body.meca-auth-body{background:#071017 url('/fond-tarifs-client.webp') center ce
 .meca-team-signup summary{color:#ffbf79;cursor:pointer;font-weight:700}
 .meca-team-signup .meca-team-form{padding-top:17px}
 @media(max-width:620px){.meca-member-rights{grid-template-columns:1fr}}
+
+
+/* Jeton de crédits Mécascope : compteur collectif réservé aux membres Pro connectés. */
+.meca-new-top .nav a:has(.meca-credit-badge){display:inline-flex;align-items:center;gap:7px}
+.meca-credit-badge{
+ display:inline-flex;align-items:center;gap:5px;
+ padding:5px 9px;margin-left:4px;border-radius:999px;
+ border:1px solid #db9b3e;background:linear-gradient(120deg,#4e3219,#9e6321);
+ color:#ffe1a1;font-size:12px;font-weight:850;line-height:1.2;white-space:nowrap;
+ box-shadow:0 0 12px rgba(236,151,45,.16);
+}
+.meca-credit-badge svg{flex-shrink:0;color:#ffdd80}
+.meca-credit-badge[hidden]{display:none!important}
+.meca-pro-credit-summary{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:24px 0;padding:14px 17px;border:1px solid #b17a3d;border-radius:12px;background:rgba(26,27,28,.92);font-weight:700;color:#f7e5cb}
+.meca-credit-token-inline{font-size:29px;color:#ffd16e;text-shadow:0 1px 10px #dc922c66}
+.meca-pro-credit-summary strong{color:#ffcd73;font-size:20px}
+.meca-pro-credits-panel{
+ display:flex;align-items:center;justify-content:center;gap:12px;
+ flex-wrap:wrap;margin:24px 0;padding:24px;
+ background:linear-gradient(135deg,#1a232d,#382919);
+ border:1px solid #b37d3a;border-radius:16px;color:#f9d899;
+}
+.meca-credit-token-large{display:flex;color:#ffd277}
+.meca-pro-credits-panel strong{font-size:clamp(32px,5vw,54px);line-height:1.1;color:#fff0c2}
+.meca-pro-credits-panel>span:last-child{font-size:16px;font-weight:700}
+@media(max-width:800px){.meca-credit-badge{padding:4px 6px;margin-left:0;font-size:11px}.meca-credit-badge svg{width:15px;height:15px}}
