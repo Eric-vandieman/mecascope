@@ -21,13 +21,16 @@ function setTab(mode){
 document.querySelectorAll('[data-pro-tab]').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.proTab)));
 function render(p){
   completing=false;gate.hidden=true;connected.hidden=false;
-  document.getElementById('meca-pro-welcome').textContent='Connecté : '+(p.email||'compte professionnel');
+  document.getElementById('meca-pro-welcome').textContent=(p.etablissement||'Votre établissement')+' · '+(p.email||'Compte professionnel connecté');
   const d=document.getElementById('meca-pro-profile');d.replaceChildren();
   for(const [key,value] of [['Établissement',p.etablissement],['SIRET',p.siret],['Adresse',p.adresse],['Code postal',p.code_postal],['Ville',p.ville],['Contact',p.contact],['Téléphone',p.telephone]]){
     if(!value)continue;
     const dt=document.createElement('dt'),dd=document.createElement('dd');
     dt.textContent=key;dd.textContent=value;d.append(dt,dd);
   }
+  window.dispatchEvent(new Event('meca-auth-updated'));
+  connected.querySelector('h1')?.focus({preventScroll:true});
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 function showCompletion(profile={}){
   completing=true;gate.hidden=false;connected.hidden=true;tabs.hidden=true;
