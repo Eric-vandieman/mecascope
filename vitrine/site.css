@@ -778,3 +778,41 @@ body.meca-auth-body{background:#071017 url('/fond-tarifs-client.webp') center ce
 .meca-confirmation-panel h1{font-size:clamp(25px,3vw,39px);margin:12px 0 20px}
 .meca-confirmation-panel p{line-height:1.65;color:#e6e9ed}
 .meca-confirmation-panel .btn{display:inline-flex;justify-content:center;align-items:center;padding:13px 23px;margin-top:14px}
+
+
+/* Session Mécascope : le bouton Connexion devient l'identité de l'utilisateur. */
+.meca-new-top .topright .meca-login.meca-logged-in{
+  max-width:clamp(145px,19vw,285px);min-width:0;
+  border:1px solid rgba(255,164,69,.63);
+  background:rgba(24,31,39,.9);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.035);
+  padding:10px 13px;
+  gap:9px;
+}
+.meca-new-top .topright .meca-login.meca-logged-in span{
+  display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;color:#ffcb8b;font-weight:800;
+}
+.meca-new-top .topright .meca-global-logout{
+  font-size:12px;padding:9px 11px;
+  min-height:38px;border:1px solid rgba(255,255,255,.2);
+  white-space:nowrap;
+}
+.meca-new-top .topright .meca-register[hidden],
+.meca-new-top .topright .meca-global-logout[hidden]{display:none!important}
+.meca-personal-details{
+  display:grid;grid-template-columns:minmax(96px,1fr) minmax(0,2fr);
+  gap:12px 16px;line-height:1.5;
+  padding:20px;background:rgba(0,0,0,.23);border-radius:12px;
+}
+.meca-personal-details dt{font-weight:800;color:#ffbf76}
+.meca-personal-details dd{margin:0;overflow-wrap:anywhere}
+.meca-auth-panel #meca-private h2{margin-top:28px;font-size:20px;color:#fff}
+@media(max-width:960px){
+ .meca-new-top .topright .meca-login.meca-logged-in{max-width:170px}
+ .meca-new-top .topright .meca-global-logout{font-size:11px;padding:8px}
+}
+@media(max-width:600px){
+ .meca-new-top .topright .meca-login.meca-logged-in{max-width:145px;padding:8px}
+ .meca-new-top .topright .meca-global-logout{padding:7px;font-size:10px}
+}
