@@ -23,6 +23,14 @@ if(form)form.addEventListener('submit',async event=>{
   }catch{setStatus('Connexion momentanément indisponible. Réessayez.')}
   finally{submit.disabled=false}
 });
+document.querySelectorAll('[data-private-tab]').forEach(button=>button.addEventListener('click',()=>{
+ const tab=button.dataset.privateTab;
+ document.querySelectorAll('[data-private-tab]').forEach(b=>{
+  const active=b.dataset.privateTab===tab;
+  b.classList.toggle('is-active',active);b.setAttribute('aria-current',active?'page':'false');
+ });
+ document.querySelectorAll('[data-private-panel]').forEach(panel=>panel.hidden=panel.dataset.privatePanel!==tab);
+}));
 const privateBox=document.getElementById('meca-private');
 if(privateBox){
   fetch(API,{credentials:'same-origin',cache:'no-store'}).then(async r=>{
