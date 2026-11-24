@@ -543,3 +543,54 @@ body:has(.meca-home-decor){background:transparent}
  .meca-vehicle-type svg{width:21px;height:21px}
  .meca-showcase-interior{padding-top:20px;padding-bottom:20px}
 }
+
+
+/* Logo horizontal : emblème officiel corrigé + nom lisible, sans déplacer les onglets. */
+.meca-new-top .meca-brand-horizontal{
+ display:inline-flex;align-items:center;gap:7px;flex-shrink:0;
+ width:clamp(190px,18vw,285px);text-decoration:none;overflow:visible;
+ border-right:0;padding-right:0;
+}
+.meca-new-top .meca-brand-symbol{
+ position:relative;display:block;flex:0 0 61px;width:61px;height:60px;
+ overflow:hidden;isolation:isolate;
+}
+.meca-new-top .meca-brand-symbol-image{
+ position:absolute;display:block;
+ width:100px!important;height:100px!important;max-width:none!important;
+ left:50%;top:-7px;transform:translateX(-50%);
+ object-fit:contain!important;object-position:center!important;
+ filter:none!important;
+}
+.meca-new-top .meca-brand-name{
+ display:inline-flex;align-items:baseline;white-space:nowrap;line-height:1;
+ font-size:clamp(24px,2.02vw,34px);font-style:italic;font-weight:900;
+ letter-spacing:-1.2px;text-shadow:0 2px 3px #000b;
+}
+.meca-new-top .meca-brand-name span:first-child{color:#e8edf1}
+.meca-new-top .meca-brand-name span:last-child{color:#ff921f}
+@media (max-width:1300px){
+ .meca-new-top .meca-brand-horizontal{width:200px;gap:4px}
+ .meca-new-top .meca-brand-symbol{width:49px;height:52px;flex-basis:49px}
+ .meca-new-top .meca-brand-symbol-image{width:86px!important;height:86px!important;top:-5px}
+ .meca-new-top .meca-brand-name{font-size:26px;letter-spacing:-1.1px}
+}
+@media (max-width:600px){
+ .meca-new-top .meca-brand-horizontal{width:139px;gap:3px}
+ .meca-new-top .meca-brand-symbol{width:36px;height:40px;flex-basis:36px}
+ .meca-new-top .meca-brand-symbol-image{width:67px!important;height:67px!important;top:-4px}
+ .meca-new-top .meca-brand-name{font-size:19px;letter-spacing:-.8px}
+}
+/* Grand emblème de l'accueil : même fichier corrigé, sans changer le titre ni les boutons. */
+.meca-showcase .meca-showcase-logo{
+ width:min(580px,55vw)!important;
+ height:clamp(280px,34vh,365px)!important;
+ margin:-24px auto -12px!important;
+ object-fit:contain!important;
+}
+@media (max-width:960px){
+ .meca-showcase .meca-showcase-logo{width:min(470px,72vw)!important;height:245px!important;margin:0 auto -6px!important}
+}
+@media (max-width:600px){
+ .meca-showcase .meca-showcase-logo{width:min(290px,88vw)!important;height:170px!important;margin:0 auto -4px!important}
+}
