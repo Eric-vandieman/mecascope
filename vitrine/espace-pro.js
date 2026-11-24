@@ -29,7 +29,7 @@ async function refresh(){
 function applyAccess(){
  const role=current.role;
  const p=current.permissions||{};
- const tabMap={equipe:role==='owner'||role==='manager',recherches:p.view===true,nouvelle:p.create===true,statistiques:role==='owner'||role==='manager',credits:role==='owner',etablissements:true};
+ const tabMap={equipe:role==='owner'||role==='manager',recherches:p.view===true,nouvelle:p.create===true,statistiques:role==='owner'||role==='manager',credits:role==='owner'||p.spend===true,etablissements:true};
  for(const b of tabs){const visible=tabMap[b.dataset.workspaceTab]!==false;b.hidden=!visible;}
  document.querySelectorAll('[data-workspace-go]').forEach(b=>{
   if(b.dataset.workspaceGo==='nouvelle')b.hidden=p.create!==true;
@@ -169,7 +169,7 @@ document.getElementById('team-invite-form').addEventListener('submit',async even
   document.getElementById('team-invite-link').value=invite.link;
   document.getElementById('team-invite-message').textContent=invite.message;
   const mailto='mailto:'+(email||'')+'?subject='+encodeURIComponent('Invitation à rejoindre l’équipe Mécascope')+'&body='+encodeURIComponent('Bonjour,\n\nVous êtes invité à rejoindre notre équipe Mécascope en tant que '+(role==='manager'?'responsable':'collaborateur')+'.\n\nUtilisez ce lien personnel (valable 7 jours) :\n'+invite.link+'\n\nÀ bientôt.');
-  const send=document.getElementById('team-email-send');send.href=mailto;send.textContent=email?'Ouvrir l’e-mail d’invitation':'Partager par e-mail';
+  const send=document.getElementById('team-email-send');send.href=mailto;send.hidden=invite.emailSent===true;send.textContent=email?'Envoyer manuellement l’invitation':'Partager par e-mail';
   const qr=document.getElementById('team-qr');qr.replaceChildren();
   if(typeof QRCode!=='undefined')new QRCode(qr,{text:invite.link,width:208,height:208,colorDark:'#10151b',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
   else qr.append(node('p','Impossible de créer le QR code sur ce navigateur. Copiez le lien.'));
