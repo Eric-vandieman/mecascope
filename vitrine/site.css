@@ -966,3 +966,28 @@ body.meca-auth-body{background:#071017 url('/fond-tarifs-client.webp') center ce
 .meca-pro-credits-panel strong{font-size:clamp(32px,5vw,54px);line-height:1.1;color:#fff0c2}
 .meca-pro-credits-panel>span:last-child{font-size:16px;font-weight:700}
 @media(max-width:800px){.meca-credit-badge{padding:4px 6px;margin-left:0;font-size:11px}.meca-credit-badge svg{width:15px;height:15px}}
+
+
+/* Onglets historiques des espaces Mécascope et messagerie. */
+.meca-pro-workspace-nav button[hidden],
+.meca-private-nav button[hidden],
+[data-private-panel][hidden],
+[data-workspace-panel][hidden]{display:none!important}
+.meca-messages-list{display:grid;gap:12px;margin:21px 0 26px;max-height:520px;overflow:auto;padding:4px}
+.meca-message-card{border:1px solid #6d573e;background:rgba(16,27,38,.93);padding:17px 18px;border-radius:12px}
+.meca-message-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.meca-message-header strong{font-size:15px;color:#ffcf91}
+.meca-message-header small{font-size:12px;color:#c6cbd1}
+.meca-message-card p{margin:12px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;color:#e7e9ec;line-height:1.55}
+.meca-team-form textarea{display:block;box-sizing:border-box;width:100%;min-height:125px;padding:13px;border:1px solid #796651;border-radius:10px;color:white;background:#101d28;font:inherit;resize:vertical}
+.meca-private-layout{display:grid;grid-template-columns:minmax(165px,210px) minmax(0,1fr);gap:18px;align-items:start;text-align:left;margin-top:22px}
+.meca-private-nav{display:flex;flex-direction:column;gap:7px;padding:12px;border:1px solid #805e38;border-radius:12px;background:rgba(9,20,31,.9)}
+.meca-private-nav button{border:1px solid transparent;border-radius:8px;text-align:left;padding:12px 10px;background:transparent;color:#e8edf1;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.meca-private-nav button:hover{background:#293442;border-color:#9b6a37}
+.meca-private-nav button.is-active{background:linear-gradient(130deg,#ec8423,#f9ac49);color:#171b20;border-color:#ffbc6a}
+.meca-private-content{border:1px solid #806244;border-radius:13px;background:rgba(7,15,23,.75);padding:clamp(18px,2vw,30px);min-height:310px;min-width:0}
+.meca-private-content h2{color:#fff;margin:0 0 14px}
+.meca-private-content p{line-height:1.6;color:#d9e0e6}
+.meca-auth-panel:has(.meca-private-layout){width:min(1100px,calc(100vw - 24px));max-width:1100px}
+.meca-private-content .meca-team-form button{justify-self:start}
+@media(max-width:760px){.meca-private-layout{grid-template-columns:1fr}.meca-private-nav{flex-direction:row;flex-wrap:wrap}.meca-private-nav button{font-size:12px;padding:10px}}
