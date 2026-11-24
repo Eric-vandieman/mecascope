@@ -39,7 +39,7 @@ export default async function handler(req,res){
       if(!prenom||!nom||!telephone||!/^[+0-9 ()-]{8,22}$/.test(telephone)||telephone.replace(/\D/g,'').length<9||req.body.legalAccepted!==true||req.body.legalVersion!=='2026-11-24')
         return res.status(400).json({message:'Complétez vos informations et acceptez les conditions applicables.'});
       const payload={email,password,data:{prenom,nom,telephone,profil:'particulier',mecascope_legal_version:'2026-11-24',mecascope_legal_accepted_at:new Date().toISOString(),mecascope_marketing_opt_in:req.body.marketingOptIn===true}};
-      const response=await fetch(base+'signup',{method:'POST',headers,body:JSON.stringify(payload),signal:AbortSignal.timeout(12000)});
+      const response=await fetch(base+'signup?redirect_to='+encodeURIComponent('https://xn--mcascope-b1a.fr/confirmation.html?espace=particulier'),{method:'POST',headers,body:JSON.stringify(payload),signal:AbortSignal.timeout(12000)});
       if(!response.ok)return res.status(400).json({message:'Inscription impossible avec ces informations. Vérifiez votre adresse ou réessayez.'});
       const result=await response.json();
       if(result.access_token){res.setHeader('Set-Cookie',cookie(result.access_token,Math.min(Number(result.expires_in)||3600,3600)));return res.status(200).json({authenticated:true,message:'Votre compte particulier a été créé.'})}
