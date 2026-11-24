@@ -25,6 +25,16 @@ export default async function handler(req,res){
   const user=await response.json();
   if(user.user_metadata?.profil==='particulier')return res.status(403).json({message:'Accès professionnel uniquement'});
   const action=req.method==='GET'?(req.query?.view==='credits'?'credits':'dashboard'):req.body?.action;
+  if(action==='messages'){
+   const messages=await rpc('meca_messages_lire_pro');
+   return res.status(200).json({messages:Array.isArray(messages)?messages:[]});
+  }
+  if(action==='send-message'){
+   const subject=String(req.body.subject||'').trim(),body=String(req.body.body||'').trim();
+   if(!subject||subject.length>160||!body||body.length>3000)return res.status(400).json({message:'Sujet et message requis (3 000 caractères maximum)'});
+   const id=await rpc('meca_messages_envoyer_pro',{p_sujet:subject,p_contenu:body});
+   return res.status(200).json({id,message:'Votre message a été enregistré dans la messagerie Mécascope.'});
+  }
   if(action==='credits'){
    const value=await rpc('meca_solde_credits');
    if(!Number.isSafeInteger(value)||value<0)return res.status(409).json({message:'Solde indisponible pour ce compte.'});
