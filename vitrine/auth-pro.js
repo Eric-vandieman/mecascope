@@ -22,7 +22,8 @@ document.querySelectorAll('[data-pro-tab]').forEach(b=>b.addEventListener('click
 function render(p){
   // Les comptes professionnels authentifiés accèdent à l'interface dédiée,
   // et non au formulaire de connexion.
-  location.replace('/espace-pro.html');
+  const pending=sessionStorage.getItem('meca-invite');
+  location.replace(pending?'/rejoindre-equipe.html?code='+encodeURIComponent(pending):'/espace-pro.html');
 }
 
 function showCompletion(profile={}){
