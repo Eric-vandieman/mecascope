@@ -40,7 +40,14 @@ async function checkSession(){
     const data=await response.json();
     if(data.authenticated && !data.needsProfile){
       // Le compte a pu être automatiquement rattaché lors de la connexion.
-      setSuccess();return;
+      const check=await fetch('/api/pro-collaboration',{
+        method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({action:'invite-accepted',code})
+      });
+      if(check.ok){
+        const result=await check.json();
+        if(result.accepted===true){setSuccess();return}
+      }
     }
     await acceptInvitation();
   }catch{
