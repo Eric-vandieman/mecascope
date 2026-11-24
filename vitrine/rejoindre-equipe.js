@@ -7,6 +7,21 @@ const success=document.getElementById('join-success');
 if(!code||code.length<30||code.length>180){status.textContent='Ce lien d’invitation est invalide.'}
 else{
  sessionStorage.setItem('meca-invite',code);
+ const joinSignup=document.getElementById('join-signup-form');
+ if(joinSignup)joinSignup.addEventListener('submit',async event=>{
+   event.preventDefault();
+   const values=Object.fromEntries(new FormData(joinSignup));
+   if(values.password!==values.confirm){status.textContent='Les mots de passe ne correspondent pas.';return}
+   const submit=joinSignup.querySelector('[type=submit]');submit.disabled=true;status.textContent='Création de votre compte collaborateur…';
+   try{
+    const response=await fetch('/api/pro-auth',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'invite-signup',...values,legalAccepted:values.legal==='on',legalVersion:'2026-11-24'})});
+    const result=await response.json();
+    status.textContent=result.message||'Impossible de créer le compte.';
+    if(response.ok&&result.authenticated){guest.hidden=true;ready.hidden=false}
+    else if(response.ok)joinSignup.reset();
+   }catch{status.textContent='Service temporairement indisponible.'}
+   finally{submit.disabled=false}
+ });
  const login=document.getElementById('join-login'),signup=document.getElementById('join-signup');
  login.href='/compte.html?invitation='+encodeURIComponent(code)+'#professionnel';
  signup.href='/compte.html?invitation='+encodeURIComponent(code)+'#creer-un-compte';
