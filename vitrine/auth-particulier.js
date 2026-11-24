@@ -16,7 +16,7 @@ if(form)form.addEventListener('submit',async event=>{
   if(mode==='signup' && data.legal!=='on'){setStatus('Vous devez accepter les CGU et les CGV.');return}
   const submit=form.querySelector('[type="submit"]');submit.disabled=true;setStatus('Vérification en cours…');
   try{
-    const r=await fetch(API,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:mode,email:data.email,password:data.password,prenom:data.prenom,nom:data.nom,legalAccepted:mode==='signup'&&data.legal==='on',legalVersion:'2026-11-24',marketingOptIn:data.marketing==='on'})});
+    const r=await fetch(API,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:mode,email:data.email,password:data.password,prenom:data.prenom,nom:data.nom,telephone:data.telephone,legalAccepted:mode==='signup'&&data.legal==='on',legalVersion:'2026-11-24',marketingOptIn:data.marketing==='on'})});
     const v=await r.json();setStatus(v.message||'Impossible de terminer la demande.',r.ok);
     if(r.ok&&v.authenticated){location.assign('/mon-espace.html')}
     else if(r.ok&&mode==='signup'){form.reset()}
