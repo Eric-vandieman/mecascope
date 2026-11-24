@@ -32,13 +32,15 @@
       ? (p.etablissement||p.contact||'Mon compte professionnel')
       : ([selected.prenom,selected.nom].filter(Boolean).join(' ')||selected.email||'Mon compte');
     label.textContent=displayName;
-    login.href=professional?'/espace-pro.html':'/mon-espace.html';
+    login.href=professional?(selected.needsProfile?'/compte.html#professionnel':'/espace-pro.html'):'/mon-espace.html';
     login.title=professional?'Accéder à mon espace professionnel':'Accéder à mon tableau de bord particulier';
     login.setAttribute('aria-label',login.title+' — '+displayName);
     login.classList.add('meca-logged-in');
-    header.querySelectorAll('a[href="/compte.html#professionnel"]').forEach(a=>{
-      a.href='/espace-pro.html';
-    });
+    if(professional&&!selected.needsProfile){
+      header.querySelectorAll('a[href="/compte.html#professionnel"]').forEach(a=>{
+        a.href='/espace-pro.html';
+      });
+    }
     if(register)register.hidden=true;
     if(!logout){
       logout=document.createElement('button');
@@ -60,7 +62,7 @@
   }
   async function refresh(){
     const [pro,individual]=await Promise.all([check('/api/pro-auth'),check('/api/particulier-auth')]);
-    const proInfo=pro?.authenticated?{kind:'pro',profile:pro.profile||{}}:null;
+    const proInfo=(pro?.authenticated||pro?.needsProfile)?{kind:'pro',profile:pro.profile||{},needsProfile:!!pro?.needsProfile}:null;
     const individualInfo=individual?.authenticated?{kind:'particulier',...individual}:null;
     const isPersonalPage=/\/(?:mon-espace|inscription|connexion)\.html$/.test(location.pathname);
     selected=(isPersonalPage?individualInfo||proInfo:proInfo||individualInfo);
