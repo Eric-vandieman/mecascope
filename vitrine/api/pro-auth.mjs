@@ -70,7 +70,7 @@ export default async function handler(req,res){
       if(!validate.ok)return res.status(400).json({message:'Impossible de vérifier l’invitation.'});
       const invitationStatus=await validate.json();
       if(invitationStatus?.valide!==true)return res.status(400).json({message:'Cette invitation est invalide, a expiré, ou ne correspond pas à cette adresse e-mail.'});
-      const payload={email,password,data:{contact,telephone,profil:'professionnel',invite_pending:true,mecascope_invite_code:invitation,mecascope_legal_version:'2026-11-24',mecascope_legal_accepted_at:new Date().toISOString()}};
+      const payload={email,password,data:{contact,telephone,profil:'professionnel',invite_pending:true,mecascope_invite_code:invitation,mecascope_garage_name:invitationStatus.garage||'',mecascope_inviter_name:invitationStatus.inviteur||'',mecascope_legal_version:'2026-11-24',mecascope_legal_accepted_at:new Date().toISOString()}};
       const r=await fetch(authRequest,{method:'POST',headers,body:JSON.stringify(payload),signal:AbortSignal.timeout(12000)});
       if(!r.ok)return res.status(400).json({message:'Création impossible. Si votre compte existe, connectez-vous avec ce compte.'});
       const result=await r.json();
