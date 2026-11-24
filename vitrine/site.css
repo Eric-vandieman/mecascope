@@ -763,3 +763,6 @@ body.meca-auth-body{background:#071017 url('/fond-tarifs-client.webp') center ce
 .meca-pro-dashboard-actions .btn{padding:13px 17px}
 #meca-pro-logout{margin-top:20px}
 @media(max-width:600px){.meca-pro-auth-card{padding:16px 12px}.meca-pro-two{grid-template-columns:1fr;gap:4px}.meca-pro-tab{padding:12px 5px}.meca-pro-dashboard-actions{flex-direction:column}}
+
+/* Les panneaux ne s'affichent jamais avant le choix ou la validation de la session. */
+.meca-pro-form[hidden],#meca-pro-gate[hidden],#meca-pro-connected[hidden]{display:none!important}
