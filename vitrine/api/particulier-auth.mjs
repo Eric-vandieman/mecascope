@@ -31,6 +31,20 @@ export default async function handler(req,res){
     }
     const {action}=req.body||{};
     if(action==='logout'){res.setHeader('Set-Cookie',cookie('',0));return res.status(200).json({message:'Déconnexion effectuée.'})}
+    if(action==='resend'){
+      const address=norm(req.body.email,254)?.toLowerCase();
+      if(!address||!/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(address))
+        return res.status(400).json({message:'Renseignez une adresse e-mail valide.'});
+      const redirect='https://xn--mcascope-b1a.fr/confirmation.html?espace=particulier';
+      const result=await fetch(base+'resend',{method:'POST',headers,body:JSON.stringify({type:'signup',email:address,options:{emailRedirectTo:redirect}}),signal:AbortSignal.timeout(12000)});
+      if(result.status===429)return res.status(429).json({message:'Le service d’envoi limite actuellement les confirmations. Réessayez plus tard. Le domaine doit être connecté au SMTP Mécascope pour lever cette limite.'});
+      if(!result.ok){
+        const problem=await result.json().catch(()=>({}));
+        const code=String(problem.code||'');
+        return res.status(503).json({message:code==='email_address_not_authorized'?'L’expéditeur Supabase ne permet pas d’envoyer vers cette adresse. Activez le SMTP Mécascope.':'Impossible de renvoyer la confirmation pour le moment. Vérifiez l’envoi SMTP Supabase.'});
+      }
+      return res.status(200).json({message:'Si cette adresse possède un compte en attente de validation, un nouveau lien de confirmation a été demandé. Vérifiez aussi vos courriers indésirables.'});
+    }
     if(!['login','signup'].includes(action))return res.status(400).json({message:'Demande invalide.'});
     const email=norm(req.body.email,254)?.toLowerCase();
     const password=req.body.password;
@@ -42,10 +56,15 @@ export default async function handler(req,res){
         return res.status(400).json({message:'Complétez vos informations et acceptez les conditions applicables.'});
       const payload={email,password,data:{prenom,nom,telephone,profil:'particulier',mecascope_legal_version:'2026-11-24',mecascope_legal_accepted_at:new Date().toISOString(),mecascope_marketing_opt_in:req.body.marketingOptIn===true}};
       const response=await fetch(base+'signup?redirect_to='+encodeURIComponent('https://xn--mcascope-b1a.fr/confirmation.html?espace=particulier'),{method:'POST',headers,body:JSON.stringify(payload),signal:AbortSignal.timeout(12000)});
-      if(!response.ok)return res.status(400).json({message:'Inscription impossible avec ces informations. Vérifiez votre adresse ou réessayez.'});
+      if(!response.ok){
+        const error=await response.json().catch(()=>({}));
+        if(response.status===429)return res.status(429).json({message:'Le service de confirmation a atteint sa limite d’e-mails. L’inscription n’a pas pu être finalisée : réessayez plus tard.'});
+        if(error.code==='email_address_not_authorized')return res.status(503).json({message:'Supabase refuse d’envoyer à cette adresse. Le SMTP personnalisé Mécascope doit être activé.'});
+        return res.status(400).json({message:'Inscription impossible pour le moment. Vérifiez votre adresse ou réessayez.'});
+      }
       const result=await response.json();
       if(result.access_token){res.setHeader('Set-Cookie',cookie(result.access_token,Math.min(Number(result.expires_in)||3600,3600)));return res.status(200).json({authenticated:true,message:'Votre compte particulier a été créé.'})}
-      return res.status(200).json({authenticated:false,message:'Vérifiez votre messagerie pour confirmer votre adresse et activer votre compte.'});
+      return res.status(200).json({authenticated:false,message:'Si un e-mail de confirmation peut être envoyé à cette adresse, vous le recevrez pour activer votre compte. Si rien n’arrive, utilisez « Renvoyer la confirmation » ci-dessous.',canResend:true});
     }
     const response=await fetch(base+'token?grant_type=password',{method:'POST',headers,body:JSON.stringify({email,password}),signal:AbortSignal.timeout(12000)});
     if(!response.ok)return res.status(401).json({message:'Identifiants incorrects ou adresse e-mail non confirmée.'});
