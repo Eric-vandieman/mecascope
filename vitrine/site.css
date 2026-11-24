@@ -923,3 +923,20 @@ body.meca-auth-body{background:#071017 url('/fond-tarifs-client.webp') center ce
 .meca-pro-stat-card span{font-size:13px;color:#e1e6e9;margin-top:9px}
 #meca-request-save-status:not(:empty){padding:10px 15px;border:1px solid #bc843f;border-radius:9px;background:rgba(8,17,23,.85);color:#ffdfb8}
 @media(max-width:700px){.meca-pro-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+
+/* Autorisations précises par collaborateur. */
+.meca-permission-panel{border:1px solid #806145;border-radius:12px;padding:14px 18px;margin:12px 0;background:#172532}
+.meca-permission-panel legend{font-weight:800;color:#ffc586;padding:0 8px}
+.meca-permission-panel label{display:flex;align-items:flex-start;gap:10px;margin:12px 0;font-weight:550;line-height:1.45}
+.meca-permission-panel input[type=checkbox],.meca-member-rights input[type=checkbox]{width:18px;height:18px;accent-color:#ff9d31;flex-shrink:0}
+.meca-team-entry:has(.meca-member-rights){display:block}
+.meca-member-rights{border-top:1px solid #584b3f;padding-top:13px;margin-top:14px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.meca-member-rights label{display:flex;align-items:center;gap:9px;font-size:13px;color:#e6e9ed}
+.meca-member-rights button{grid-column:1/-1}
+.meca-pending-approval{padding:9px 12px;background:#493315;border:1px solid #c3883d;border-radius:8px;color:#ffdfb3!important;font-weight:750}
+.meca-pro-workspace-nav button[hidden],.meca-pro-workspace-tiles button[hidden]{display:none!important}
+.meca-team-signup{margin:22px auto;text-align:left;max-width:500px;border:1px solid #8f663f;padding:16px;border-radius:12px;background:#101c27}
+.meca-team-signup summary{color:#ffbf79;cursor:pointer;font-weight:700}
+.meca-team-signup .meca-team-form{padding-top:17px}
+@media(max-width:620px){.meca-member-rights{grid-template-columns:1fr}}
