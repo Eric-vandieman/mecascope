@@ -7,6 +7,8 @@ const ready=document.getElementById('join-ready');
 const success=document.getElementById('join-success');
 const joinForm=document.getElementById('join-signup-form');
 const loginLink=document.getElementById('join-login');
+const feedback=document.getElementById('join-form-feedback');
+const showFeedback=message=>{if(feedback)feedback.textContent=message;setMessage(message)};
 let joining=false;
 const setMessage=message=>{status.textContent=message};
 const setSuccess=()=>{
@@ -63,11 +65,11 @@ if(code.length<30||code.length>180){
   loginLink.href='/compte.html?invitation='+encodeURIComponent(code)+'#professionnel';
   joinForm.addEventListener('submit',async event=>{
     event.preventDefault();
-    if(!joinForm.reportValidity())return;
+    if(!joinForm.reportValidity()){showFeedback('Complétez les champs signalés dans le formulaire avant de continuer.');return}
     const values=Object.fromEntries(new FormData(joinForm));
-    if(values.password!==values.confirm){setMessage('Les mots de passe ne correspondent pas.');return}
+    if(values.password!==values.confirm){showFeedback('Les mots de passe ne correspondent pas.');return}
     const submit=joinForm.querySelector('[type=submit]');submit.disabled=true;
-    setMessage('Création de votre compte professionnel collaborateur…');
+    showFeedback('Création de votre compte professionnel collaborateur…');
     try{
       const response=await fetch('/api/pro-auth',{
         method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},
@@ -79,9 +81,9 @@ if(code.length<30||code.length>180){
         await checkSession();
         return;
       }
-      setMessage('Votre compte professionnel a été créé. Confirmez votre adresse e-mail, puis connectez-vous : vous rejoindrez automatiquement l’établissement.');
+      showFeedback('Votre compte a été créé. Vous devez confirmer votre adresse e-mail pour protéger votre compte avant son activation ; le lien de confirmation vous ramènera vers Mécascope.');
       joinForm.reset();
-    }catch(error){setMessage(error.message||'Le service est temporairement indisponible.')}
+    }catch(error){showFeedback(error.message||'Le service est temporairement indisponible.')}
     finally{submit.disabled=false}
   });
   document.getElementById('join-accept')?.addEventListener('click',acceptInvitation);
