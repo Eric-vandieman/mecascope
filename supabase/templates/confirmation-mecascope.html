@@ -8,16 +8,21 @@
 <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#ffba74;margin-top:8px">Recherche de pièces automobiles</div>
 </td></tr>
 <tr><td style="padding:36px 32px">
+{{ if eq .Data.profil "professionnel" }}
 {{ if .Data.invite_pending }}
 <h1 style="font-size:25px;line-height:1.3;color:#15202c;margin:0 0 18px">Bienvenue dans l’équipe Mécascope</h1>
 <p style="font-size:16px;line-height:1.65;margin:0 0 17px;color:#35404c">{{ if .Data.mecascope_inviter_name }}<strong>{{ .Data.mecascope_inviter_name }}</strong>{{ else }}Un responsable{{ end }} vous invite à rejoindre l’équipe de <strong>{{ .Data.mecascope_garage_name }}</strong> sur Mécascope.</p>
 <p style="font-size:15px;line-height:1.65;color:#35404c">Pour finaliser la création de votre compte collaborateur, confirmez votre adresse e-mail. Vous accéderez ensuite à l’espace de votre établissement.</p>
 {{ else }}
+<h1 style="font-size:25px;line-height:1.3;color:#15202c;margin:0 0 18px">Bienvenue sur Mécascope Pro !</h1>
+<p style="font-size:16px;line-height:1.7;margin:0 0 17px;color:#35404c">Confirmez votre adresse e-mail pour activer votre compte professionnel Mécascope et retrouver votre établissement.</p>
+{{ end }}
+{{ else }}
 <h1 style="font-size:25px;line-height:1.3;color:#15202c;margin:0 0 18px">Bienvenue chez Mécascope !</h1>
 <p style="font-size:16px;line-height:1.7;margin:0 0 17px;color:#35404c">Votre compte particulier est presque prêt. Il ne reste qu’une étape : confirmer votre adresse e-mail pour protéger votre compte et accéder à votre tableau de bord personnel.</p>
 {{ end }}
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:26px auto"><tr><td align="center" bgcolor="#ed963b" style="border-radius:9px;padding:0">
-{{ if .Data.invite_pending }}
+{{ if eq .Data.profil "professionnel" }}
 <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:17px 28px;color:#161c22;font-size:16px;font-weight:800;text-decoration:none;border-radius:9px">Confirmer mon compte Mécascope</a>
 {{ else }}
 <a href="https://xn--mcascope-b1a.fr/confirmation.html?espace=particulier&amp;type=email&amp;token_hash={{ .TokenHash }}" style="display:inline-block;padding:17px 28px;color:#161c22;font-size:16px;font-weight:800;text-decoration:none;border-radius:9px">Confirmer mon adresse e-mail</a>
@@ -25,7 +30,7 @@
 </td></tr></table>
 <p style="font-size:14px;line-height:1.7;color:#606c77">Le bouton ne fonctionne pas ? Copiez ce lien dans votre navigateur :</p>
 <p style="font-size:12px;overflow-wrap:anywhere;word-break:break-all;line-height:1.8;color:#8f5822">
-{{ if .Data.invite_pending }}{{ .ConfirmationURL }}{{ else }}https://xn--mcascope-b1a.fr/confirmation.html?espace=particulier&amp;type=email&amp;token_hash={{ .TokenHash }}{{ end }}
+{{ if eq .Data.profil "professionnel" }}{{ .ConfirmationURL }}{{ else }}https://xn--mcascope-b1a.fr/confirmation.html?espace=particulier&amp;type=email&amp;token_hash={{ .TokenHash }}{{ end }}
 </p>
 <p style="font-size:13px;line-height:1.65;color:#64717d;margin-top:26px">Si vous n’avez pas créé de compte Mécascope, vous pouvez ignorer ce message. Ne transmettez jamais votre lien de confirmation à une autre personne.</p>
 </td></tr>
