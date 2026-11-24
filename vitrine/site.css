@@ -699,3 +699,33 @@ body.meca-pro-body{
     pointer-events:none;
   }
 }
+
+
+/* Connexion et inscription des particuliers */
+body.meca-auth-body{background:#071017 url('/fond-tarifs-client.webp') center center / cover fixed no-repeat;min-height:100svh}
+.meca-auth-page{width:min(100%,720px);margin:0 auto;padding:48px 18px 70px;min-height:calc(100svh - 170px)}
+.meca-auth-panel{padding:clamp(24px,5vw,48px);border-radius:20px;background:rgba(8,15,23,.93);border:1px solid #ac763f;box-shadow:0 24px 80px #0009;backdrop-filter:blur(5px);color:#f7f8fa}
+.meca-auth-kicker{color:#ffab47;font-weight:850;letter-spacing:2px;font-size:12px;margin:0}
+.meca-auth-panel h1{font-size:clamp(26px,3.4vw,37px);margin:10px 0 8px;line-height:1.16}
+.meca-auth-panel>p{color:#e0e4e8;line-height:1.5}
+.meca-auth-panel form{display:flex;flex-direction:column;gap:10px;margin-top:24px}
+.meca-auth-panel label{font-weight:700;font-size:13px;color:#eef2f6;margin-top:8px}
+.meca-auth-panel input:not([type=checkbox]){width:100%;border:1px solid #53606e;border-radius:9px;background:#101821;color:#fff;padding:13px 14px;min-height:47px;outline-offset:2px}
+.meca-auth-panel input:focus-visible{outline:2px solid #ff9c27}
+.meca-auth-pass{display:flex;position:relative;align-items:center}
+.meca-auth-pass input{padding-right:92px!important}
+.meca-toggle-pass{position:absolute;right:8px;border:0;background:none;color:#ffc382;font-weight:700;padding:9px;cursor:pointer}
+.meca-auth-two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.meca-auth-two>div{display:flex;flex-direction:column;gap:10px}
+.meca-auth-check{display:flex;gap:12px;align-items:flex-start;margin:12px 0 0!important;font-weight:450!important;line-height:1.5}
+.meca-auth-check input{width:18px;height:18px;accent-color:#ff951f;flex-shrink:0;margin-top:3px}
+.meca-auth-panel a:not(.btn){color:#ffbe6a;text-decoration:underline;text-underline-offset:3px}
+.meca-auth-submit{margin-top:16px;display:flex!important;justify-content:center;align-items:center;text-align:center;width:100%;min-height:51px;font-size:16px}
+.meca-auth-submit:disabled{opacity:.65;cursor:wait}
+.meca-auth-status{min-height:18px;line-height:1.45;color:#ffb4a7;font-weight:650}
+.meca-auth-status[data-ok=true]{color:#a6eead}
+.meca-auth-separator{border-top:1px solid #54606a;margin:24px 0}
+.meca-auth-footer{text-align:center;background:rgba(5,10,16,.75);padding:22px 12px;color:#dbe0e5;font-size:13px}
+.meca-auth-footer a{color:#f5c58b}
+.meca-logout{display:inline-flex;justify-content:center;width:100%;margin-top:12px}
+@media(max-width:600px){.meca-auth-page{padding:24px 12px 42px}.meca-auth-two{grid-template-columns:1fr;gap:3px}body.meca-auth-body{background-attachment:scroll}}
