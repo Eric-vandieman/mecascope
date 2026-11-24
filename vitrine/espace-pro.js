@@ -24,7 +24,19 @@ async function refresh(){
  const response=await fetch(collab,{credentials:'same-origin',cache:'no-store'});
  let data;try{data=await response.json()}catch{data={}};
  if(!response.ok)throw Error(data.message||'Service indisponible');
- current=data;drawTeam();drawSearches();drawStats();return data
+ current=data;applyAccess();drawTeam();drawSearches();drawStats();return data
+}
+function applyAccess(){
+ const role=current.role;
+ const p=current.permissions||{};
+ const tabMap={equipe:role==='owner'||role==='manager',recherches:p.view===true,nouvelle:p.create===true,statistiques:role==='owner'||role==='manager',credits:role==='owner',etablissements:true};
+ for(const b of tabs){const visible=tabMap[b.dataset.workspaceTab]!==false;b.hidden=!visible;}
+ document.querySelectorAll('[data-workspace-go]').forEach(b=>{
+  if(b.dataset.workspaceGo==='nouvelle')b.hidden=p.create!==true;
+ });
+ for(const [name,allowed] of Object.entries(tabMap)){const panel=document.querySelector('[data-workspace-panel="'+name+'"]');if(panel)panel.dataset.allowed=String(allowed);}
+ const active=tabs.find(b=>b.classList.contains('is-active'));
+ if(active?.hidden)showTab('accueil');
 }
 function drawTeam(){
  const team=document.getElementById('team-members'),pending=document.getElementById('team-pending');
@@ -51,6 +63,29 @@ function drawTeam(){
     finally{select.disabled=false}
    });
    card.append(select)
+  }
+  if(canInvite && member.role!=='owner'){
+   const rights=node('div',undefined,'meca-member-rights');
+   const options=[['view','Voir les dossiers'],['create','Créer des recherches'],['approval','Approbation obligatoire'],['spend','Dépenser des crédits']];
+   const values=member.permissions||{};
+   const switches={};
+   for(const [key,label] of options){
+    const l=node('label');const cb=document.createElement('input');cb.type='checkbox';cb.checked=values[key]===true;cb.disabled=key==='spend'&&!own;
+    switches[key]=cb;l.append(cb,node('span',label));rights.append(l);
+   }
+   const save=node('button','Enregistrer les droits','meca-team-small-button');
+   save.addEventListener('click',async()=>{
+    save.disabled=true;
+    try{
+     const permissions=Object.fromEntries(Object.entries(switches).map(([key,cb])=>[key,cb.checked]));
+     if(!own)permissions.spend=values.spend===true;
+     const out=await request('permissions',{user_id:member.id,permissions});
+     if(!out.ok)throw Error('Modification non appliquée');
+     labelStatus('team-feedback','Les autorisations de '+(member.nom||member.email)+' ont été enregistrées.');
+     await refresh();
+    }catch(e){labelStatus('team-feedback',e.message);save.disabled=false}
+   });
+   rights.append(save);card.append(rights);
   }
   team.append(card)
  }
@@ -83,6 +118,15 @@ function drawSearches(){
   const head=node('div');head.append(node('strong',item.marque+' '+item.modele+' · '+item.piece),node('small','Créée le '+new Date(item.cree_le).toLocaleDateString('fr-FR')+(item.reference_piece?' · Réf. '+item.reference_piece:'')));
   card.append(head);
   const controls=node('div',undefined,'meca-team-search-controls');
+  if(item.approuvee===false){
+   card.append(node('p','En attente de validation du responsable','meca-pending-approval'));
+   if(canEdit){
+    const approve=node('button','Approuver la demande','meca-team-small-button');
+    approve.addEventListener('click',async()=>{approve.disabled=true;try{await request('approve',{id:item.id,approve:true});await refresh()}catch(e){labelStatus('team-searches-feedback',e.message);approve.disabled=false}});
+    controls.append(approve);
+   }
+   card.append(controls);el.append(card);continue;
+  }
   if(canEdit){
    const status=node('select');status.setAttribute('aria-label','Statut de la recherche');
    for(const [v,t] of [['nouvelle','Nouvelle'],['en_cours','En cours'],['en_attente','En attente'],['terminee','Terminée']]){const o=node('option',t);o.value=v;status.append(o)}status.value=item.statut;
@@ -109,8 +153,8 @@ async function init(){
   document.getElementById('pro-workspace-welcome').textContent='Établissement : '+(p.etablissement||'Mécascope Pro');
   const d=[['Établissement',p.etablissement],['SIRET',p.siret],['Adresse',p.adresse],['Code postal',p.code_postal],['Ville',p.ville],['Contact',p.contact],['Téléphone',p.telephone],['E-mail professionnel',p.email]];
   fill('workspace-overview',d);fill('workspace-establishment',d);
-  workspace.hidden=false;loading.hidden=true;window.dispatchEvent(new Event('meca-auth-updated'));
   try{await refresh()}catch(e){labelStatus('team-feedback',e.message);labelStatus('team-searches-feedback',e.message)}
+  workspace.hidden=false;loading.hidden=true;window.dispatchEvent(new Event('meca-auth-updated'));
  }catch{loading.querySelector('p').textContent='Impossible de vérifier la session. Actualisez pour réessayer.'}
 }
 document.getElementById('team-invite-form').addEventListener('submit',async event=>{
@@ -118,7 +162,9 @@ document.getElementById('team-invite-form').addEventListener('submit',async even
  button.disabled=true;labelStatus('team-feedback','Création de l’invitation…');
  try{
   const email=form.elements.namedItem('email').value.trim(),role=form.elements.namedItem('role').value;
-  const invite=await request('invite',{email,role});
+  const fd=new FormData(form);
+  const permissions={view:fd.has('view'),create:fd.has('create'),approval:fd.has('approval'),spend:fd.has('spend')};
+  const invite=await request('invite',{email,role,permissions});
   const result=document.getElementById('team-invite-result');
   document.getElementById('team-invite-link').value=invite.link;
   document.getElementById('team-invite-message').textContent=invite.message;
@@ -127,7 +173,7 @@ document.getElementById('team-invite-form').addEventListener('submit',async even
   const qr=document.getElementById('team-qr');qr.replaceChildren();
   if(typeof QRCode!=='undefined')new QRCode(qr,{text:invite.link,width:208,height:208,colorDark:'#10151b',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
   else qr.append(node('p','Impossible de créer le QR code sur ce navigateur. Copiez le lien.'));
-  result.hidden=false;labelStatus('team-feedback','Invitation prête. Ouvrez votre messagerie pour l’envoyer, ou partagez le QR code.');
+  result.hidden=false;labelStatus('team-feedback',invite.emailSent?'Invitation envoyée automatiquement par Mécascope.':(invite.emailError||'Invitation prête : partagez le lien ou le QR code.'));
   await refresh();
  }catch(e){labelStatus('team-feedback',e.message)}
  finally{button.disabled=false}
