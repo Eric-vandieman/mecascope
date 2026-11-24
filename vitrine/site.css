@@ -997,3 +997,13 @@ body.meca-auth-body{background:#071017 url('/fond-tarifs-client.webp') center ce
 .meca-resend-confirmation{display:inline-flex;align-items:center;justify-content:center;margin:12px 0 0;max-width:100%;white-space:normal}
 .meca-resend-confirmation:disabled{opacity:.6;cursor:wait}
 .meca-auth-resend-hint{color:#c8d1d8;font-size:12px;line-height:1.5;margin:8px 0 12px}
+
+
+/* Renvoi visible au moment de la vérification des comptes particuliers. */
+.meca-confirmation-resend{display:grid;gap:10px;text-align:left;margin:22px 0;padding:18px;border-radius:13px;border:1px solid #aa763e;background:rgba(12,23,33,.93)}
+.meca-confirmation-resend[hidden]{display:none!important}
+.meca-confirmation-resend label{font-size:14px;color:#f2e3d3;font-weight:700}
+.meca-confirmation-resend input{width:100%;box-sizing:border-box;color:#fff;background:#0e1c28;border:1px solid #ae895f;border-radius:8px;padding:13px;font:inherit}
+.meca-confirmation-resend button{width:100%;margin:4px 0 0;white-space:normal}
+.meca-confirmation-resend button:disabled{opacity:.6}
+#confirmation-resend-status{min-height:18px;color:#ffcf98;font-size:13px;line-height:1.5;margin:0}
