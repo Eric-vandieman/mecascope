@@ -48,7 +48,7 @@ export default async function handler(req,res){
       if(!address||!/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(address))
         return res.status(400).json({message:'Renseignez une adresse e-mail valide.'});
       const redirect='https://xn--mcascope-b1a.fr/confirmation.html?espace=particulier';
-      const result=await fetch(base+'resend',{method:'POST',headers,body:JSON.stringify({type:'signup',email:address,options:{emailRedirectTo:redirect}}),signal:AbortSignal.timeout(12000)});
+      const result=await fetch(base+'resend?redirect_to='+encodeURIComponent(redirect),{method:'POST',headers,body:JSON.stringify({type:'signup',email:address}),signal:AbortSignal.timeout(12000)});
       if(result.status===429)return res.status(429).json({message:'Le service d’envoi limite actuellement les confirmations. Réessayez plus tard. Le domaine doit être connecté au SMTP Mécascope pour lever cette limite.'});
       if(!result.ok){
         const problem=await result.json().catch(()=>({}));
