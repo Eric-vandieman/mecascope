@@ -19,7 +19,7 @@ if(form)form.addEventListener('submit',async event=>{
     const r=await fetch(API,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:mode,email:data.email,password:data.password,prenom:data.prenom,nom:data.nom,telephone:data.telephone,legalAccepted:mode==='signup'&&data.legal==='on',legalVersion:'2026-11-24',marketingOptIn:data.marketing==='on'})});
     const v=await r.json();setStatus(v.message||'Impossible de terminer la demande.',r.ok);
     if(r.ok&&v.authenticated){location.assign('/mon-espace.html')}
-    else if(r.ok&&mode==='signup'){const submittedEmail=data.email;form.reset();const emailInput=document.getElementById('email');if(emailInput)emailInput.value=submittedEmail;document.getElementById('meca-resend-confirmation')?.removeAttribute('hidden')}
+    else if(r.ok&&mode==='signup'){sessionStorage.setItem('meca-particulier-email-pending',data.email.trim());location.assign('/confirmation.html?espace=particulier&attente=1');return}
   }catch{setStatus('Connexion momentanément indisponible. Réessayez.')}
   finally{submit.disabled=false}
 });
