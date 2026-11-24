@@ -24,7 +24,7 @@ export default async function handler(req,res){
   if(!response.ok)return res.status(401).json({message:'Session expirée'});
   const user=await response.json();
   if(user.user_metadata?.profil==='particulier')return res.status(403).json({message:'Accès professionnel uniquement'});
-  const action=req.method==='GET'?(req.query?.view==='credits'?'credits':'dashboard'):req.body?.action;
+  const action=req.method==='GET'?(req.query?.view==='credits'?'credits':req.query?.view==='messages'?'messages':'dashboard'):req.body?.action;
   if(action==='messages'){
    const messages=await rpc('meca_messages_lire_pro');
    return res.status(200).json({messages:Array.isArray(messages)?messages:[]});
