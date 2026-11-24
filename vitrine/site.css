@@ -465,3 +465,15 @@ html{scroll-behavior:smooth}#demande{scroll-margin-top:90px}.btn{text-decoration
  .meca-showcase-photo{background-size:cover,cover!important}
  .shell.meca-pricing-decor{background-attachment:scroll!important}
 }
+
+
+/* Fond accueil validé par le client : image fournie, aucun autre visuel. */
+.meca-showcase{
+  background-image:url('/fond-accueil-original.webp') !important;
+  background-position:center center !important;
+  background-size:cover !important;
+  background-repeat:no-repeat !important;
+  background-color:#081017 !important;
+}
+.meca-showcase:before{background:none!important;}
+.meca-showcase-photo{display:none!important;}
