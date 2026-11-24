@@ -63,6 +63,9 @@ if(code.length<30||code.length>180){
 }else{
   sessionStorage.setItem('meca-invite',code);
   loginLink.href='/compte.html?invitation='+encodeURIComponent(code)+'#professionnel';
+  joinForm.addEventListener('invalid',()=>{
+    showFeedback('Vérifiez les champs obligatoires signalés : nom, e-mail, téléphone, mot de passe et conditions.');
+  },true);
   joinForm.addEventListener('submit',async event=>{
     event.preventDefault();
     if(!joinForm.reportValidity()){showFeedback('Complétez les champs signalés dans le formulaire avant de continuer.');return}
@@ -76,7 +79,13 @@ if(code.length<30||code.length>180){
         body:JSON.stringify({...values,code,action:'invite-signup',legalAccepted:values.legal==='on',legalVersion:'2026-11-24'})
       });
       const data=await response.json();
-      if(!response.ok)throw Error(data.message||'Inscription impossible');
+      if(!response.ok){
+        if(response.status===409||/compte existe|déjà inscrit|déjà utilisée/i.test(data.message||'')){
+          loginLink.hidden=false;
+          showFeedback('Cette adresse possède déjà un compte. Utilisez ce compte existant pour rejoindre l’équipe ; il n’est pas nécessaire de créer un second compte.');
+        }
+        throw Error(data.message||'Inscription impossible');
+      }
       if(data.authenticated){
         await checkSession();
         return;
