@@ -421,3 +421,47 @@ html{scroll-behavior:smooth}#demande{scroll-margin-top:90px}.btn{text-decoration
 .meca-showcase-trust>div:nth-child(2){border:0}
 .meca-search-section{padding:28px 10px!important}
 }
+
+
+/* Ajustements premium photo et proportions demandés - 24 novembre 2026 */
+@media(min-width:961px){
+ .meca-new-top{gap:clamp(20px,2.15vw,44px);padding-left:clamp(18px,2.5vw,45px);padding-right:clamp(18px,2.5vw,45px)}
+ .meca-new-top .brand{width:clamp(190px,18vw,285px);flex-shrink:0}
+ .meca-new-top .nav{justify-content:space-evenly;gap:clamp(19px,2.35vw,48px)}
+ .meca-new-top .nav a{font-size:clamp(14px,1.15vw,18px);letter-spacing:.03px}
+ .meca-new-top .nav svg{width:24px;height:24px}
+ .meca-new-top .topright{gap:14px}
+ .meca-new-top .topright a{font-size:clamp(12px,1vw,15px)}
+ .meca-showcase-logo{width:min(540px,52vw);height:clamp(160px,21vh,215px);max-width:none;margin:-24px auto 2px;object-fit:contain}
+}
+.meca-showcase{
+ background-color:#05090d!important;
+ background-image:linear-gradient(90deg,#05090d00 0%,#05090d9c 25%,#05090dc4 45%,#05090dc4 55%,#05090d9c 75%,#05090d00 100%),url('https://images.unsplash.com/photo-1725180835626-b4662a0eeeb4?auto=format&fit=crop&w=1600&q=80')!important;
+ background-position:center, left center!important;
+ background-size:cover, 58% auto!important;
+ background-repeat:no-repeat!important;
+}
+.meca-showcase-photo{
+ background-image:linear-gradient(270deg,#05090d00 0%,#05090d24 20%,#05090dba 58%,#05090d 86%),url('https://images.unsplash.com/photo-1783427402535-8cb7ba33f9a7?auto=format&fit=crop&w=1600&q=80')!important;
+ background-position:center,right center!important;
+ background-size:cover,55% auto!important;
+ background-repeat:no-repeat!important;
+ opacity:.9;
+}
+.meca-showcase:before{background:radial-gradient(ellipse 61% 70% at 50% 46%,#05090dcb 0%,#05090d65 65%,transparent 100%)!important;}
+/* Le fond technique doit aussi être visible derrière les blocs de la page tarifs */
+.shell.meca-pricing-decor{
+ background:#080b0f url('https://images.unsplash.com/photo-1783427402535-8cb7ba33f9a7?auto=format&fit=crop&w=2000&q=82') center top / cover fixed no-repeat!important;
+ position:relative;
+ isolation:isolate;
+}
+.shell.meca-pricing-decor:before{
+ content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+ background:linear-gradient(90deg,#060a0dd6 0%,#05090be0 42%,#05090be0 58%,#060a0dd6 100%),linear-gradient(180deg,#070a0c69,#070a0cb3);
+}
+.shell.meca-pricing-decor .section,.shell.meca-pricing-decor main,.shell.meca-pricing-decor .home-section{background-color:transparent!important;background-image:none!important}
+@media(max-width:960px){
+ .meca-showcase{background-size:cover,cover!important;background-position:center,center!important}
+ .meca-showcase-photo{background-size:cover,cover!important}
+ .shell.meca-pricing-decor{background-attachment:scroll!important}
+}
