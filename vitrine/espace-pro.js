@@ -123,6 +123,17 @@ document.getElementById('team-invite-form').addEventListener('submit',async even
  }catch(e){labelStatus('team-feedback',e.message)}
  finally{button.disabled=false}
 });
+document.getElementById('pro-new-search').addEventListener('submit',async event=>{
+ event.preventDefault();
+ const form=event.currentTarget;const b=form.querySelector('[type=submit]');b.disabled=true;
+ labelStatus('pro-search-create-status','Enregistrement en cours…');
+ try{
+  const fields=Object.fromEntries(new FormData(form));
+  const result=await request('search',fields);
+  labelStatus('pro-search-create-status','Recherche enregistrée dans le dossier du garage. Référence : '+result.id);
+  form.reset();await refresh();
+ }catch(e){labelStatus('pro-search-create-status',e.message)}finally{b.disabled=false}
+});
 document.getElementById('team-copy').addEventListener('click',async()=>{
  const link=document.getElementById('team-invite-link');try{await navigator.clipboard.writeText(link.value);labelStatus('team-feedback','Lien copié.')}catch{link.select();document.execCommand('copy');labelStatus('team-feedback','Lien sélectionné : copiez-le.')}
 });
