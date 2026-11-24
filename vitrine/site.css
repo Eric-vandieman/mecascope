@@ -513,3 +513,33 @@ body:has(.meca-home-decor){background:transparent}
   background-position:center top!important;
  }
 }
+
+
+/* Navigation commune et catégories de véhicules — 2026-11-24 */
+.meca-vehicle-types{
+ display:grid;grid-template-columns:repeat(6,minmax(0,1fr));
+ width:min(1090px,100%);gap:9px;margin:22px auto 0;align-items:stretch;
+}
+.meca-vehicle-type{
+ display:flex;flex-direction:column;align-items:center;justify-content:center;
+ text-align:center;gap:7px;min-height:78px;
+ border:1px solid #be773d72;border-radius:10px;
+ background:linear-gradient(145deg,#0c1720be,#0b1119c7);
+ color:#f5f6f8;font-weight:650;font-size:clamp(11px,.9vw,14px);
+ line-height:1.2;padding:9px 6px;
+ box-shadow:0 2px 8px #0006;
+}
+.meca-vehicle-type svg{width:30px;height:30px;color:#ff931a;flex-shrink:0}
+.meca-showcase-trust>div{line-height:1.25}
+.meca-new-top{box-sizing:border-box}
+@media(max-width:1080px){
+ .meca-vehicle-types{grid-template-columns:repeat(3,minmax(0,1fr));max-width:740px;gap:8px;margin-top:16px}
+ .meca-vehicle-type{min-height:62px;flex-direction:row;gap:8px;font-size:13px}
+ .meca-vehicle-type svg{width:25px;height:25px}
+}
+@media(max-width:600px){
+ .meca-vehicle-types{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:12px}
+ .meca-vehicle-type{min-height:56px;flex-direction:column;gap:3px;font-size:10px;padding:6px 4px}
+ .meca-vehicle-type svg{width:21px;height:21px}
+ .meca-showcase-interior{padding-top:20px;padding-bottom:20px}
+}
