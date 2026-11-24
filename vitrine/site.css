@@ -307,3 +307,31 @@ html{scroll-behavior:smooth}#demande{scroll-margin-top:90px}.btn{text-decoration
 @media(max-width:1250px){.meca-top{flex-wrap:wrap}.meca-top .nav{order:3;flex-basis:100%;justify-content:center;padding:0 0 4px}.meca-top .nav a,.v15-top .nav a{padding:12px 8px;font-size:15px}.meca-top .topright{margin-left:auto}}
 @media(max-width:720px){.meca-top .demo-admin{display:inline-flex!important;font-size:12px;padding:8px 10px}.meca-top .nav{overflow-x:auto;justify-content:flex-start;gap:14px}.meca-top .nav a,.v15-top .nav a{font-size:13px;padding:10px 6px}.meca-top .nav svg{width:16px;height:16px}.meca-account-cards{grid-template-columns:1fr}.meca-top .brand{width:150px}.meca-request-submit{font-size:14px}}
 @media(max-width:400px){.meca-top .topright{flex-wrap:wrap;justify-content:flex-end}.meca-top .top-cta,.meca-top .demo-admin{font-size:11px}}
+
+
+/* Décors grand écran : visuels latéraux, centre préservé pour la lecture */
+@media (min-width: 1501px) {
+  .shell.meca-home-decor {
+    background-color:#08090b;
+    background-image:url('/decor-mecanique.svg');
+    background-size:cover;
+    background-position:center top;
+    background-attachment:fixed;
+    background-repeat:no-repeat;
+  }
+  .shell.meca-pricing-decor {
+    background-color:#080b0f;
+    background-image:url('/decor-technique.svg');
+    background-size:cover;
+    background-position:center top;
+    background-attachment:fixed;
+    background-repeat:no-repeat;
+  }
+  .meca-home-decor .container,
+  .meca-pricing-decor .container {
+    position:relative;
+  }
+}
+@media (max-width:1500px), (prefers-reduced-motion:reduce) {
+  .shell.meca-home-decor,.shell.meca-pricing-decor {background-attachment:scroll;}
+}
