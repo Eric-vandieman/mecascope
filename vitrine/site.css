@@ -915,3 +915,11 @@ body.meca-auth-body{background:#071017 url('/fond-tarifs-client.webp') center ce
  .meca-team-search-controls select{width:100%}
  .meca-team-search-controls button{width:100%}
 }
+
+
+.meca-pro-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;margin-top:23px}
+.meca-pro-stat-card{padding:22px 16px;min-height:120px;border:1px solid #a26f3c;border-radius:12px;background:rgba(14,25,36,.95);display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
+.meca-pro-stat-card strong{font-size:34px;line-height:1.2;color:#ffbb65}
+.meca-pro-stat-card span{font-size:13px;color:#e1e6e9;margin-top:9px}
+#meca-request-save-status:not(:empty){padding:10px 15px;border:1px solid #bc843f;border-radius:9px;background:rgba(8,17,23,.85);color:#ffdfb8}
+@media(max-width:700px){.meca-pro-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
