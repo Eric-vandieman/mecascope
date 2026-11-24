@@ -335,3 +335,89 @@ html{scroll-behavior:smooth}#demande{scroll-margin-top:90px}.btn{text-decoration
 @media (max-width:1500px), (prefers-reduced-motion:reduce) {
   .shell.meca-home-decor,.shell.meca-pricing-decor {background-attachment:scroll;}
 }
+
+
+/* Accueil Mécascope : refonte fidèle à la référence visuelle, sans retirer les rubriques existantes. */
+.meca-new-top{height:88px;min-height:88px;background:linear-gradient(180deg,#041119,#061016 95%)!important;border-bottom:1px solid #836343;display:flex;flex-wrap:nowrap;gap:clamp(10px,1.5vw,30px);padding:0 clamp(16px,3vw,50px);z-index:60}
+.meca-new-top .brand{width:clamp(165px,19vw,285px);flex:0 1 auto;height:82px;padding-right:0;border-right:0}
+.meca-new-top .brand img{max-height:68px;width:100%;object-fit:contain}
+.meca-new-top .nav{display:flex;align-items:center;justify-content:center;gap:clamp(12px,2vw,32px);flex:1;min-width:0}
+.meca-new-top .nav a{display:inline-flex;align-items:center;gap:9px;white-space:nowrap;padding:27px 0;font-size:clamp(12px,1.05vw,16px);font-weight:700}
+.meca-new-top .nav svg{flex-shrink:0;width:22px;height:22px;stroke-width:2}
+.meca-new-top .nav a.current{color:#fff;text-shadow:none}
+.meca-new-top .nav a.current:after{bottom:11px;height:3px;left:0;right:0}
+.meca-new-top .topright{flex:none;display:flex;gap:12px;margin-left:auto}
+.meca-new-top .topright a{padding:11px 16px;font-size:clamp(11px,1vw,14px);white-space:nowrap;display:inline-flex;gap:8px;align-items:center;min-height:47px}
+.meca-new-top .meca-login{border:1px solid #eee;background:#061017;color:#fff}
+.meca-new-top .meca-register{background:linear-gradient(180deg,#ff900e,#ef6900);color:#fff;border:1px solid #ff932d}
+.meca-showcase{min-height:calc(100svh - 88px);position:relative;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;isolation:isolate;background:#071017 url('/decor-mecanique.svg') center center / cover no-repeat;border-bottom:1px solid #313940}
+.meca-showcase:before{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(ellipse 55% 80% at 50% 46%,#07121c 0%,#07121bea 49%,#06101618 90%),linear-gradient(90deg,#09111722 0%,transparent 20%,transparent 80%,#09111722 100%)}
+.meca-showcase-photo{position:absolute;inset:0;z-index:-2;background:linear-gradient(90deg,#0000 0%,#050b11e8 32%,#050b11e8 68%,#0000 100%),url('/decor-mecanique.svg') center top/cover no-repeat}
+.meca-showcase-interior{width:min(1060px,calc(100% - 38px));margin:auto;display:flex;align-items:center;flex-direction:column;text-align:center;justify-content:center;padding:22px 0 34px}
+.meca-showcase-logo{display:block;width:min(450px,43vw);height:clamp(108px,16vh,170px);object-fit:contain;filter:drop-shadow(0 5px 15px #000b);margin:0 auto 12px}
+.meca-showcase h1{color:#fff;font-size:clamp(30px,3.45vw,62px);font-style:italic;font-weight:900;letter-spacing:-1.5px;line-height:1.06;margin:4px 0 0;white-space:nowrap;text-shadow:0 3px 12px #000}
+.meca-showcase-sub{font-size:clamp(23px,2.7vw,46px);font-weight:850;color:#ff8c11;font-style:italic;margin:7px 0 30px;letter-spacing:-1px;text-shadow:0 3px 12px #000}
+.meca-showcase-benefits{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch;gap:0;width:min(900px,100%);margin:0 auto 31px}
+.meca-showcase-benefit{display:flex;align-items:center;flex-direction:column;gap:9px;padding:0 26px;min-height:140px;position:relative}
+.meca-showcase-benefit+.meca-showcase-benefit:before{content:"";position:absolute;left:0;top:31px;bottom:14px;width:1px;background:#8e959b80}
+.meca-showcase-benefit svg{color:#fa8319;stroke-width:2.1;filter:drop-shadow(0 0 8px #f1772233)}
+.meca-showcase-benefit strong{font-size:clamp(16px,1.25vw,21px);font-weight:750}
+.meca-showcase-benefit span{color:#e5e9ed;font-size:clamp(12px,1vw,16px);line-height:1.35}
+.meca-showcase-actions{display:flex;flex-direction:column;gap:14px;align-items:center;width:100%}
+.meca-showcase-actions a{display:inline-flex;justify-content:center;align-items:center;gap:15px;border-radius:12px;font-size:clamp(16px,1.45vw,23px);font-weight:750;min-height:60px;padding:13px 25px;text-decoration:none;transition:transform .15s ease,filter .15s ease}
+.meca-showcase-actions a:hover{transform:translateY(-2px);filter:brightness(1.12)}
+.meca-showcase-primary{width:min(570px,100%);background:linear-gradient(160deg,#ff9715,#ef6b00);border:1px solid #fca349;color:#fff;box-shadow:0 5px 18px #0007}
+.meca-showcase-secondary{width:min(420px,100%);background:#071018df;border:1px solid #eee;color:#fff}
+.meca-showcase-trust{width:100%;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:center;background:#08151fdf;border-top:1px solid #405262;min-height:78px;padding:14px clamp(10px,4vw,60px)}
+.meca-showcase-trust>div{display:flex;justify-content:center;align-items:center;gap:13px;color:#f3f5f7;font-size:clamp(11px,1vw,16px);font-weight:550;border-right:1px solid #67758075;padding:0 13px}
+.meca-showcase-trust>div:last-child{border:0}
+.meca-showcase-trust svg{flex-shrink:0;stroke-width:1.7}
+.meca-search-section{background:linear-gradient(135deg,#0b1219,#171511,#090b0e)!important;display:flex!important;align-items:center;justify-content:center;min-height:0!important;padding:55px 20px!important;grid-template-columns:1fr!important;scroll-margin-top:90px}
+.meca-search-section .hero-left,.meca-search-section .meca-car-art{display:none!important}
+.meca-search-section .formhero{margin:0 auto!important;width:min(680px,100%)!important;max-width:680px!important}
+@media(max-width:1300px){
+.meca-new-top{gap:12px;padding:0 16px}
+.meca-new-top .brand{width:185px;min-width:150px}
+.meca-new-top .nav{gap:14px}
+.meca-new-top .nav a{font-size:12px}
+.meca-new-top .topright a{font-size:12px;padding:9px}
+}
+@media(max-width:960px){
+.meca-new-top{height:auto;min-height:70px;flex-wrap:wrap;justify-content:space-between;padding:7px 15px}
+.meca-new-top .brand{height:52px;width:185px}
+.meca-new-top .brand img{height:52px}
+.meca-new-top .topright{order:2}
+.meca-new-top .nav{order:3;flex-basis:100%;overflow-x:auto;justify-content:flex-start;gap:20px;padding-bottom:1px}
+.meca-new-top .nav a{padding:12px 0}
+.meca-new-top .nav a.current:after{bottom:3px}
+.meca-showcase{min-height:calc(100svh - 115px)}
+.meca-showcase h1{font-size:clamp(24px,4.3vw,45px)}
+.meca-showcase-logo{width:min(360px,75vw)}
+}
+@media(max-width:600px){
+.meca-new-top .brand{width:135px}
+.meca-new-top .topright{gap:5px}
+.meca-new-top .topright a{padding:7px 8px;min-height:36px;font-size:11px}
+.meca-new-top .topright a svg{display:none}
+.meca-new-top .nav{gap:17px}
+.meca-new-top .nav a{font-size:11px;gap:5px}
+.meca-new-top .nav svg{width:17px;height:17px}
+.meca-showcase{min-height:calc(100svh - 110px);background-position:center top}
+.meca-showcase-interior{padding:30px 0;width:calc(100% - 24px)}
+.meca-showcase-logo{height:100px;margin-bottom:0}
+.meca-showcase h1{font-size:clamp(18px,5.4vw,32px);letter-spacing:-.5px}
+.meca-showcase-sub{font-size:clamp(19px,5vw,29px);margin:12px 0 25px}
+.meca-showcase-benefits{gap:5px;margin-bottom:25px}
+.meca-showcase-benefit{padding:0 5px;min-height:110px;gap:7px}
+.meca-showcase-benefit svg{width:30px;height:30px}
+.meca-showcase-benefit strong{font-size:12px}
+.meca-showcase-benefit span{font-size:10px}
+.meca-showcase-benefit+.meca-showcase-benefit:before{top:22px;bottom:8px}
+.meca-showcase-actions a{min-height:49px;font-size:15px;padding:10px}
+.meca-showcase-actions{gap:10px}
+.meca-showcase-trust{grid-template-columns:1fr 1fr;gap:14px;min-height:90px;padding:14px 8px}
+.meca-showcase-trust>div{font-size:10px;padding:0 5px;gap:6px}
+.meca-showcase-trust svg{width:20px;height:20px}
+.meca-showcase-trust>div:nth-child(2){border:0}
+.meca-search-section{padding:28px 10px!important}
+}
