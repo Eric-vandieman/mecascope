@@ -24,12 +24,27 @@ async function refresh(){
  const response=await fetch(collab,{credentials:'same-origin',cache:'no-store'});
  let data;try{data=await response.json()}catch{data={}};
  if(!response.ok)throw Error(data.message||'Service indisponible');
- current=data;applyAccess();drawTeam();drawSearches();drawStats();return data
+ current=data;applyAccess();drawTeam();drawSearches();drawStats();await refreshCreditBalance().catch(()=>{});return data
+}
+async function refreshCreditBalance(){
+ const response=await fetch('/api/pro-collaboration?view=credits',{credentials:'same-origin',cache:'no-store'});
+ if(!response.ok)throw Error('Solde indisponible');
+ const data=await response.json();
+ if(!Number.isSafeInteger(data.credits)||data.credits<0)throw Error('Solde incorrect');
+ const amount=String(data.credits);
+ for(const id of ['workspace-credit-balance','workspace-credit-overview']){
+  const el=document.getElementById(id);
+  if(el)el.textContent=amount;
+ }
+ const info=document.getElementById('workspace-credit-permission');
+ if(info)info.textContent=current.permissions?.spend===true
+  ? 'Votre compte est autorisé à utiliser les crédits, dès que les débits seront raccordés.'
+  : 'Vous pouvez consulter ce solde, mais vous n’êtes pas autorisé à engager les crédits du garage.';
 }
 function applyAccess(){
  const role=current.role;
  const p=current.permissions||{};
- const tabMap={equipe:role==='owner'||role==='manager',recherches:p.view===true,nouvelle:p.create===true,statistiques:role==='owner'||role==='manager',credits:role==='owner'||p.spend===true,etablissements:true};
+ const tabMap={equipe:role==='owner'||role==='manager',recherches:p.view===true,nouvelle:p.create===true,statistiques:role==='owner'||role==='manager',credits:true,etablissements:true};
  for(const b of tabs){const visible=tabMap[b.dataset.workspaceTab]!==false;b.hidden=!visible;}
  document.querySelectorAll('[data-workspace-go]').forEach(b=>{
   if(b.dataset.workspaceGo==='nouvelle')b.hidden=p.create!==true;
