@@ -29,7 +29,17 @@ if(privateBox){
     if(!r.ok){location.replace('/connexion.html?retour=espace');return}
     const v=await r.json();
     document.getElementById('meca-guest').hidden=true;privateBox.hidden=false;
-    privateBox.querySelector('.meca-auth-welcome').textContent='Connecté : '+(v.email||'compte particulier');
+    privateBox.querySelector('.meca-auth-welcome').textContent='Bienvenue '+([v.prenom,v.nom].filter(Boolean).join(' ')||'dans votre espace Mécascope')+' !';
+    const details=document.getElementById('meca-personal-details');
+    if(details){
+      details.replaceChildren();
+      for(const [key,value] of [['Nom', [v.prenom,v.nom].filter(Boolean).join(' ')],['E-mail',v.email],['Téléphone',v.telephone]]){
+        if(!value)continue;
+        const dt=document.createElement('dt'),dd=document.createElement('dd');
+        dt.textContent=key;dd.textContent=value;details.append(dt,dd);
+      }
+    }
+    window.dispatchEvent(new Event('meca-auth-updated'));
   }).catch(()=>{setStatus('Impossible de vérifier la connexion pour le moment.')});
   privateBox.querySelector('.meca-logout').addEventListener('click',async()=>{
     await fetch(API,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})}).catch(()=>{});
