@@ -20,6 +20,16 @@ export default async function handler(req,res){
   const base=url.replace(/\/$/,'')+'/auth/v1/';
   const authRequest=base+'signup?redirect_to='+encodeURIComponent(confirmationUrl);
   const headers={apikey:key,'Content-Type':'application/json'};
+  async function membership(accessToken){
+    if(!accessToken)return null;
+    try{
+      const r=await fetch(url+'/rest/v1/rpc/meca_tableau_bord',{method:'POST',headers:{...headers,Authorization:'Bearer '+accessToken},body:'{}',signal:AbortSignal.timeout(8000)});
+      if(!r.ok)return null;
+      const data=await r.json();
+      return data?.garage?data:null;
+    }catch{return null}
+  }
+  const memberProfile=(user,data)=>({...profile(user),etablissement:data.garage.nom,siret:data.garage.siret,adresse:data.garage.adresse,code_postal:data.garage.code_postal,ville:data.garage.ville,role:data.role});
   try{
     if(req.method==='GET'){
       const token=getCookie(req.headers.cookie);
@@ -28,11 +38,29 @@ export default async function handler(req,res){
       if(!r.ok){res.setHeader('Set-Cookie',cookie('',0));return res.status(401).json({message:'Session expirée.'})}
       const user=await r.json();
       if(user.user_metadata?.profil==='particulier')return res.status(403).json({message:'Ce compte est un compte particulier.'});
+      const member=await membership(token);
+      if(member)return res.status(200).json({authenticated:true,profile:memberProfile(user,member)});
       if(!ready(user))return res.status(200).json({authenticated:false,needsProfile:true,profile:profile(user),message:'Complétez vos coordonnées professionnelles pour terminer votre accès.'});
       return res.status(200).json({authenticated:true,profile:profile(user)});
     }
     const b=req.body||{};
     if(b.action==='logout'){res.setHeader('Set-Cookie',cookie('',0));return res.status(200).json({message:'Déconnecté.'})}
+    if(b.action==='invite-signup'){
+      const email=clean(b.email,254).toLowerCase();
+      const password=b.password;
+      const contact=clean(b.contact,120),telephone=clean(b.telephone,22);
+      if(!email||!email.includes('@')||typeof password!=='string'||password.length<8||password.length>256||!contact||!phoneOK(telephone)||b.legalAccepted!==true||b.legalVersion!=='2026-11-24')
+        return res.status(400).json({message:'Vérifiez votre e-mail, votre nom, votre téléphone et les conditions.'});
+      const payload={email,password,data:{contact,telephone,profil:'professionnel',invite_pending:true,mecascope_legal_version:'2026-11-24',mecascope_legal_accepted_at:new Date().toISOString()}};
+      const r=await fetch(authRequest,{method:'POST',headers,body:JSON.stringify(payload),signal:AbortSignal.timeout(12000)});
+      if(!r.ok)return res.status(400).json({message:'Création impossible. Si votre compte existe, connectez-vous avec ce compte.'});
+      const result=await r.json();
+      if(result.access_token){
+        res.setHeader('Set-Cookie',cookie(result.access_token,Math.min(3600,Number(result.expires_in)||3600)));
+        return res.status(200).json({authenticated:true,message:'Compte créé : vous pouvez accepter votre invitation.'});
+      }
+      return res.status(200).json({authenticated:false,message:'Confirmez votre adresse e-mail, puis revenez sur le lien d’invitation pour rejoindre l’équipe.'});
+    }
     if(b.action==='complete'){
       const token=getCookie(req.headers.cookie);
       if(!token)return res.status(401).json({message:'Reconnectez-vous pour compléter votre profil.'});
@@ -78,7 +106,9 @@ export default async function handler(req,res){
     if(!ur.ok)return res.status(401).json({message:'Session non vérifiée.'});
     const user=await ur.json();
     if(user.user_metadata?.profil==='particulier')return res.status(403).json({message:'Ce compte est un compte particulier. Utilisez la connexion particuliers.'});
+    const member=await membership(data.access_token);
     res.setHeader('Set-Cookie',cookie(data.access_token,Math.min(3600,Number(data.expires_in)||3600)));
+    if(member)return res.status(200).json({authenticated:true,profile:memberProfile(user,member),message:'Connexion réussie.'});
     if(!ready(user))return res.status(200).json({authenticated:false,needsProfile:true,profile:profile(user),message:'Connexion réussie. Complétez votre profil professionnel afin d’accéder à votre espace.'});
     return res.status(200).json({authenticated:true,profile:profile(user),message:'Connexion réussie.'});
   }catch{return res.status(503).json({message:'Service temporairement indisponible. Réessayez.'})}
