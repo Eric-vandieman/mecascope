@@ -662,3 +662,40 @@ body:has(.meca-pricing-decor){background:transparent}
    pointer-events:none!important;
  }
 }
+
+
+/* Espace pro : même fond que Tarifs, conservé pendant le défilement. */
+body.meca-pro-body{
+  background:#071017 url('/fond-tarifs-client.webp') center center / cover fixed no-repeat!important;
+  min-height:100vh;
+}
+.meca-pro-body .meca-pro-page{
+  max-width:840px;
+  min-height:calc(100vh - 240px);
+  margin:0 auto;
+  padding:clamp(34px,5vw,66px) 22px 38px;
+  text-align:center;
+}
+.meca-pro-page h1{font-size:clamp(26px,3vw,42px);line-height:1.2;text-shadow:0 3px 12px #000}
+.meca-pro-page .meca-pro-intro{font-size:17px;color:#f0f2f4;text-shadow:0 2px 10px #000}
+.meca-pro-page .meca-account-cards{grid-template-columns:minmax(0,1fr);max-width:650px;margin:30px auto 22px}
+.meca-pro-page .meca-account-cards>article{
+  padding:clamp(22px,3vw,40px);text-align:center;
+  background:rgba(8,14,20,.83);
+  border:1px solid #ce8847;
+  box-shadow:0 16px 42px #0008;
+  backdrop-filter:blur(4px);
+}
+.meca-pro-page .meca-account-cards h2{font-size:clamp(22px,2.4vw,30px);margin-top:0}
+.meca-pro-page .meca-account-cards .btn{font-size:16px;display:inline-flex;justify-content:center;align-items:center;min-height:50px}
+.meca-pro-page .meca-pro-helper{font-size:13px;color:#cad2d8;margin-top:22px}
+.meca-pro-page .meca-return-link{display:inline-block;color:#ffb65e;margin-bottom:15px}
+.meca-pro-body>footer{background:rgba(5,10,16,.72);border-radius:12px}
+@media(max-width:760px){
+  body.meca-pro-body{background-attachment:scroll!important}
+  body.meca-pro-body::before{
+    content:"";position:fixed;inset:0;z-index:-1;
+    background:url('/fond-tarifs-client.webp') center center / cover no-repeat;
+    pointer-events:none;
+  }
+}
