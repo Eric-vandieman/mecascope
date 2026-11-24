@@ -31,6 +31,21 @@
    title.textContent='Adresse confirmée — connexion à terminer';
    msg.textContent=error.message||'Revenez sur votre invitation ou connectez-vous.';
   }
+ }else if(!pro&&hash.get('access_token')){
+  title.textContent='Adresse confirmée';
+  msg.textContent='Ouverture de votre espace personnel Mécascope…';
+  const token=hash.get('access_token'),expires=Number(hash.get('expires_in'))||3600;
+  history.replaceState(null,'',location.pathname+location.search);
+  try{
+   const response=await fetch('/api/particulier-auth',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'resume-confirmed',access_token:token,expires_in:expires})});
+   const data=await response.json();
+   if(!response.ok)throw Error(data.message||'Impossible de valider la session.');
+   msg.textContent='Votre compte particulier est confirmé. Redirection vers votre tableau de bord…';
+   location.replace('/mon-espace.html');return;
+  }catch(error){
+   title.textContent='Confirmation reçue — connexion à terminer';
+   msg.textContent=error.message||'Votre adresse a été confirmée, mais vous devez ouvrir votre compte.';
+  }
  }else if(hash.get('access_token')||query.has('code')){
   title.textContent='Votre adresse e-mail a été confirmée';
   msg.textContent='Votre adresse est validée. Vous pouvez maintenant accéder à Mécascope.';
