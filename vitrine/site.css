@@ -594,3 +594,26 @@ body:has(.meca-home-decor){background:transparent}
 @media (max-width:600px){
  .meca-showcase .meca-showcase-logo{width:min(290px,88vw)!important;height:170px!important;margin:0 auto -4px!important}
 }
+
+
+/* Emblème officiel + MécaScope métallique intégré dans une seule image horizontale. */
+.meca-new-top .meca-brand-horizontal{
+ display:inline-flex;align-items:center;justify-content:flex-start;overflow:visible;
+ width:clamp(190px,18vw,285px);height:76px;flex-shrink:0;padding:0;border:0;
+}
+.meca-new-top .meca-brand-full-logo{
+ display:block;width:100%!important;height:auto!important;max-width:100%!important;
+ max-height:76px!important;object-fit:contain!important;object-position:left center!important;
+ filter:none!important;
+}
+@media(max-width:1300px){
+ .meca-new-top .meca-brand-horizontal{width:200px;height:62px}
+ .meca-new-top .meca-brand-full-logo{max-height:62px!important}
+}
+@media(max-width:600px){
+ .meca-new-top .meca-brand-horizontal{width:139px;height:44px}
+ .meca-new-top .meca-brand-full-logo{max-height:44px!important}
+}
+/* Le nouveau titre plus long s'adapte en préservant la composition. */
+.meca-showcase h1{font-size:clamp(26px,3.1vw,56px);white-space:nowrap}
+@media(max-width:600px){.meca-showcase h1{font-size:clamp(17px,4.95vw,30px)}}
