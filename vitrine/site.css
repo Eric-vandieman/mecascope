@@ -285,3 +285,25 @@ html,body{margin:0;padding:0;max-width:none;width:100%;display:block}.shell,.adm
 @media(min-width:1025px){.admin-mode .dash{display:grid;grid-template-columns:222px minmax(0,1fr)}.admin-mode .metrics.six,.admin-mode .metrics.pro-dashboard-metrics{grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr))}}
 
 html{scroll-behavior:smooth}#demande{scroll-margin-top:90px}.btn{text-decoration:none}
+/* Correctifs vitrine — navigation et abonnements, novembre 2026 */
+.meca-top .nav{gap:clamp(10px,1.3vw,22px);justify-content:center;flex:1 1 auto}
+.meca-top .nav a,.v15-top .nav a{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:clamp(14px,1.08vw,17px);font-weight:750;line-height:1.2;padding:20px 2px;white-space:nowrap}
+.meca-top .nav svg,.meca-top .demo-admin svg{width:18px;height:18px;flex-shrink:0;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.meca-top .demo-admin{font-size:clamp(12px,1vw,15px);opacity:1;display:inline-flex;align-items:center;gap:8px;padding:10px 12px;white-space:nowrap}
+.meca-top .brand{width:clamp(160px,19vw,275px);padding-right:12px}
+.meca-top{gap:clamp(10px,1.4vw,23px);min-height:82px;height:auto}
+.meca-top .top-cta{font-size:clamp(12px,.95vw,14px);padding:11px 13px}
+.meca-request-submit{white-space:normal!important;min-width:0;max-width:100%;display:flex;flex-wrap:wrap;gap:9px;line-height:1.35;overflow-wrap:anywhere;text-align:center;padding:12px 14px}
+.meca-request-submit span{min-width:0}
+.meca-request-submit svg{width:19px;height:19px;flex:none;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linejoin:round}
+.meca-pro-plans .price{display:flex;flex-direction:column;align-items:stretch}
+.meca-pro-plans .price p{flex:1}
+.meca-pro-plans .meca-plan-cta{width:100%;white-space:normal;text-align:center;line-height:1.3;font-size:clamp(13px,1vw,16px);padding:12px 10px;margin-top:16px}
+.meca-account-page,.meca-checkout-page{max-width:900px;margin:50px auto;padding:20px}
+.meca-account-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:25px}
+.meca-account-cards>article{background:#17191c;border:1px solid #73512a;border-radius:16px;padding:24px}
+.meca-account-cards .btn{white-space:normal;margin-top:14px}
+.meca-plan-selected{color:#ffc277;font-size:24px;font-weight:800}
+@media(max-width:1250px){.meca-top{flex-wrap:wrap}.meca-top .nav{order:3;flex-basis:100%;justify-content:center;padding:0 0 4px}.meca-top .nav a,.v15-top .nav a{padding:12px 8px;font-size:15px}.meca-top .topright{margin-left:auto}}
+@media(max-width:720px){.meca-top .demo-admin{display:inline-flex!important;font-size:12px;padding:8px 10px}.meca-top .nav{overflow-x:auto;justify-content:flex-start;gap:14px}.meca-top .nav a,.v15-top .nav a{font-size:13px;padding:10px 6px}.meca-top .nav svg{width:16px;height:16px}.meca-account-cards{grid-template-columns:1fr}.meca-top .brand{width:150px}.meca-request-submit{font-size:14px}}
+@media(max-width:400px){.meca-top .topright{flex-wrap:wrap;justify-content:flex-end}.meca-top .top-cta,.meca-top .demo-admin{font-size:11px}}
