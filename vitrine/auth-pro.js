@@ -56,7 +56,7 @@ async function send(form,mode){
     const res=await fetch(endpoint,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     const data=await res.json();
     if(res.ok&&data.authenticated){render(data.profile||{email:fields.email});return}
-    if(res.ok&&data.needsProfile){showCompletion(data.profile||{});return}
+    if(res.ok&&data.needsProfile){const pending=sessionStorage.getItem('meca-invite');if(pending){location.replace('/rejoindre-equipe.html?code='+encodeURIComponent(pending));return}showCompletion(data.profile||{});return}
     if(res.ok&&mode==='signup'){signup.reset();setTab('login');showStatus(data.message,true);return}
     showStatus(data.message||'Impossible de terminer la demande.',res.ok);
   }catch{showStatus('Service momentanément inaccessible. Réessayez.')}
@@ -82,5 +82,5 @@ if(location.hash==='#creer-un-compte')setTab('signup');
 fetch(endpoint,{credentials:'same-origin',cache:'no-store'})
   .then(async r=>{if(!r.ok)return;const data=await r.json();
     if(data.authenticated)render(data.profile||{});
-    else if(data.needsProfile)showCompletion(data.profile||{});
+    else if(data.needsProfile){const pending=sessionStorage.getItem('meca-invite');if(pending){location.replace('/rejoindre-equipe.html?code='+encodeURIComponent(pending));return}showCompletion(data.profile||{});}
   }).catch(()=>{});
