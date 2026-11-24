@@ -35,10 +35,10 @@ export default async function handler(req,res){
     if(!email||!email.includes('@')||typeof password!=='string'||password.length<8||password.length>256)
       return res.status(400).json({message:'Vérifiez votre adresse e-mail et votre mot de passe (8 caractères minimum).'});
     if(action==='signup'){
-      const prenom=norm(req.body.prenom,80),nom=norm(req.body.nom,80);
-      if(!prenom||!nom||req.body.legalAccepted!==true||req.body.legalVersion!=='2026-11-24')
+      const prenom=norm(req.body.prenom,80),nom=norm(req.body.nom,80),telephone=norm(req.body.telephone,22);
+      if(!prenom||!nom||!telephone||!/^[+0-9 ()-]{8,22}$/.test(telephone)||telephone.replace(/\D/g,'').length<9||req.body.legalAccepted!==true||req.body.legalVersion!=='2026-11-24')
         return res.status(400).json({message:'Complétez vos informations et acceptez les conditions applicables.'});
-      const payload={email,password,data:{prenom,nom,profil:'particulier',mecascope_legal_version:'2026-11-24',mecascope_legal_accepted_at:new Date().toISOString(),mecascope_marketing_opt_in:req.body.marketingOptIn===true}};
+      const payload={email,password,data:{prenom,nom,telephone,profil:'particulier',mecascope_legal_version:'2026-11-24',mecascope_legal_accepted_at:new Date().toISOString(),mecascope_marketing_opt_in:req.body.marketingOptIn===true}};
       const response=await fetch(base+'signup',{method:'POST',headers,body:JSON.stringify(payload),signal:AbortSignal.timeout(12000)});
       if(!response.ok)return res.status(400).json({message:'Inscription impossible avec ces informations. Vérifiez votre adresse ou réessayez.'});
       const result=await response.json();
