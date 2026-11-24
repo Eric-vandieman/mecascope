@@ -58,6 +58,20 @@ export default async function handler(req,res){
     }
     const b=req.body||{};
     if(b.action==='logout'){res.setHeader('Set-Cookie',cookie('',0));return res.status(200).json({message:'Déconnecté.'})}
+    if(b.action==='resume-confirmed'){
+      // Reprise sécurisée après le lien de confirmation Supabase : le jeton est validé côté serveur.
+      const accessToken=typeof b.access_token==='string'&&b.access_token.length<4096?b.access_token:'';
+      if(!accessToken)return res.status(400).json({message:'Lien de confirmation incomplet.'});
+      const verified=await fetch(base+'user',{headers:{...headers,Authorization:'Bearer '+accessToken},signal:AbortSignal.timeout(10000)});
+      if(!verified.ok)return res.status(401).json({message:'Le lien de confirmation a expiré ou n’a pas été validé.'});
+      const account=await verified.json();
+      if(account.user_metadata?.profil!=='professionnel')return res.status(403).json({message:'Ce lien n’est pas lié à un compte professionnel.'});
+      const member=await membership(accessToken)||await acceptPendingInvite(accessToken,account);
+      res.setHeader('Set-Cookie',cookie(accessToken,Math.min(Number(b.expires_in)||3600,3600)));
+      if(member)return res.status(200).json({authenticated:true,joined:true,profile:memberProfile(account,member)});
+      return res.status(200).json({authenticated:false,needsProfile:!ready(account),message:'Adresse confirmée. Vous pouvez poursuivre dans votre espace professionnel.'});
+    }
+
     if(b.action==='invite-signup'){
       const email=clean(b.email,254).toLowerCase();
       const password=b.password;
