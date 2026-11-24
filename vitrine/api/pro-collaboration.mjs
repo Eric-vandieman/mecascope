@@ -63,6 +63,11 @@ export default async function handler(req,res){
    }
    return res.status(200).json({id,link,email,role,emailSent,emailError,permissions:perms,message:emailSent?'Invitation envoyée par Mécascope.':emailError||'Invitation générée. Valable 7 jours, utilisable une seule fois.'});
   }
+  if(action==='invite-accepted'){
+   const code=req.body.code;
+   if(typeof code!=='string'||code.length<30||code.length>180)return res.status(400).json({message:'Invitation invalide'});
+   return res.status(200).json({accepted:await rpc('meca_invitation_est_acceptee',{p_code:code})});
+  }
   if(action==='accept'){
    const code=req.body.code;
    if(typeof code!=='string'||code.length<30||code.length>180)return res.status(400).json({message:'Code invalide'});
