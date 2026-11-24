@@ -24,7 +24,7 @@ async function refresh(){
  const response=await fetch(collab,{credentials:'same-origin',cache:'no-store'});
  let data;try{data=await response.json()}catch{data={}};
  if(!response.ok)throw Error(data.message||'Service indisponible');
- current=data;drawTeam();drawSearches();return data
+ current=data;drawTeam();drawSearches();drawStats();return data
 }
 function drawTeam(){
  const team=document.getElementById('team-members'),pending=document.getElementById('team-pending');
@@ -65,6 +65,15 @@ function drawTeam(){
   pending.append(card)
  }
  if(!pending.childElementCount)pending.append(node('p','Aucune invitation en attente.'));
+}
+function drawStats(){
+ const place=document.getElementById('workspace-stats');if(!place)return;
+ place.replaceChildren();
+ const searches=current.recherches||[];
+ const cards=[['Total des recherches',searches.length],['Nouvelles',searches.filter(r=>r.statut==='nouvelle').length],['En cours',searches.filter(r=>r.statut==='en_cours').length],['En attente',searches.filter(r=>r.statut==='en_attente').length],['Terminées',searches.filter(r=>r.statut==='terminee').length],['Collaborateurs',(current.membres||[]).length]];
+ for(const [label,value] of cards){
+  const card=node('div',undefined,'meca-pro-stat-card');card.append(node('strong',String(value)),node('span',label));place.append(card);
+ }
 }
 function drawSearches(){
  const el=document.getElementById('team-searches');if(!el)return;el.replaceChildren();
