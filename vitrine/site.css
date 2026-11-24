@@ -617,3 +617,48 @@ body:has(.meca-home-decor){background:transparent}
 /* Le nouveau titre plus long s'adapte en préservant la composition. */
 .meca-showcase h1{font-size:clamp(26px,3.1vw,56px);white-space:nowrap}
 @media(max-width:600px){.meca-showcase h1{font-size:clamp(17px,4.95vw,30px)}}
+
+
+/* Tarifs : photographie fournie par le client, unique et fixe sur toute la page. */
+html:has(.meca-pricing-decor){background:#071017}
+body:has(.meca-pricing-decor){background:transparent}
+.shell.meca-pricing-decor{
+ background-color:#071017!important;
+ background-image:url('/fond-tarifs-client.webp')!important;
+ background-position:center center!important;
+ background-size:cover!important;
+ background-attachment:fixed!important;
+ background-repeat:no-repeat!important;
+ isolation:isolate;
+}
+.shell.meca-pricing-decor::before{
+ content:none!important;
+ background:none!important;
+}
+.shell.meca-pricing-decor > section,
+.shell.meca-pricing-decor > main,
+.shell.meca-pricing-decor .home-section,
+.shell.meca-pricing-decor .section{
+ background:rgba(5,10,15,.16)!important;
+ background-image:none!important;
+}
+.shell.meca-pricing-decor footer{
+ background:rgba(5,10,15,.55)!important;
+ background-image:none!important;
+}
+@media(max-width:760px){
+ .shell.meca-pricing-decor{
+   background-image:none!important;
+   background-color:transparent!important;
+   position:relative;
+ }
+ .shell.meca-pricing-decor::before{
+   content:""!important;
+   display:block!important;
+   position:fixed!important;
+   inset:0!important;
+   background:url('/fond-tarifs-client.webp') center center / cover no-repeat!important;
+   z-index:-1!important;
+   pointer-events:none!important;
+ }
+}
