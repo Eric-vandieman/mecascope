@@ -729,3 +729,37 @@ body.meca-auth-body{background:#071017 url('/fond-tarifs-client.webp') center ce
 .meca-auth-footer a{color:#f5c58b}
 .meca-logout{display:inline-flex;justify-content:center;width:100%;margin-top:12px}
 @media(max-width:600px){.meca-auth-page{padding:24px 12px 42px}.meca-auth-two{grid-template-columns:1fr;gap:3px}body.meca-auth-body{background-attachment:scroll}}
+
+
+/* Espace Pro : connexion et inscription dans l'habillage du site public. */
+.meca-pro-body .meca-pro-page{max-width:900px}
+.meca-pro-auth-card{
+ max-width:750px;margin:26px auto;padding:clamp(20px,3.2vw,36px);
+ border:1px solid #c18b4f;border-radius:18px;background:rgba(8,14,21,.91);
+ box-shadow:0 18px 56px rgba(0,0,0,.65);backdrop-filter:blur(6px);text-align:left;
+}
+.meca-pro-switch{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:24px}
+.meca-pro-tab{border:1px solid #a27547;border-radius:9px;background:#15202b;color:#f8f8f8;font-weight:750;font-size:clamp(12px,1.2vw,16px);padding:14px 8px;cursor:pointer}
+.meca-pro-tab.is-active{background:linear-gradient(145deg,#f59b30,#e56e08);border-color:#ffbd70;color:#111}
+.meca-pro-form{display:flex;flex-direction:column;gap:10px}
+.meca-pro-form h2{font-size:clamp(21px,2.4vw,29px);text-align:center;margin:0 0 12px}
+.meca-pro-form label{display:block;font-size:13px;font-weight:700;color:#f6f6f7;margin:8px 0 0}
+.meca-pro-form input:not([type=checkbox]){box-sizing:border-box;display:block;width:100%;min-height:46px;background:#111a24;border:1px solid #6a727d;border-radius:8px;padding:12px;color:#fff}
+.meca-pro-form input:focus-visible{outline:2px solid #ffad43}
+.meca-pro-two{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.meca-pro-two>div{display:flex;flex-direction:column;gap:10px}
+.meca-pro-form .meca-pro-check{display:flex;align-items:flex-start;gap:9px;line-height:1.5;font-weight:500;margin:10px 0 0}
+.meca-pro-form .meca-pro-check input{width:18px;height:18px;flex-shrink:0;accent-color:#f39624}
+.meca-pro-form .meca-pro-check a{color:#ffbc67;text-decoration:underline}
+.meca-pro-form button[type=submit]{margin-top:18px;min-height:50px}
+.meca-pro-form button:disabled{opacity:.6;cursor:wait}
+#meca-pro-status{min-height:22px;text-align:center;color:#ffb1a0;font-weight:700}
+#meca-pro-status[data-ok=true]{color:#a6e8b5}
+#meca-pro-connected{text-align:center}
+#meca-pro-profile{display:grid;grid-template-columns:minmax(100px,1fr) minmax(0,2fr);gap:10px 16px;text-align:left;line-height:1.4}
+#meca-pro-profile dt{color:#ffc284;font-weight:700}
+#meca-pro-profile dd{margin:0;overflow-wrap:anywhere}
+.meca-pro-dashboard-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:12px;margin:26px 0}
+.meca-pro-dashboard-actions .btn{padding:13px 17px}
+#meca-pro-logout{margin-top:20px}
+@media(max-width:600px){.meca-pro-auth-card{padding:16px 12px}.meca-pro-two{grid-template-columns:1fr;gap:4px}.meca-pro-tab{padding:12px 5px}.meca-pro-dashboard-actions{flex-direction:column}}
