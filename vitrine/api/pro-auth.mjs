@@ -9,7 +9,6 @@ const ready=u=>u.user_metadata?.profil==='professionnel' && /^\d{14}$/.test(prof
 const fieldsFrom=b=>({siret:clean(b.siret,14),etablissement:clean(b.etablissement,160),adresse:clean(b.adresse,220),code_postal:clean(b.code_postal,16),ville:clean(b.ville,100),contact:clean(b.contact,120),telephone:clean(b.telephone,22)});
 const validFields=(fields,b)=>/^\d{14}$/.test(fields.siret)&&phoneOK(fields.telephone)&&Object.values(fields).every(Boolean)&&b.legalAccepted===true&&b.legalVersion==='2026-11-24';
 const confirmationUrl='https://xn--mcascope-b1a.fr/confirmation.html?espace=pro';
-const authRequest=base+'signup?redirect_to='+encodeURIComponent(confirmationUrl);
 export default async function handler(req,res){
   res.setHeader('Cache-Control','no-store');
   if(!['GET','POST'].includes(req.method))return res.status(405).json({message:'Méthode non autorisée.'});
@@ -19,6 +18,7 @@ export default async function handler(req,res){
   const url=process.env.SUPABASE_URL,key=process.env.SUPABASE_PUBLISHABLE_KEY;
   if(!url||!key)return res.status(503).json({message:'Le service de connexion est indisponible pour le moment.'});
   const base=url.replace(/\/$/,'')+'/auth/v1/';
+  const authRequest=base+'signup?redirect_to='+encodeURIComponent(confirmationUrl);
   const headers={apikey:key,'Content-Type':'application/json'};
   try{
     if(req.method==='GET'){
