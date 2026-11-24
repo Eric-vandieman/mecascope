@@ -25,7 +25,9 @@ export default async function handler(req,res){
       const result=await fetch(base+'user',{headers:{...headers,Authorization:'Bearer '+token},signal:AbortSignal.timeout(10000)});
       if(!result.ok){res.setHeader('Set-Cookie',cookie('',0));return res.status(401).json({message:'Session expirée.'})}
       const user=await result.json();
-      return res.status(200).json({email:user.email||null});
+      const m=user.user_metadata||{};
+      if(m.profil!=='particulier')return res.status(403).json({message:'Ce compte ne correspond pas à un espace particulier.'});
+      return res.status(200).json({email:user.email||null,prenom:m.prenom||'',nom:m.nom||'',telephone:m.telephone||'',authenticated:true});
     }
     const {action}=req.body||{};
     if(action==='logout'){res.setHeader('Set-Cookie',cookie('',0));return res.status(200).json({message:'Déconnexion effectuée.'})}
@@ -49,6 +51,10 @@ export default async function handler(req,res){
     if(!response.ok)return res.status(401).json({message:'Identifiants incorrects ou adresse e-mail non confirmée.'});
     const result=await response.json();
     if(!result.access_token)return res.status(401).json({message:'Connexion impossible.'});
+    const ur=await fetch(base+'user',{headers:{...headers,Authorization:'Bearer '+result.access_token},signal:AbortSignal.timeout(10000)});
+    if(!ur.ok)return res.status(401).json({message:'Session non vérifiée.'});
+    const user=await ur.json();
+    if(user.user_metadata?.profil!=='particulier')return res.status(403).json({message:'Ce compte est professionnel. Utilisez l’Espace Pro.'});
     res.setHeader('Set-Cookie',cookie(result.access_token,Math.min(Number(result.expires_in)||3600,3600)));
     return res.status(200).json({authenticated:true,message:'Connexion réussie.'});
   }catch{return res.status(503).json({message:'Le service est momentanément indisponible. Réessayez.'})}
