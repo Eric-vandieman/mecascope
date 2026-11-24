@@ -44,11 +44,8 @@ async function refreshCreditBalance(){
 function applyAccess(){
  const role=current.role;
  const p=current.permissions||{};
- const tabMap={equipe:role==='owner'||role==='manager',recherches:p.view===true,nouvelle:p.create===true,statistiques:role==='owner'||role==='manager',credits:true,etablissements:true};
+ const tabMap={equipe:role==='owner'||role==='manager',recherches:p.view===true,statistiques:role==='owner'||role==='manager',credits:true,etablissements:true,messages:true,factures:true,vehicules:true,export:role==='owner'};
  for(const b of tabs){const visible=tabMap[b.dataset.workspaceTab]!==false;b.hidden=!visible;}
- document.querySelectorAll('[data-workspace-go]').forEach(b=>{
-  if(b.dataset.workspaceGo==='nouvelle')b.hidden=p.create!==true;
- });
  for(const [name,allowed] of Object.entries(tabMap)){const panel=document.querySelector('[data-workspace-panel="'+name+'"]');if(panel)panel.dataset.allowed=String(allowed);}
  const active=tabs.find(b=>b.classList.contains('is-active'));
  if(active?.hidden)showTab('accueil');
@@ -193,17 +190,6 @@ document.getElementById('team-invite-form').addEventListener('submit',async even
  }catch(e){labelStatus('team-feedback',e.message)}
  finally{button.disabled=false}
 });
-document.getElementById('pro-new-search').addEventListener('submit',async event=>{
- event.preventDefault();
- const form=event.currentTarget;const b=form.querySelector('[type=submit]');b.disabled=true;
- labelStatus('pro-search-create-status','Enregistrement en cours…');
- try{
-  const fields=Object.fromEntries(new FormData(form));
-  const result=await request('search',fields);
-  labelStatus('pro-search-create-status','Recherche enregistrée dans le dossier du garage. Référence : '+result.id);
-  form.reset();await refresh();
- }catch(e){labelStatus('pro-search-create-status',e.message)}finally{b.disabled=false}
-});
 document.getElementById('team-copy').addEventListener('click',async()=>{
  const link=document.getElementById('team-invite-link');try{await navigator.clipboard.writeText(link.value);labelStatus('team-feedback','Lien copié.')}catch{link.select();document.execCommand('copy');labelStatus('team-feedback','Lien sélectionné : copiez-le.')}
 });
@@ -218,6 +204,19 @@ setInterval(()=>{
     refresh().catch(()=>{});
   }
 },30000);
+document.getElementById('workspace-export-data').addEventListener('click',async()=>{
+ const status=document.getElementById('workspace-export-status');
+ if(current.role!=='owner'){status.textContent='Export réservé au titulaire du garage.';return}
+ try{
+  const data=await refresh();
+  const exported={date_export:new Date().toISOString(),etablissement:data.garage||{},membres:data.membres||[],demandes:data.recherches||[],invitations_en_attente:data.invitations||[]};
+  const blob=new Blob([JSON.stringify(exported,null,2)],{type:'application/json;charset=utf-8'});
+  const url=URL.createObjectURL(blob),link=document.createElement('a');
+  link.href=url;link.download='mecascope-export-garage-'+new Date().toISOString().slice(0,10)+'.json';
+  document.body.append(link);link.click();link.remove();URL.revokeObjectURL(url);
+  status.textContent='Export des données disponibles généré.';
+ }catch(error){status.textContent=error.message||'Export indisponible.'}
+});
 document.getElementById('workspace-logout').addEventListener('click',async()=>{
  await fetch(service,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})}).catch(()=>{});location.replace('/');
 });
