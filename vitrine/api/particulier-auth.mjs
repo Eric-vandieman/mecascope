@@ -31,6 +31,20 @@ export default async function handler(req,res){
     }
     const {action}=req.body||{};
     if(action==='logout'){res.setHeader('Set-Cookie',cookie('',0));return res.status(200).json({message:'Déconnexion effectuée.'})}
+    if(action==='verify-email-token'){
+      const hash=typeof req.body.token_hash==='string'?req.body.token_hash:'';
+      if(!/^[a-zA-Z0-9_-]{20,256}$/.test(hash))return res.status(400).json({message:'Lien de confirmation invalide.'});
+      const verification=await fetch(base+'verify',{method:'POST',headers,body:JSON.stringify({token_hash:hash,type:'email'}),signal:AbortSignal.timeout(12000)});
+      const data=await verification.json().catch(()=>({}));
+      if(!verification.ok||!data.access_token)return res.status(400).json({message:'Lien expiré ou déjà utilisé. Demandez un nouveau lien de confirmation.'});
+      const authenticated=await fetch(base+'user',{headers:{...headers,Authorization:'Bearer '+data.access_token},signal:AbortSignal.timeout(10000)});
+      if(!authenticated.ok)return res.status(401).json({message:'Impossible de confirmer la session.'});
+      const user=await authenticated.json();
+      if(user.user_metadata?.profil!=='particulier'||!user.email_confirmed_at)
+        return res.status(403).json({message:'Cette confirmation ne concerne pas un compte particulier.'});
+      res.setHeader('Set-Cookie',cookie(data.access_token,Math.max(1,Math.min(Number(data.expires_in)||3600,3600))));
+      return res.status(200).json({authenticated:true,message:'Adresse confirmée. Votre tableau de bord s’ouvre.'});
+    }
     if(action==='resume-confirmed'){
       const token=typeof req.body.access_token==='string'&&req.body.access_token.length<4096?req.body.access_token:'';
       if(!token)return res.status(400).json({message:'Jeton de confirmation manquant.'});
