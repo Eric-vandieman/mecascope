@@ -29,6 +29,19 @@ export default async function handler(req,res){
       return data?.garage?data:null;
     }catch{return null}
   }
+  async function acceptPendingInvite(accessToken,user){
+    const code=user?.user_metadata?.mecascope_invite_code;
+    if(typeof code!=='string'||code.length<30||code.length>180)return null;
+    try{
+      const r=await fetch(url+'/rest/v1/rpc/meca_accepter_invitation',{
+        method:'POST',headers:{...headers,Authorization:'Bearer '+accessToken},
+        body:JSON.stringify({p_code:code}),signal:AbortSignal.timeout(8000)
+      });
+      if(!r.ok)return null;
+      // Le rattachement est fait dans la base et la permission de l'invitation s'applique.
+      return await membership(accessToken);
+    }catch{return null}
+  }
   const memberProfile=(user,data)=>({...profile(user),etablissement:data.garage.nom,siret:data.garage.siret,adresse:data.garage.adresse,code_postal:data.garage.code_postal,ville:data.garage.ville,role:data.role});
   try{
     if(req.method==='GET'){
@@ -38,7 +51,7 @@ export default async function handler(req,res){
       if(!r.ok){res.setHeader('Set-Cookie',cookie('',0));return res.status(401).json({message:'Session expirée.'})}
       const user=await r.json();
       if(user.user_metadata?.profil==='particulier')return res.status(403).json({message:'Ce compte est un compte particulier.'});
-      const member=await membership(token);
+      const member=await membership(token) || await acceptPendingInvite(token,user);
       if(member)return res.status(200).json({authenticated:true,profile:memberProfile(user,member)});
       if(!ready(user))return res.status(200).json({authenticated:false,needsProfile:true,profile:profile(user),message:'Complétez vos coordonnées professionnelles pour terminer votre accès.'});
       return res.status(200).json({authenticated:true,profile:profile(user)});
@@ -51,13 +64,20 @@ export default async function handler(req,res){
       const contact=clean(b.contact,120),telephone=clean(b.telephone,22);
       if(!email||!email.includes('@')||typeof password!=='string'||password.length<8||password.length>256||!contact||!phoneOK(telephone)||b.legalAccepted!==true||b.legalVersion!=='2026-11-24')
         return res.status(400).json({message:'Vérifiez votre e-mail, votre nom, votre téléphone et les conditions.'});
-      const payload={email,password,data:{contact,telephone,profil:'professionnel',invite_pending:true,mecascope_legal_version:'2026-11-24',mecascope_legal_accepted_at:new Date().toISOString()}};
+      const invitation=typeof b.code==='string'?b.code:'';
+      if(invitation.length<30||invitation.length>180)return res.status(400).json({message:'Utilisez une invitation valide pour créer ce compte collaborateur.'});
+      const validate=await fetch(url+'/rest/v1/rpc/meca_verifier_invitation',{method:'POST',headers,body:JSON.stringify({p_code:invitation,p_email:email}),signal:AbortSignal.timeout(10000)});
+      if(!validate.ok)return res.status(400).json({message:'Impossible de vérifier l’invitation.'});
+      const invitationStatus=await validate.json();
+      if(invitationStatus?.valide!==true)return res.status(400).json({message:'Cette invitation est invalide, a expiré, ou ne correspond pas à cette adresse e-mail.'});
+      const payload={email,password,data:{contact,telephone,profil:'professionnel',invite_pending:true,mecascope_invite_code:invitation,mecascope_legal_version:'2026-11-24',mecascope_legal_accepted_at:new Date().toISOString()}};
       const r=await fetch(authRequest,{method:'POST',headers,body:JSON.stringify(payload),signal:AbortSignal.timeout(12000)});
       if(!r.ok)return res.status(400).json({message:'Création impossible. Si votre compte existe, connectez-vous avec ce compte.'});
       const result=await r.json();
       if(result.access_token){
         res.setHeader('Set-Cookie',cookie(result.access_token,Math.min(3600,Number(result.expires_in)||3600)));
-        return res.status(200).json({authenticated:true,message:'Compte créé : vous pouvez accepter votre invitation.'});
+        const membershipData=await membership(result.access_token) || await acceptPendingInvite(result.access_token,await (await fetch(base+'user',{headers:{...headers,Authorization:'Bearer '+result.access_token}})).json());
+        return res.status(200).json({authenticated:true,joined:!!membershipData,message:membershipData?'Votre compte professionnel est créé et rattaché au garage.':'Compte créé. Confirmez votre adresse e-mail pour terminer le rattachement.'});
       }
       return res.status(200).json({authenticated:false,message:'Confirmez votre adresse e-mail, puis revenez sur le lien d’invitation pour rejoindre l’équipe.'});
     }
@@ -106,7 +126,7 @@ export default async function handler(req,res){
     if(!ur.ok)return res.status(401).json({message:'Session non vérifiée.'});
     const user=await ur.json();
     if(user.user_metadata?.profil==='particulier')return res.status(403).json({message:'Ce compte est un compte particulier. Utilisez la connexion particuliers.'});
-    const member=await membership(data.access_token);
+    const member=await membership(data.access_token) || await acceptPendingInvite(data.access_token,user);
     res.setHeader('Set-Cookie',cookie(data.access_token,Math.min(3600,Number(data.expires_in)||3600)));
     if(member)return res.status(200).json({authenticated:true,profile:memberProfile(user,member),message:'Connexion réussie.'});
     if(!ready(user))return res.status(200).json({authenticated:false,needsProfile:true,profile:profile(user),message:'Connexion réussie. Complétez votre profil professionnel afin d’accéder à votre espace.'});
