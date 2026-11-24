@@ -31,6 +31,18 @@ export default async function handler(req,res){
     }
     const {action}=req.body||{};
     if(action==='logout'){res.setHeader('Set-Cookie',cookie('',0));return res.status(200).json({message:'Déconnexion effectuée.'})}
+    if(action==='resume-confirmed'){
+      const token=typeof req.body.access_token==='string'&&req.body.access_token.length<4096?req.body.access_token:'';
+      if(!token)return res.status(400).json({message:'Jeton de confirmation manquant.'});
+      const verification=await fetch(base+'user',{headers:{...headers,Authorization:'Bearer '+token},signal:AbortSignal.timeout(10000)});
+      if(!verification.ok)return res.status(401).json({message:'Lien de confirmation invalide ou expiré.'});
+      const user=await verification.json();
+      if(user.user_metadata?.profil!=='particulier'||!user.email_confirmed_at)
+        return res.status(403).json({message:'Ce lien ne correspond pas à un compte particulier confirmé.'});
+      const age=Math.max(1,Math.min(Number(req.body.expires_in)||3600,3600));
+      res.setHeader('Set-Cookie',cookie(token,age));
+      return res.status(200).json({authenticated:true,message:'Adresse confirmée et compte particulier connecté.'});
+    }
     if(action==='resend'){
       const address=norm(req.body.email,254)?.toLowerCase();
       if(!address||!/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(address))
