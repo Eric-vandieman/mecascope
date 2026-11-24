@@ -23,6 +23,20 @@ if(form)form.addEventListener('submit',async event=>{
   }catch{setStatus('Connexion momentanément indisponible. Réessayez.')}
   finally{submit.disabled=false}
 });
+const resendButton=document.getElementById('meca-resend-confirmation');
+if(resendButton)resendButton.addEventListener('click',async()=>{
+ const emailField=document.getElementById('email');
+ const address=emailField?.value?.trim()||'';
+ if(!address||!emailField.checkValidity()){setStatus('Renseignez votre adresse e-mail pour recevoir un nouveau lien de validation.');emailField?.focus();return}
+ resendButton.disabled=true;
+ setStatus('Demande de renvoi en cours…');
+ try{
+  const response=await fetch(API,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'resend',email:address})});
+  const result=await response.json();
+  setStatus(result.message||'Envoi non confirmé.',response.ok);
+ }catch{setStatus('Impossible de contacter le service de confirmation pour le moment.')}
+ finally{resendButton.disabled=false}
+});
 document.querySelectorAll('[data-private-tab]').forEach(button=>button.addEventListener('click',()=>{
  const tab=button.dataset.privateTab;
  document.querySelectorAll('[data-private-tab]').forEach(b=>{
