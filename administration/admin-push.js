@@ -19,7 +19,8 @@
  };
  async function updateRegistration(){
   if(!isSupported())return null;
-  registration=await navigator.serviceWorker.register('/sw.js',{scope:'/'});
+  registration=await navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'});
+  await registration.update();
   return registration;
  }
  async function fetchCenter(host,button){
