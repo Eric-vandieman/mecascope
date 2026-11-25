@@ -11,7 +11,7 @@ export default async function handler(req,res){
  if(!Object.hasOwn(plans,plan))return res.status(400).json({message:'Formule invalide'});
  const stripeKey=process.env.STRIPE_SECRET_KEY;
  const price=process.env[plans[plan][0]];
- if(process.env.MECASCOPE_ENABLE_LIVE_BILLING!=='true'||!stripeKey||!stripeKey.startsWith('sk_live_')||!price||!process.env.STRIPE_WEBHOOK_SECRET||!process.env.SUPABASE_SERVICE_ROLE_KEY){
+ if(process.env.MECASCOPE_ENABLE_LIVE_BILLING!=='true'||!stripeKey||!(/^((sk|rk)_live_)/).test(stripeKey)||!price||!process.env.STRIPE_WEBHOOK_SECRET||!process.env.SUPABASE_SERVICE_ROLE_KEY){
   return res.status(503).json({message:'La souscription en ligne n’est pas encore activée. Aucun paiement ne sera engagé.'});
  }
  const cookie=getCookie(req.headers.cookie);
