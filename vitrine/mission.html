@@ -1,36 +1,89 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Mission — Mécascope</title><link rel="icon" type="image/webp" sizes="192x192" href="/logo-ms-officiel.webp?v=ms-20261125"><link rel="shortcut icon" href="/logo-ms-officiel.webp?v=ms-20261125"><link rel="stylesheet" href="/site.css"><style>body{background:#131b24;color:#f4f1ec;font:16px Arial}.mission{max-width:690px;margin:45px auto;padding:30px;border:1px solid #725431;border-radius:18px;background:#202b37}h1{color:#efac64}button{border:0;padding:16px 24px;background:#ed932d;border-radius:8px;font-weight:bold;cursor:pointer}button:disabled{opacity:.5}.muted{color:#bac5d1}#etat{line-height:1.6}#erreur{color:#edc48c}</style></head><body><main class="mission"><a href="/" style="color:#edb16b">← Mécascope</a><h1>Votre mission de recherche</h1><p id="etat" role="status">Chargement du dossier…</p><p id="offre"></p><p id="conditions" class="muted"></p><button id="payer" hidden>Accepter et payer</button><p id="erreur" role="alert"></p><p class="muted">Lien personnel : ne le partagez pas. Le retour du navigateur ne confirme pas le paiement. Seul Stripe confirme les fonds au serveur.</p></main><script>
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Mission — Mécascope</title><link rel="icon" type="image/webp" sizes="192x192" href="/logo-ms-officiel.webp?v=ms-20261125"><link rel="shortcut icon" href="/logo-ms-officiel.webp?v=ms-20261125"><link rel="stylesheet" href="/site.css"><style>body{background:#131b24;color:#f4f1ec;font:16px Arial}.mission{max-width:690px;margin:45px auto;padding:30px;border:1px solid #725431;border-radius:18px;background:#202b37}h1{color:#efac64}button{border:0;padding:16px 24px;background:#ed932d;border-radius:8px;font-weight:bold;cursor:pointer}button:disabled{opacity:.5}.muted{color:#bac5d1}#etat{line-height:1.6}#erreur{color:#edc48c}</style></head><body><main class="mission"><a href="/" style="color:#edb16b">← Mécascope</a><h1>Votre mission de recherche</h1><p id="etat" role="status">Chargement du dossier…</p><div id="message-personnel" hidden style="white-space:pre-wrap;line-height:1.7;padding:16px;background:#16212c;border-left:3px solid #ed932d;border-radius:8px;margin:18px 0"></div>
+<div id="devis-formulaire" hidden style="padding:16px 0">
+<h2 style="color:#efac64">Votre devis</h2><div id="tableau-tarif" style="line-height:1.9;margin-bottom:15px"></div>
+<fieldset style="border:1px solid #725431;border-radius:9px;padding:16px;margin:16px 0"><legend>Votre option de délai (facultative)</legend>
+<label style="display:block;margin:10px 0"><input type="radio" name="express" value="" checked> Sans option Express — 0 €</label>
+<label style="display:block;margin:10px 0"><input type="radio" name="express" value="48h"> Express 48 heures — +20 €</label>
+<label style="display:block;margin:10px 0"><input type="radio" name="express" value="24h"> Express 24 heures — +50 €</label></fieldset>
+<label style="display:block;padding:12px 16px;border:1px solid #725431;border-radius:9px;margin-bottom:16px"><input type="checkbox" id="option-reservation"> Service de réservation fournisseur — +10 € (facultatif)</label>
+<p class="muted">Les options retenues sont réglées avec le paiement initial. Le supplément Express correspond au service prioritaire demandé, sous réserve de validation de sa faisabilité par Mécascope. La réservation n'est pas une garantie de disponibilité de la pièce. Les conditions de réalisation et de remboursement éventuel des options doivent être communiquées clairement avant paiement.</p>
+<div id="resume-paiement" style="font-size:18px;font-weight:700;padding:14px;background:#12202a;border-radius:8px"></div>
+<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:18px"><button id="accepter" type="button">Accepter le devis</button><button id="refuser" type="button" style="background:#343e49;color:white;border:1px solid #9d8875">Refuser le devis</button></div>
+</div><p id="offre"></p><p id="conditions" class="muted"></p><button id="payer" hidden>Payer mon acompte et mes options</button><p id="erreur" role="alert"></p><p class="muted">Lien personnel : ne le partagez pas. Le retour du navigateur ne confirme pas le paiement. Seul Stripe confirme les fonds au serveur.</p></main><script>
 (async()=>{
- const qs=new URLSearchParams(location.search),token=qs.get('t'),etat=document.getElementById('etat'),payer=document.getElementById('payer'),offre=document.getElementById('offre'),conditions=document.getElementById('conditions'),erreur=document.getElementById('erreur');
- if(!token||!(/^[0-9a-f]{64}$/i.test(token))){etat.textContent='Lien manquant ou incorrect.';return}
- async function refresh(){
-  try{
-   const r=await fetch('/api/unitaire?action=status&t='+encodeURIComponent(token),{cache:'no-store'});
-   const data=await r.json();if(!r.ok)throw Error(data.message||'Dossier inaccessible');
-   payer.hidden=true;offre.textContent='Référence : '+data.reference+(data.offre?' — '+data.offre:'');
-   if(data.statut==='devis_envoye'){
-    etat.textContent='Proposition : '+data.total+' € au total, dont '+data.initial+' € à régler pour lancer la recherche après votre accord. Solde : '+data.solde+' € seulement si une source conforme est trouvée.';
-    const add=(data.expressOption?' Express '+data.expressOption+' : supplément de '+(data.expressOption==='24h'?50:20)+' € uniquement si le délai convenu est respecté.':'')+(data.reservationOption?' Réservation fournisseur : 10 € uniquement si confirmée.':'');
-    conditions.textContent='Vous acceptez les éventuels suppléments conditionnels indiqués dans le devis :'+(add||' aucun supplément.')+' Le paiement initial se fait sur Stripe après votre confirmation.';
-    payer.hidden=false;payer.dataset.stage='initial';payer.textContent="J’accepte et je règle "+data.initial+" €";
-   }else if(data.statut==='reussite'){
-    etat.textContent='Mécascope a identifié une source conforme. Vous pouvez régler le solde de '+data.solde+' €.';
-    conditions.textContent='Le solde ne vous est proposé qu’après vérification de la source.';
-    payer.hidden=false;payer.dataset.stage='solde';payer.textContent="Régler le solde de "+data.solde+" €";
-   }else if(data.statut==='acompte_paye')etat.textContent="Acompte confirmé, recherche en cours. Aucun solde n'est dû pour le moment.";
-   else if(data.statut==='solde_paye')etat.textContent='Solde confirmé. Mécascope finalise la transmission des informations.';
-   else if(data.statut==='echec')etat.textContent="Recherche infructueuse. Aucun solde à payer.";
-   else etat.textContent='Demande reçue, étude en cours.';
-  }catch(e){etat.textContent=e.message}
+ const qs=new URLSearchParams(location.search),token=qs.get('t');
+ const $=id=>document.getElementById(id),etat=$('etat'),payer=$('payer'),offre=$('offre'),conditions=$('conditions'),erreur=$('erreur');
+ const quote=$('devis-formulaire'),intro=$('message-personnel'),summary=$('resume-paiement'),priceTable=$('tableau-tarif'),accept=$('accepter'),refuse=$('refuser');
+ let current=null;
+ if(!token||!/^[0-9a-f]{64}$/i.test(token)){etat.textContent='Lien manquant ou incorrect.';return}
+ const euro=n=>new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(n);
+ function selected(){
+  const express=document.querySelector('input[name="express"]:checked')?.value||'';
+  const reservation=$('option-reservation').checked;
+  return {express,reservation,extra:(express==='24h'?50:express==='48h'?20:0)+(reservation?10:0)};
  }
+ function showAmount(){
+  if(!current)return;
+  const x=selected();
+  summary.textContent='À régler maintenant : '+euro((current.initial||0)+x.extra)+' (acompte '+euro(current.initial||0)+' + options '+euro(x.extra)+').';
+ }
+ async function api(payload){
+  const r=await fetch('/api/unitaire',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,...payload}),cache:'no-store'});
+  const data=await r.json().catch(()=>({}));if(!r.ok)throw Error(data.message||'Opération indisponible');return data;
+ }
+ async function refresh(){
+  const r=await fetch('/api/unitaire?action=status&t='+encodeURIComponent(token),{cache:'no-store'});
+  const data=await r.json().catch(()=>({}));if(!r.ok)throw Error(data.message||'Dossier inaccessible');
+  current=data;quote.hidden=true;payer.hidden=true;erreur.textContent='';
+  intro.hidden=!data.proposition;intro.textContent=data.proposition||'';
+  offre.textContent='Référence : '+data.reference+(data.offre?' — '+data.offre:'');
+  if(data.statut==='devis_envoye'&&data.decision==='en_attente'&&data.optionsPayeesAvance){
+   etat.textContent='Votre proposition est disponible. Vous pouvez accepter avec les options de votre choix, ou refuser sans paiement.';
+   priceTable.textContent='Formule : '+data.offre+' — '+euro(data.total)+' au total. Acompte : '+euro(data.initial)+'. Solde de '+euro(data.solde)+' uniquement si la recherche aboutit.';
+   quote.hidden=false;conditions.textContent='Après acceptation, le paiement sécurisé sera proposé. Le travail commencera une fois le paiement confirmé et les informations nécessaires réunies.';
+   showAmount();
+  }else if(data.statut==='devis_envoye'&&data.decision==='accepte'){
+   etat.textContent='Vous avez accepté le devis. Réglez le montant initial et les options sélectionnées pour lancer la recherche.';
+   conditions.textContent='Option : '+(data.expressOption||'aucun Express')+' ; réservation : '+(data.reservationOption?'oui':'non')+'. Les options choisies sont incluses dans le montant à régler.';
+   payer.dataset.stage='initial';payer.textContent='Payer '+euro(data.initial)+' avec Stripe';payer.hidden=false;
+  }else if(data.statut==='devis_envoye'&&!data.optionsPayeesAvance){
+   etat.textContent='Proposition : '+euro(data.total)+' au total, dont '+euro(data.initial)+' initialement. Offre antérieure à la nouvelle présentation.';
+   conditions.textContent='Les options figurent dans la proposition déjà transmise.';
+   payer.dataset.stage='initial';payer.textContent='J’accepte et je règle '+euro(data.initial);payer.hidden=false;
+  }else if(data.statut==='refuse'||data.decision==='refuse'){
+   etat.textContent='Vous avez refusé ce devis. Le dossier est clôturé, aucun paiement n’est dû.';
+   conditions.textContent='Vous pouvez contacter Mécascope si vous souhaitez déposer une nouvelle demande.';
+  }else if(data.statut==='reussite'){
+   etat.textContent='Une source a été identifiée. Solde restant : '+euro(data.solde)+'.';
+   conditions.textContent='Aucune option déjà payée n’est facturée une seconde fois.';
+   payer.dataset.stage='solde';payer.textContent='Régler le solde de '+euro(data.solde);payer.hidden=false;
+  }else if(data.statut==='acompte_paye')etat.textContent='Paiement confirmé : recherche en cours. Aucun solde n’est dû pour le moment.';
+  else if(data.statut==='solde_paye')etat.textContent='Solde confirmé. Mécascope finalise votre dossier.';
+  else if(data.statut==='echec')etat.textContent='Recherche infructueuse. Aucun solde de réussite à payer.';
+  else etat.textContent='Demande reçue, étude en cours.';
+ }
+ for(const el of document.querySelectorAll('input[name="express"],#option-reservation'))el.addEventListener('change',showAmount);
+ accept.onclick=async()=>{
+  if(!current||!confirm('Confirmer votre acceptation du devis et des options cochées ? Le paiement vous sera ensuite proposé.'))return;
+  accept.disabled=true;refuse.disabled=true;
+  try{await api({action:'decision',choice:'accepter',express:selected().express,reservation:selected().reservation});await refresh()}
+  catch(e){erreur.textContent=e.message}finally{accept.disabled=false;refuse.disabled=false}
+ };
+ refuse.onclick=async()=>{
+  if(!confirm('Refuser définitivement ce devis et clôturer la demande, sans paiement ?'))return;
+  accept.disabled=true;refuse.disabled=true;
+  try{await api({action:'decision',choice:'refuser'});await refresh()}
+  catch(e){erreur.textContent=e.message}finally{accept.disabled=false;refuse.disabled=false}
+ };
  payer.onclick=async()=>{
-  payer.disabled=true;erreur.textContent='Préparation du paiement…';
+  payer.disabled=true;erreur.textContent='Préparation du paiement sécurisé…';
   try{
-   const r=await fetch('/api/unitaire',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'checkout',stage:payer.dataset.stage,token})});
-   const d=await r.json();if(!r.ok)throw Error(d.message||'Paiement indisponible');
-   const u=new URL(d.checkoutUrl);if(u.protocol!=='https:'||!u.hostname.endsWith('.stripe.com'))throw Error('Lien Stripe non reconnu');location.assign(u.href);
+   const d=await api({action:'checkout',stage:payer.dataset.stage});
+   const u=new URL(d.checkoutUrl);if(u.protocol!=='https:'||!u.hostname.endsWith('.stripe.com'))throw Error('Lien Stripe non reconnu');
+   location.assign(u.href);
   }catch(e){erreur.textContent=e.message;payer.disabled=false}
  };
- await refresh();
- if(qs.get('paiement')==='retour'){erreur.textContent='Retour de Stripe reçu. Confirmation du paiement en cours.';setTimeout(refresh,3000)}
+ try{await refresh()}catch(e){etat.textContent=e.message}
+ if(qs.get('paiement')==='retour'){erreur.textContent='Retour de Stripe reçu. Confirmation bancaire en cours.';setTimeout(()=>refresh().catch(e=>erreur.textContent=e.message),3000)}
 })();
 </script><script src="/mission-chat.js?v=20261125-r2" defer></script></body></html>
