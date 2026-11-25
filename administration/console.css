@@ -283,3 +283,24 @@
 [hidden]{display:none!important}.admin-mode button:disabled{opacity:.55;cursor:default}.admin-mode .preview{color:#ffbd62}.admin-mode .side{overflow-y:auto}@media(max-width:760px){.admin-mode .dash{display:block}.admin-mode .side{display:flex;position:static;width:100%;height:auto;overflow-x:auto}.admin-mode .side a{flex:none}.admin-mode .main{min-width:0;overflow:auto}}
 html,body{margin:0;padding:0;max-width:none;width:100%;display:block}.shell,.admin-mode,.admin-mode .dash{width:100%;max-width:none}.admin-mode .main{width:100%;min-width:0;max-width:none;margin:0}
 @media(min-width:1025px){.admin-mode .dash{display:grid;grid-template-columns:222px minmax(0,1fr)}.admin-mode .metrics.six,.admin-mode .metrics.pro-dashboard-metrics{grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr))}}
+
+
+/* Mise en service : nettoyage visuel et indicateurs */
+.admin-mode .side::after{content:none!important;display:none!important;background:none!important}
+.admin-mode .metric.meca-kpi-revenue{background:linear-gradient(135deg,#176e43,#103e2c)!important;border-color:#42c18a!important}
+.admin-mode .metric.meca-kpi-new{background:linear-gradient(135deg,#7041ab,#3e226d)!important;border-color:#b18aea!important}
+.admin-mode .metric.meca-kpi-urgent{background:linear-gradient(135deg,#9d313a,#57202a)!important;border-color:#f16a79!important}
+.admin-mode .metric.meca-kpi-revenue .label,.admin-mode .metric.meca-kpi-new .label,.admin-mode .metric.meca-kpi-urgent .label{color:#fff!important}
+.admin-mode .metric.meca-kpi-revenue .symbol,.admin-mode .metric.meca-kpi-new .symbol,.admin-mode .metric.meca-kpi-urgent .symbol{color:#fff!important}
+.meca-single-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:16px 0 22px}
+.meca-single-cards .metric{min-height:116px}
+.meca-single-cards .value{font-size:32px}
+.meca-single-card-desc{font-size:12px;color:#bcc3cb;margin-top:6px}
+.meca-compose-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.meca-compose-grid label{font-weight:700;display:flex;flex-direction:column;gap:7px}
+.meca-compose-grid input,.meca-compose-grid select,.meca-compose-grid textarea{width:100%;padding:12px;background:#11151b;border:1px solid #687079;color:white;border-radius:9px}
+.meca-compose-grid .wide{grid-column:1/-1}
+.meca-compose-preview{margin:18px 0;padding:18px;border-radius:12px;background:#0a1016;border:1px solid #594732;white-space:pre-wrap;line-height:1.7}
+.meca-admin-live-status{padding:12px 16px;border:1px solid #60503a;border-radius:12px;background:#171a1e;margin:16px 0;line-height:1.6}
+.meca-admin-live-status strong{color:#ffbf72}
+@media(max-width:780px){.meca-single-cards,.meca-compose-grid{grid-template-columns:1fr}.meca-compose-grid .wide{grid-column:auto}}
