@@ -103,11 +103,18 @@ export default async function handler(req,res){
   }
   if(action==='search'){
    const b=req.body;
-   const id=await rpc('meca_creer_recherche',{p_marque:b.brand,p_modele:b.model,p_annee:b.year||'',p_piece:b.part,p_reference:b.ref||'',p_budget:b.budget||''});
+   const detail=[['Catégorie',b.vehicleType],['Motorisation',b.engine],['Version',b.trim],['VIN',b.vin],['Énergie',b.fuel],['Transmission',b.gearbox],['Couleur',b.colourType],['Précisions',b.notes]].filter(x=>typeof x[1]==='string'&&x[1].trim()).map(([k,v])=>k+' : '+v.trim().slice(0,250)).join(' | ');
+   const part=String(b.part||'').trim().slice(0,220);
+   if(!part||!String(b.brand||'').trim()||!String(b.model||'').trim())return res.status(400).json({message:'Véhicule et pièce requis'});
+   const id=await rpc('meca_creer_recherche',{p_marque:String(b.brand).slice(0,120),p_modele:String(b.model).slice(0,120),p_annee:String(b.year||'').slice(0,4),p_piece:(part+(detail?' — '+detail:'' )).slice(0,490),p_reference:String(b.ref||'').slice(0,140),p_budget:String(b.budget||'').slice(0,40)});
    return res.status(200).json({id,message:'Recherche enregistrée dans votre tableau de bord professionnel.'});
   }
   if(action==='update-search'){
-   const ok=await rpc('meca_modifier_recherche',{p_id:req.body.id,p_statut:req.body.status,p_attribue_a:req.body.assignee||null});
+   if(Object.hasOwn(req.body,'status'))return res.status(403).json({message:'Les statuts de mission sont réservés à Mécascope.'});
+   const current=await rpc('meca_tableau_bord');
+   const item=(current.recherches||[]).find(x=>x.id===req.body.id);
+   if(!item)return res.status(404).json({message:'Recherche introuvable ou non autorisée'});
+   const ok=await rpc('meca_modifier_recherche',{p_id:item.id,p_statut:item.statut,p_attribue_a:req.body.assignee||null});
    return res.status(200).json({ok});
   }
   return res.status(400).json({message:'Action non reconnue'});
