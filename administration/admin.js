@@ -5,7 +5,7 @@ async function appeler(payload){
 async function ouvrir(payload){
   try {
     const r=await appeler(payload);
-    if(!r.ok){if(payload.action==='login') document.querySelector('[role=status]').textContent=(await r.json()).message;return;}
+    if(!r.ok){const status=document.querySelector('[role=status]');if(status)status.textContent=(await r.json().catch(()=>({}))).message||'Connexion impossible.';return;}
     const data=await r.json();
     const layoutResponse=await fetch('/console.json');
     if(!layoutResponse.ok) throw new Error('Interface indisponible');
