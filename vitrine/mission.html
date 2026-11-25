@@ -1,14 +1,18 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Mission — Mécascope</title><link rel="icon" type="image/webp" sizes="192x192" href="/logo-ms-officiel.webp?v=ms-20261125"><link rel="shortcut icon" href="/logo-ms-officiel.webp?v=ms-20261125"><link rel="stylesheet" href="/site.css"><style>body{background:#131b24;color:#f4f1ec;font:16px Arial}.mission{max-width:690px;margin:45px auto;padding:30px;border:1px solid #725431;border-radius:18px;background:#202b37}h1{color:#efac64}button{border:0;padding:16px 24px;background:#ed932d;border-radius:8px;font-weight:bold;cursor:pointer}button:disabled{opacity:.5}.muted{color:#bac5d1}#etat{line-height:1.6}#erreur{color:#edc48c}</style></head><body><main class="mission"><a href="/" style="color:#edb16b">← Mécascope</a><h1>Votre mission de recherche</h1><p id="etat" role="status">Chargement du dossier…</p><div id="message-personnel" hidden style="white-space:pre-wrap;line-height:1.7;padding:16px;background:#16212c;border-left:3px solid #ed932d;border-radius:8px;margin:18px 0"></div>
 <div id="devis-formulaire" hidden style="padding:16px 0">
-<h2 style="color:#efac64">Votre devis</h2><div id="tableau-tarif" style="line-height:1.9;margin-bottom:15px"></div>
-<fieldset style="border:1px solid #725431;border-radius:9px;padding:16px;margin:16px 0"><legend>Votre option de délai (facultative)</legend>
-<label style="display:block;margin:10px 0"><input type="radio" name="express" value="" checked> Sans option Express — 0 €</label>
+<h2 style="color:#efac64">Votre devis et vos options</h2><div id="tableau-tarif" style="line-height:1.9;margin-bottom:15px"></div>
+<fieldset style="border:1px solid #725431;border-radius:9px;padding:16px;margin:16px 0">
+<legend><strong>1. Choisissez votre délai de recherche</strong></legend>
+<label style="display:block;margin:10px 0"><input type="radio" name="express" value=""> Sans Express — 0 €</label>
 <label style="display:block;margin:10px 0"><input type="radio" name="express" value="48h"> Express 48 heures — +20 €</label>
 <label style="display:block;margin:10px 0"><input type="radio" name="express" value="24h"> Express 24 heures — +50 €</label></fieldset>
-<label style="display:block;padding:12px 16px;border:1px solid #725431;border-radius:9px;margin-bottom:16px"><input type="checkbox" id="option-reservation"> Demande de réservation 24 h auprès du fournisseur — +10 € (facultatif)</label>
+<fieldset style="border:1px solid #725431;border-radius:9px;padding:16px;margin:16px 0"><legend><strong>2. Souhaitez-vous une demande de réservation 24 h auprès du fournisseur ?</strong></legend>
+<label style="display:block;margin:10px 0"><input type="radio" name="reservation" value="oui"> Oui — +10 €</label>
+<label style="display:block;margin:10px 0"><input type="radio" name="reservation" value="non"> Non — 0 €</label>
+</fieldset>
 <p class="muted">Les options cochées sont encaissées avec l'acompte. Le supplément Express est remboursé si aucune offre conforme n'est trouvée dans le délai Express accepté. Les 10 € de réservation sont remboursés si la réservation n'est pas confirmée par le fournisseur. Les options ne garantissent ni de trouver ni d'acheter la pièce ; son prix et la livraison restent distincts.</p>
 <div id="resume-paiement" style="font-size:18px;font-weight:700;padding:14px;background:#12202a;border-radius:8px"></div><label style="display:block;margin-top:14px"><input type="checkbox" id="accord-conditions"> Je reconnais avoir consulté les <a href="/legal.html#cgv" target="_blank" rel="noopener noreferrer" style="color:#ffbd74">conditions générales de vente</a> et compris les montants payables immédiatement, les conditions de réalisation et les remboursements des options.</label>
-<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:18px"><button id="accepter" type="button">Accepter le devis</button><button id="refuser" type="button" style="background:#343e49;color:white;border:1px solid #9d8875">Refuser le devis</button></div>
+<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:18px"><button id="accepter" type="button">Valider mes options et accepter le devis</button><button id="refuser" type="button" style="background:#343e49;color:white;border:1px solid #9d8875">Refuser le devis</button></div>
 </div><p id="offre"></p><p id="conditions" class="muted"></p><button id="payer" hidden>Payer mon acompte et mes options</button><p id="erreur" role="alert"></p><p class="muted">Lien personnel : ne le partagez pas. Le retour du navigateur ne confirme pas le paiement. Seul Stripe confirme les fonds au serveur.</p></main><script>
 (async()=>{
  const qs=new URLSearchParams(location.search),token=qs.get('t');
@@ -18,14 +22,17 @@
  if(!token||!/^[0-9a-f]{64}$/i.test(token)){etat.textContent='Lien manquant ou incorrect.';return}
  const euro=n=>new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(n);
  function selected(){
-  const express=document.querySelector('input[name="express"]:checked')?.value||'';
-  const reservation=$('option-reservation').checked;
-  return {express,reservation,extra:(express==='24h'?50:express==='48h'?20:0)+(reservation?10:0)};
+  const express=document.querySelector('input[name="express"]:checked')?.value;
+  const reservationValue=document.querySelector('input[name="reservation"]:checked')?.value;
+  const complete=express!==undefined&&reservationValue!==undefined;
+  const reservation=reservationValue==='oui';
+  return {express,reservation,complete,extra:(express==='24h'?50:express==='48h'?20:0)+(reservation?10:0)};
  }
  function showAmount(){
   if(!current)return;
   const x=selected();
-  summary.textContent='À régler maintenant : '+euro((current.initial||0)+x.extra)+' (acompte '+euro(current.initial||0)+' + options '+euro(x.extra)+'). Total de la prestation si réussite : '+euro((current.total||0)+x.extra)+'. Solde en cas de réussite : '+euro(current.solde||0)+'.';
+  accept.disabled=!x.complete;
+  summary.textContent=(x.complete?'Vos deux choix sont validés. ':'Veuillez choisir explicitement le délai ET la réservation (oui/non) avant de valider. ')+'À régler maintenant : '+euro((current.initial||0)+x.extra)+' (acompte '+euro(current.initial||0)+' + options '+euro(x.extra)+'). Total de la prestation si réussite : '+euro((current.total||0)+x.extra)+'. Solde en cas de réussite : '+euro(current.solde||0)+'.';
  }
  async function api(payload){
   const r=await fetch('/api/unitaire',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,...payload}),cache:'no-store'});
@@ -40,7 +47,7 @@
   if(data.statut==='devis_envoye'&&data.decision==='en_attente'&&data.optionsPayeesAvance){
    etat.textContent='Votre proposition est disponible. Vous pouvez accepter avec les options de votre choix, ou refuser sans paiement.';
    priceTable.textContent='Formule : '+data.offre+' — '+euro(data.total)+' au total. Acompte : '+euro(data.initial)+'. Solde de '+euro(data.solde)+' uniquement si la recherche aboutit.';
-   quote.hidden=false;conditions.textContent='Après acceptation, le paiement sécurisé sera proposé. Le travail commencera une fois le paiement confirmé et les informations nécessaires réunies.';
+   quote.hidden=false;conditions.textContent='Après validation de tous vos choix et acceptation, Stripe s’ouvrira automatiquement. Le travail commencera une fois le paiement confirmé et les informations nécessaires réunies.';
    showAmount();
   }else if(data.statut==='devis_envoye'&&data.decision==='accepte'){
    etat.textContent='Vous avez accepté le devis. Réglez le montant initial et les options sélectionnées pour lancer la recherche.';
@@ -62,13 +69,24 @@
   else if(data.statut==='echec')etat.textContent='Recherche infructueuse. Aucun solde de réussite à payer.';
   else etat.textContent='Demande reçue, étude en cours.';
  }
- for(const el of document.querySelectorAll('input[name="express"],#option-reservation'))el.addEventListener('change',showAmount);
+ for(const el of document.querySelectorAll('input[name="express"],input[name="reservation"]'))el.addEventListener('change',showAmount);
  accept.onclick=async()=>{
-  if(!$('accord-conditions').checked){erreur.textContent='Vous devez prendre connaissance des conditions générales avant d’accepter.';return}
-  if(!current||!confirm('Confirmer votre acceptation du devis et des options cochées ? Le paiement vous sera ensuite proposé.'))return;
-  accept.disabled=true;refuse.disabled=true;
-  try{await api({action:'decision',choice:'accepter',express:selected().express,reservation:selected().reservation});await refresh()}
-  catch(e){erreur.textContent=e.message}finally{accept.disabled=false;refuse.disabled=false}
+  const choice=selected();
+  if(!choice.complete){erreur.textContent='Choisissez une option de délai ET répondez oui ou non pour la réservation.';return}
+  if(!$('accord-conditions').checked){erreur.textContent='Consultez et acceptez les conditions générales avant de continuer.';return}
+  if(!current||!confirm('Vous acceptez le devis de '+euro(current.total)+' € et validez vos options. Paiement immédiat : '+euro(current.initial+choice.extra)+' € ?'))return;
+  accept.disabled=true;refuse.disabled=true;erreur.textContent='Enregistrement des options et ouverture de Stripe…';
+  let decided=false;
+  try{
+   await api({action:'decision',choice:'accepter',express:choice.express,reservation:choice.reservation});
+   decided=true;
+   const d=await api({action:'checkout',stage:'initial'});
+   const u=new URL(d.checkoutUrl);if(u.protocol!=='https:'||!u.hostname.endsWith('.stripe.com'))throw Error('Lien Stripe non reconnu');
+   location.assign(u.href);
+  }catch(e){
+   if(decided){await refresh().catch(()=>{});erreur.textContent='Devis accepté, mais le paiement ne s’est pas ouvert : '+e.message+'. Utilisez le bouton « Payer » affiché pour reprendre sans repasser par vos choix.'}
+   else erreur.textContent=e.message;
+  }finally{if(!decided){accept.disabled=false;refuse.disabled=false}}
  };
  refuse.onclick=async()=>{
   if(!confirm('Refuser définitivement ce devis et clôturer la demande, sans paiement ?'))return;
