@@ -7,7 +7,7 @@ self.addEventListener('push',event=>{
  const url=typeof data.url==='string'&&/^\/#\/admin(?:\/[a-z-]+)?(?:\?dossier=[a-f0-9-]+)?$/.test(data.url)?data.url:'/#/admin';
  event.waitUntil(self.registration.showNotification(String(data.title||'Mécascope — Notification').slice(0,100),{
   body:String(data.body||'Un événement vous attend dans votre administration.').slice(0,160),
-  icon:'/favicon.svg',badge:'/favicon.svg',tag:String(data.tag||id).slice(0,95),
+  icon:'/icon-192.png',badge:'/icon-192.png',tag:String(data.tag||id).slice(0,95),
   renotify:false,data:{url},silent:false
  }));
 });
