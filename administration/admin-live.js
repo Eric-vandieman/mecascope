@@ -73,106 +73,115 @@ window.mecaAdminLive=async function(main,path){
    }
    if(!dossiers.length){const empty=document.createElement('p');empty.textContent='Aucun dossier reçu pour le moment.';list.append(empty)}
    wrap.before(registry);
-   const quotePanel=document.createElement('div');quotePanel.className='panel';
-   quotePanel.innerHTML='<h3>Préparer le devis — validation humaine</h3><p class="muted">Choisissez uniquement la formule de recherche. Le client sélectionnera lui-même les options Express (48 h +20 €, 24 h +50 €) et la réservation (+10 €) dans le formulaire du devis. Ces options seront payées avec son acompte, et non à la fin.</p><div class="meca-compose-grid"><label>Formule à proposer<select id="meca-quote-plan"><option value="ciblee">Recherche ciblée · 39 €</option><option value="approfondie">Recherche approfondie · 79 €</option><option value="expert">Investigation Expert · 149 €</option></select></label></div>';
-   const proposalBox=document.createElement('div');proposalBox.className='panel';proposalBox.style.marginTop='14px';
-   proposalBox.innerHTML='<h3>Votre message au client — rédigé par vous</h3><p class="muted">L’IA ne rédige pas à votre place. Les suggestions ci-dessous sont STRICTEMENT PRIVÉES : elles servent de pense-bête, jamais de texte transmis automatiquement. Seul ce que vous écrivez dans la zone libre est envoyé. Les prix et les options sont présentés séparément dans le formulaire client.</p>';
-   const introLabel=document.createElement('label');introLabel.textContent='Pense-bête privé : idées pour introduire votre réponse';
-   const introSelect=document.createElement('select');
-   for(const x of ['Après étude de votre demande, voici la solution de recherche que je vous propose.','J’ai étudié les informations de votre véhicule et la pièce demandée.','Merci pour votre demande. Voici mon analyse et ma proposition de prise en charge.']){const o=document.createElement('option');o.textContent=x;o.value=x;introSelect.append(o)}
-   introLabel.append(introSelect);
-   const reasonLabel=document.createElement('label');reasonLabel.textContent='Pense-bête privé : pourquoi proposer cette formule ?';
-   const reasonSelect=document.createElement('select');
-   for(const x of ['La recherche nécessite de vérifier plusieurs sources et de confirmer la compatibilité exacte.','La formule à 39 € convient à une recherche ciblée lorsque la référence est suffisamment identifiable et que les pistes initiales sont limitées.','La formule à 79 € est proposée plutôt que celle à 39 € car la recherche nécessite davantage de recoupements, de fournisseurs et de vérifications de compatibilité.','La formule à 149 € est proposée lorsque la rareté potentielle impose une investigation experte et des recherches documentaires plus larges.']){const o=document.createElement('option');o.value=x;o.textContent=x;reasonSelect.append(o)}
-   reasonLabel.append(reasonSelect);
-   const constraintLabel=document.createElement('h4');constraintLabel.textContent='Pense-bête privé : difficultés à considérer (jamais envoyées automatiquement)';
-   const checks=document.createElement('div');checks.style.cssText='display:grid;gap:8px';
-   const choices=['Référence constructeur / équivalence à confirmer','Compatibilité véhicule / motorisation à vérifier','Disponibilité et stock fournisseur non garantis','État, dimensions ou caractéristiques techniques à contrôler','Rareté probable nécessitant plusieurs fournisseurs','Informations complémentaires ou photos éventuellement nécessaires','Prix de la pièce distinct du tarif de recherche'];
-   let aiConstraints=[];
-   function populateChecks(extras=[]){checks.replaceChildren();for(const x of [...new Set([...choices,...extras.map(v=>String(v).slice(0,220))])].slice(0,16)){const l=document.createElement('label');l.style.cssText='display:flex;gap:8px;align-items:flex-start';const c=document.createElement('input');c.type='checkbox';c.value=x;c.style.width='auto';l.append(c,document.createTextNode(' '+x));checks.append(l)}}
-   populateChecks();
-   const personalLabel=document.createElement('label');personalLabel.textContent='Mon message personnel au client (obligatoire, rédigé par moi)';
-   const personal=document.createElement('textarea');personal.rows=5;personal.maxLength=1500;personal.placeholder='Bonjour, j’ai regardé votre demande… Expliquez ici avec vos mots les difficultés et pourquoi vous proposez cette formule. Le client ne verra aucun texte IA.';personal.style.width='100%';personalLabel.append(personal);
-   const previewTitle=document.createElement('h4');previewTitle.textContent='Message qui sera transmis au client';
-   const preview=document.createElement('pre');preview.style.cssText='white-space:pre-wrap;line-height:1.6;background:#111923;padding:14px;border-radius:8px;max-height:440px;overflow:auto';
-   const price={ciblee:{name:'Recherche ciblée',total:39,initial:19,balance:20,days:3},approfondie:{name:'Recherche approfondie',total:79,initial:39,balance:40,days:5},expert:{name:'Investigation Expert',total:149,initial:69,balance:80,days:7}};
-   function buildProposal(){
-      const row=dossiers.find(x=>x.id===select.value);
-      if(row?.statut==='devis_envoye'&&row.proposition_texte)return row.proposition_texte;
-      return 'Dossier '+(row?.reference||'à sélectionner')+'\\n\\n'+personal.value.trim();
-   }
-   function refreshPreview(){preview.textContent=buildProposal()}
-   proposalBox.append(introLabel,reasonLabel,constraintLabel,checks,personalLabel,previewTitle,preview);
-   quotePanel.append(proposalBox);
-   proposalBox.addEventListener('input',refreshPreview);
-   proposalBox.addEventListener('change',refreshPreview);
-   quotePanel.querySelector('#meca-quote-plan').addEventListener('change',refreshPreview);
-   const quoteButton=document.createElement('button');quoteButton.type='button';quoteButton.className='btn orange';quoteButton.textContent='Valider et envoyer le devis';quotePanel.append(quoteButton);
-   const failButton=document.createElement('button');failButton.type='button';failButton.className='btn danger';failButton.textContent='Clôturer la recherche sans résultat';failButton.hidden=true;
-   quotePanel.append(failButton);form.before(quotePanel);
-   // Qualification IA réservée à l'administrateur, jamais envoyée automatiquement.
-   const aiPanel=document.createElement('section');aiPanel.className='panel';
-   aiPanel.innerHTML='<h2>Estimation IA de la recherche</h2><p class="muted">Analyse interne de la difficulté, du temps de travail estimé et de la formule conseillée. Prix et délais contractuels fixes, validation humaine obligatoire.</p>';
-   const aiBtn=document.createElement('button');aiBtn.type='button';aiBtn.className='btn orange';aiBtn.textContent='Analyser la demande avec l’IA';
-   const aiStatus=document.createElement('p');aiStatus.setAttribute('role','status');
-   const aiOutput=document.createElement('div');aiOutput.style.cssText='white-space:pre-wrap;line-height:1.7;margin-top:12px';
-   aiPanel.append(aiBtn,aiStatus,aiOutput);quotePanel.before(aiPanel);
-   aiBtn.onclick=async()=>{
-     if(!select.value){aiStatus.textContent='Sélectionnez un dossier.';return}
-     const id=select.value;aiBtn.disabled=true;aiStatus.textContent='Qualification commerciale en cours…';aiOutput.replaceChildren();
-     try{
-       const r=await fetch('/api/qualification',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({id}),cache:'no-store'});
-       const response=await r.json().catch(()=>({}));if(!r.ok)throw Error(response.message||'Analyse indisponible');
-       if(id!==select.value)return;
-       const q=response.qualification||{},plan=response.recommandation||{};
-       const hours=[q.temps_interne_heures_min,q.temps_interne_heures_max].filter(v=>v!==null&&v!==undefined).join(' à ');
-       aiOutput.textContent='Formule suggérée : '+(plan.label||'À examiner')+' — '+(plan.prix_eur||'—')+' €'+'\\nDélai contractuel : '+(plan.delai_jours_ouvres||'—')+' jours ouvrés après conditions remplies'+'\\nPaiement initial : '+(plan.acompte_eur||'—')+' € · Solde si résultat : '+(plan.solde_eur||'—')+' €'+'\\nDifficulté : '+(q.difficulte||'—')+' · Confiance : '+(q.confiance||'—')+'\\nTemps de travail interne estimé : '+(hours||'Non estimé')+' heures'+'\\nJustification : '+(q.justification||'Non précisée')+'\\nRisques : '+(q.risques||'À vérifier')+'\\nQuestions au client :\\n'+(Array.isArray(q.questions_client)?q.questions_client.map(x=>'• '+x).join('\\n'):'—')+'\\nPistes fournisseurs :\\n'+(Array.isArray(q.pistes_recherche)?q.pistes_recherche.map(x=>'• '+x).join('\\n'):'—');
-       if(q.formule&&quotePanel.querySelector('#meca-quote-plan')?.querySelector('option[value="'+q.formule+'"]'))quotePanel.querySelector('#meca-quote-plan').value=q.formule;
-       // L'IA suggère des précautions ; leur reprise commerciale requiert une sélection manuelle.
-       aiConstraints=[...(Array.isArray(q.questions_client)?q.questions_client:[]),...(Array.isArray(q.risques)?q.risques:typeof q.risques==='string'?[q.risques]:[])];
-       populateChecks(aiConstraints);
-       if(q.justification){reasonSelect.selectedIndex=q.formule==='ciblee'?1:q.formule==='approfondie'?2:q.formule==='expert'?3:0}
-       refreshPreview();
-       aiStatus.textContent='Analyse prête. Vérifiez-la avant tout devis. Aucune proposition envoyée.';
-     }catch(e){aiStatus.textContent=e.message}finally{aiBtn.disabled=false}
-   };
-   // Conversation de qualification : possible avant paiement, aucun résultat fournisseur révélé.
-   const chatPanel=document.createElement('section');chatPanel.className='panel';
-   chatPanel.innerHTML='<h2>Conversation avec le client</h2><p class="muted">Utilisez ce chat pour demander des précisions avant le devis et échanger pendant la recherche. Les résultats fournisseurs restent soumis au paiement confirmé.</p>';
-   const chatInput=document.createElement('textarea');chatInput.rows=4;chatInput.maxLength=3000;chatInput.placeholder='Votre message au client (référence, photos, dimensions, questions…)';chatInput.style.width='100%';
-   const chatButton=document.createElement('button');chatButton.type='button';chatButton.className='btn orange';chatButton.textContent='Enregistrer le message dans la conversation';
-   const chatStatus=document.createElement('p');chatStatus.setAttribute('role','status');
-   chatPanel.append(chatInput,chatButton,chatStatus);wrap.after(chatPanel);
-   chatButton.onclick=async()=>{
-     const message=chatInput.value.trim(),row=dossiers.find(x=>x.id===select.value);
-     if(!row||!message){chatStatus.textContent='Sélectionnez un dossier et saisissez un message.';return}
-     if(!confirm('Enregistrer ce message visible par le client dans le dossier '+row.reference+' ?'))return;
-     chatButton.disabled=true;chatStatus.textContent='Enregistrement…';
-     try{
-       const response=await call({action:'chat',id:row.id,message});
-       chatInput.value='';chatStatus.textContent=response.message||'Message enregistré dans le dossier.';await refreshHistory();
-     }catch(e){chatStatus.textContent=e.message}finally{chatButton.disabled=false}
-   };
 
-   form.insertAdjacentHTML('beforeend','<label class="wide"><input type="checkbox" name="expressEligible"> Délai Express tenu et éligible au supplément prévu</label><label class="wide"><input type="checkbox" name="reservationConfirmed"> Réservation fournisseur effectivement confirmée</label>');
-   function showOptions(){
-    const d=dossiers.find(x=>x.id===select.value),existing=d?.statut==='devis_envoye';
-    const planSelect=quotePanel.querySelector('#meca-quote-plan');
-    planSelect.value=existing&&d.offre?d.offre:'ciblee';
-    planSelect.disabled=existing;
-    proposalBox.querySelectorAll('select,input,textarea').forEach(x=>x.disabled=existing);
-    quoteButton.textContent=existing?'Renvoyer le devis identique':'Valider et envoyer le devis';
-    refreshPreview();
-    quotePanel.hidden=!d||!['deposee','devis_envoye','acompte_paye'].includes(d.statut);
-    quoteButton.hidden=!d||!['deposee','devis_envoye'].includes(d.statut)||(existing&&d.devis_decision!=='en_attente');
-    failButton.hidden=!d||d.statut!=='acompte_paye';
+   // Conversation = historique + une proposition prête à envoyer, sans plusieurs formulaires redondants.
+   const conversationTitle=document.createElement('h2');conversationTitle.textContent='Conversation avec le client';wrap.insertBefore(conversationTitle,history);
+   const quotePanel=document.createElement('section');quotePanel.className='panel meca-simple-proposal';quotePanel.style.cssText='margin-top:14px;border:1px solid #b07c3b;padding:18px';
+   const quoteHeader=document.createElement('h3');quoteHeader.textContent='Ma proposition de recherche';quotePanel.append(quoteHeader);
+   const quoteHelp=document.createElement('p');quoteHelp.className='muted';quoteHelp.textContent='L’IA prépare un message à partir du dossier. Relisez-le, adaptez-le avec vos mots, puis envoyez. Votre client choisira lui-même les options Express 48 h (+20 €), Express 24 h (+50 €) et réservation fournisseur (+10 €) au moment d’accepter le devis.';quotePanel.append(quoteHelp);
+   const planLabel=document.createElement('label');planLabel.textContent='Formule proposée';
+   const planSelect=document.createElement('select');planSelect.id='meca-quote-plan';
+   for(const [key,name] of [['ciblee','Recherche ciblée — 39 € · 3 jours ouvrés'],['approfondie','Recherche approfondie — 79 € · 5 jours ouvrés'],['expert','Investigation Expert — 149 € · 7 jours ouvrés']]){const option=document.createElement('option');option.value=key;option.textContent=name;planSelect.append(option)}
+   planLabel.append(planSelect);quotePanel.append(planLabel);
+   const aiPanel=document.createElement('div');aiPanel.style.cssText='padding:10px 0';
+   const aiBtn=document.createElement('button');aiBtn.type='button';aiBtn.className='btn dark';aiBtn.textContent='↻ Préparer / actualiser avec l’IA';
+   const aiStatus=document.createElement('p');aiStatus.setAttribute('role','status');aiStatus.className='muted';
+   const aiOutput=document.createElement('details');aiOutput.innerHTML='<summary>Voir les conseils techniques privés de l’IA</summary>';
+   const aiDetails=document.createElement('pre');aiDetails.style.cssText='white-space:pre-wrap;font:inherit;line-height:1.6;max-height:400px;overflow:auto';aiOutput.append(aiDetails);
+   aiPanel.append(aiBtn,aiStatus,aiOutput);quotePanel.append(aiPanel);
+   const personalLabel=document.createElement('label');personalLabel.textContent='Message au client (modifiable avant envoi)';
+   const personal=document.createElement('textarea');personal.rows=11;personal.maxLength=2600;personal.style.cssText='display:block;width:100%;line-height:1.65;padding:12px';personal.placeholder='L’IA prépare automatiquement votre proposition ici. Vous pouvez tout réécrire avant de l’envoyer.';
+   personalLabel.append(personal);quotePanel.append(personalLabel);
+   const priceInfo=document.createElement('p');priceInfo.className='muted';quotePanel.append(priceInfo);
+   const quoteButton=document.createElement('button');quoteButton.type='button';quoteButton.className='btn orange';quoteButton.textContent='Envoyer ma proposition au client';quotePanel.append(quoteButton);
+   const proposalStatus=document.createElement('p');proposalStatus.setAttribute('role','status');quotePanel.append(proposalStatus);
+   const failButton=document.createElement('button');failButton.type='button';failButton.className='btn danger';failButton.textContent='Clôturer la recherche sans résultat';failButton.hidden=true;quotePanel.append(failButton);
+   wrap.append(quotePanel);
+   const chatPanel=document.createElement('div');chatPanel.style.cssText='margin-top:18px';
+   const chatHeading=document.createElement('h3');chatHeading.textContent='Envoyer un simple message (sans devis)';chatPanel.append(chatHeading);
+   const chatInput=document.createElement('textarea');chatInput.rows=3;chatInput.maxLength=3000;chatInput.placeholder='Une question ou un complément pour le client…';chatInput.style.width='100%';
+   const chatButton=document.createElement('button');chatButton.type='button';chatButton.className='btn dark';chatButton.textContent='Envoyer ce message';
+   const chatStatus=document.createElement('p');chatStatus.setAttribute('role','status');chatPanel.append(chatInput,chatButton,chatStatus);wrap.append(chatPanel);
+   const plans={ciblee:{price:39,initial:19,solde:20,days:3,name:'Recherche ciblée'},approfondie:{price:79,initial:39,solde:40,days:5,name:'Recherche approfondie'},expert:{price:149,initial:69,solde:80,days:7,name:'Investigation Expert'}};
+   const dossierName=row=>String(row?.contact||'').trim();
+   function defaultDraft(row,formule){
+    const p=plans[formule]||plans.approfondie,d=row?.details||{};
+    const vehicle=[d.brand,d.model,d.year].filter(Boolean).join(' ');
+    const part=String(d.part||'la pièce demandée');
+    const reference=d.ref?(' (référence '+d.ref+')'):'';
+    const greeting=dossierName(row)?'Bonjour '+dossierName(row)+',':'Bonjour,';
+    return greeting+'\n\nJ’ai regardé votre demande concernant '+part+reference+(vehicle?' pour votre '+vehicle:'')+'. Pour éviter de vous orienter vers une pièce qui ne conviendrait pas, je vais d’abord vérifier les références compatibles et les fournisseurs susceptibles de l’avoir. La disponibilité reste à confirmer.\n\nPour cette recherche, je vous propose la formule '+p.name+' à '+p.price+' €, avec un délai de '+p.days+' jours ouvrés à compter de la validation et du paiement initial. '+(formule==='approfondie'?'Le travail nécessite des vérifications plus étendues qu’une recherche ciblée à 39 €. ':formule==='expert'?'La difficulté suppose une recherche auprès de sources spécialisées. ':'Cette formule permet de commencer par une recherche ciblée. ')+'\n\nSi vous le souhaitez, vous pourrez choisir directement sur le devis une recherche Express en 48 h (+20 €), en 24 h (+50 €) ou une demande de réservation auprès du fournisseur (+10 €). Ces options sont facultatives et réglées avec l’acompte ; elles sont remboursables si leurs conditions de réalisation ne sont pas remplies. Le prix d’achat de la pièce reste distinct.\n\nJe reste disponible si vous souhaitez une précision.\n\nCordialement,\nMécascope';
    }
-   quoteButton.onclick=async()=>{const d=dossiers.find(x=>x.id===select.value);if(!d)return;
-    const message=buildProposal();if((d.statut!=='devis_envoye'&&personal.value.trim().length<45)||message.length<80||message.length>2800){alert('Rédigez personnellement au moins 45 caractères et ne dépassez pas 2 800 caractères au total.');return}
-    if(!confirm('Envoyer ce devis et cet argumentaire dans la messagerie de '+d.contact+', avec un e-mail contenant le lien de paiement ?'))return;
-    quoteButton.disabled=true;
-    try{const r=await call({action:'quote',id:d.id,offre:quotePanel.querySelector('#meca-quote-plan').value,proposal:message});alert(r.message||'Devis envoyé');location.reload()}
-    catch(e){alert(e.message)}finally{quoteButton.disabled=false}
+   function buildProposal(){
+     const row=dossiers.find(x=>x.id===select.value);
+     if(row?.statut==='devis_envoye'&&row.proposition_texte)return row.proposition_texte;
+     return 'Dossier '+(row?.reference||'à sélectionner')+'\n\n'+personal.value.trim();
+   }
+   function setPriceInfo(){const p=plans[planSelect.value]||plans.ciblee;priceInfo.textContent='Formule '+p.price+' € : acompte '+p.initial+' € + solde '+p.solde+' € si recherche aboutie. Options du client : 48 h +20 €, 24 h +50 €, réservation +10 € (payées avec l’acompte).'}
+   planSelect.onchange=()=>{
+     setPriceInfo();
+     const row=dossiers.find(x=>x.id===select.value);
+     if(!row||row.statut!=='deposee')return;
+     // Si l'administrateur change la formule, le brouillon suit sans écraser le texte déjà personnalisé.
+     proposalStatus.textContent='Formule modifiée : adaptez si nécessaire le tarif et le délai dans le message avant l’envoi.';
+   };
+   let currentAiDossier=null;
+   async function analyzeCurrent(force=false){
+     const row=dossiers.find(x=>x.id===select.value);if(!row||row.type_dossier==='professionnel'||!['deposee','devis_envoye'].includes(row.statut))return;
+     const id=row.id;
+     if(!force&&currentAiDossier===id)return;
+     currentAiDossier=id;aiBtn.disabled=true;aiStatus.textContent='L’IA examine la demande et prépare une réponse…';
+     try{
+       const r=await fetch('/api/qualification',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,contact:row.contact||''}),cache:'no-store'});
+       const data=await r.json().catch(()=>({}));if(!r.ok)throw Error(data.message||'Analyse indisponible');
+       if(select.value!==id)return;
+       const q=data.qualification||{};const key=plans[q.formule]?q.formule:'approfondie';
+       if(row.statut==='deposee'){
+         planSelect.value=key;
+         const proposal=String(q.message_client||'').trim();
+         personal.value=proposal.length>75?proposal:defaultDraft(row,key);
+       }
+       aiDetails.textContent='Difficulté : '+(q.difficulte||'à préciser')+'\nPourquoi cette formule : '+(q.justification||'à vérifier')+'\nRisques / contrôles : '+(Array.isArray(q.risques)?q.risques.join(' ; '):q.risques||'à vérifier')+'\nInformations utiles : '+(Array.isArray(q.questions_client)?q.questions_client.join(' ; '):'—')+'\nPistes de recherche : '+(Array.isArray(q.pistes_recherche)?q.pistes_recherche.join(' ; '):'—');
+       aiStatus.textContent='Proposition IA préparée. Vous pouvez modifier librement le message et la formule ; rien n’a été envoyé.';
+       setPriceInfo();
+     }catch(e){if(select.value===id){aiStatus.textContent='IA indisponible : '+e.message+' — vous pouvez utiliser et modifier le brouillon déjà préparé.';currentAiDossier=null}}
+     finally{aiBtn.disabled=false}
+   }
+   aiBtn.onclick=()=>analyzeCurrent(true);
+   chatButton.onclick=async()=>{
+     const row=dossiers.find(x=>x.id===select.value),message=chatInput.value.trim();
+     if(!row||!message){chatStatus.textContent='Choisissez un dossier et écrivez votre message.';return}
+     if(!confirm('Envoyer ce message au client dans son espace de suivi ?'))return;
+     chatButton.disabled=true;
+     try{const response=await call({action:'chat',id:row.id,message});chatInput.value='';chatStatus.textContent=response.message||'Message enregistré.';await refreshHistory()}
+     catch(e){chatStatus.textContent=e.message}finally{chatButton.disabled=false}
+   };
+   form.insertAdjacentHTML('beforeend','<label class="wide"><input type="checkbox" name="expressEligible"> Délai Express tenu et éligible au supplément prévu</label><label class="wide"><input type="checkbox" name="reservationConfirmed"> Réservation fournisseur effectivement confirmée</label>');
+
+   function showOptions(){
+     const row=dossiers.find(x=>x.id===select.value),existing=row?.statut==='devis_envoye',canQuote=row&&['deposee','devis_envoye'].includes(row.statut);
+     quotePanel.hidden=!row||!['deposee','devis_envoye','acompte_paye'].includes(row.statut);
+     quoteButton.hidden=!canQuote||(existing&&row.devis_decision!=='en_attente');
+     failButton.hidden=!row||row.statut!=='acompte_paye';
+     planSelect.value=existing&&plans[row.offre]?row.offre:'approfondie';
+     planSelect.disabled=existing;personal.disabled=existing;
+     quoteButton.textContent=existing?'Renvoyer le même devis':'Envoyer ma proposition au client';
+     personal.value=existing?(row.proposition_texte||''):(row?defaultDraft(row,planSelect.value):'');
+     setPriceInfo();
+     proposalStatus.textContent='';
+     aiDetails.textContent='';
+     aiStatus.textContent='';
+     currentAiDossier=null;
+     if(row&&row.statut==='deposee'&&row.type_dossier!=='professionnel')analyzeCurrent();
+   }
+   quoteButton.onclick=async()=>{
+     const row=dossiers.find(x=>x.id===select.value);if(!row)return;
+     const message=buildProposal();
+     if(message.length<80||message.length>2800){proposalStatus.textContent='Vérifiez votre message (80 à 2 800 caractères, référence comprise).';return}
+     if(!confirm('Envoyer votre proposition de '+(plans[planSelect.value]?.price||'—')+' € à '+(row.contact||'ce client')+' avec toutes les options facultatives à sélectionner sur son devis ?'))return;
+     quoteButton.disabled=true;proposalStatus.textContent='Envoi de votre proposition…';
+     try{const result=await call({action:'quote',id:row.id,offre:planSelect.value,proposal:message});proposalStatus.textContent=result.message||'Devis transmis au client.';await refreshHistory();location.reload()}
+     catch(e){proposalStatus.textContent=e.message}finally{quoteButton.disabled=false}
    };
    failButton.onclick=async()=>{const d=dossiers.find(x=>x.id===select.value);if(!d||!confirm('Clôturer cette recherche comme infructueuse, sans solde à payer ?'))return;
     failButton.disabled=true;try{await call({action:'fail',id:d.id});await call({action:'reply',id:d.id,found:false,message:'Nous vous informons que notre recherche n’a pas permis d’identifier une pièce conforme. Aucun solde de réussite n’est dû. Nous restons à votre disposition pour tout complément.'});alert('Recherche clôturée et client informé.');location.reload()}catch(e){alert(e.message)}finally{failButton.disabled=false}
@@ -180,7 +189,7 @@ window.mecaAdminLive=async function(main,path){
 
    async function refreshHistory(){history.textContent='';if(!select.value)return;try{const r=await call({action:'messages',id:select.value});for(const m of r.messages||[]){const p=document.createElement('p');p.textContent=(m.auteur==='client'?'Client':'Mécascope')+' · '+new Date(m.cree_le).toLocaleString('fr-FR')+' : '+m.contenu;history.append(p)}}catch(e){history.textContent=e.message}}
    window.mecaPieceHistory?.(main,select,dossiers);
-   select.onchange=()=>{const row=dossiers.find(x=>x.id===select.value);form.elements.ref.value=row?.reference||'';personal.value='';populateChecks();reasonSelect.selectedIndex=0;aiOutput.replaceChildren();aiStatus.textContent='';showDossier(row);showOptions();refreshHistory()};
+   select.onchange=()=>{const row=dossiers.find(x=>x.id===select.value);form.elements.ref.value=row?.reference||'';showDossier(row);showOptions();refreshHistory()};
    // Alimenter le tableau principal attendu dans Gestion des demandes.
    if(path==='/admin/demandes'){
      const table=main.querySelector('#list-content tbody');
