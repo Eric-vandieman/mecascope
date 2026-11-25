@@ -19,7 +19,7 @@ export default async function handler(req,res){
  const phone=limited(b.phone,22);
  if(!validEmail(email)||contact.length<2||!allowTypes.has(b.vehicleType)||!limited(b.brand)||!limited(b.model)||!limited(b.part)||!/^((19|20)\d{2})$/.test(String(b.year||'')))
   return res.status(400).json({message:'Complétez votre nom, e-mail, type de véhicule, marque, modèle, année et pièce recherchée.'});
- if(b.vin && !/^[A-HJ-NPR-Z0-9]{11,17}$/i.test(limited(b.vin,30)))return res.status(400).json({message:'Le VIN indiqué semble incorrect. Corrigez-le ou laissez ce champ vide.'});
+ if(b.vin && !/^[A-HJ-NPR-Z0-9]{4,17}$/i.test(limited(b.vin,30)))return res.status(400).json({message:'Le VIN indiqué semble incorrect. Corrigez-le ou laissez ce champ vide.'});
  const photos=Array.isArray(b.photos)?b.photos:[];
  if(photos.length>5)return res.status(413).json({message:'Cinq photos maximum.'});
  const allowed=new Set(['image/jpeg','image/png','image/webp']);
@@ -27,10 +27,10 @@ export default async function handler(req,res){
  const attachments=[];
  for(let i=0;i<photos.length;i++){
   const photo=photos[i];
-  if(!photo || !allowed.has(photo.type) || typeof photo.data!=='string' || photo.data.length>2000000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(photo.data))
-   return res.status(400).json({message:'Photo non valide. Utilisez JPG, PNG ou WebP (1,4 Mo maximum par photo).'});
+  if(!photo || !allowed.has(photo.type) || typeof photo.data!=='string' || photo.data.length>1350000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(photo.data))
+   return res.status(400).json({message:'Photo non valide. Utilisez JPG, PNG ou WebP (950 Ko maximum par photo).'});
   total+=photo.data.length;
-  if(total>5000000)return res.status(413).json({message:'Photos trop volumineuses (3,7 Mo cumulés maximum).'});
+  if(total>3200000)return res.status(413).json({message:'Photos trop volumineuses (2,3 Mo cumulés maximum).'});
   attachments.push({filename:'piece-'+(i+1)+'.'+({ 'image/jpeg':'jpg','image/png':'png','image/webp':'webp'}[photo.type]),content:photo.data});
  }
  const key=process.env.RESEND_API_KEY,from=process.env.MECASCOPE_MAIL_FROM;
