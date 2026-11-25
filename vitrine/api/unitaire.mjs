@@ -66,6 +66,7 @@ export default async function handler(req,res){
    let plan=d.offre,stage;
    if(action==='admin-quote'){
     if(!['deposee','devis_envoye'].includes(d.statut)||!offers[b.offre]||d.initial_paid_at)return res.status(409).json({message:'Devis non autorisé'});
+    if(d.statut==='devis_envoye'&&d.offre!==b.offre)return res.status(409).json({message:'Une proposition a déjà été envoyée. Son tarif ne peut plus être modifié pendant qu’un paiement Stripe peut être en cours.'});
     plan=b.offre;stage='devis_envoye';
    }else{
     if(d.statut!=='acompte_paye'||!d.initial_paid_at||!offers[plan])return res.status(409).json({message:'Solde interdit tant que l’acompte n’est pas confirmé'});
@@ -104,7 +105,7 @@ export default async function handler(req,res){
   params.set('cancel_url','https://xn--mcascope-b1a.fr/mission.html?t='+encodeURIComponent(token)+'&paiement=annule');
   const sr=await fetch('https://api.stripe.com/v1/checkout/sessions',{
    method:'POST',headers:{Authorization:'Bearer '+process.env.STRIPE_SECRET_KEY,'Content-Type':'application/x-www-form-urlencoded',
-    'Idempotency-Key':'meca-'+stage+'-'+d.id+'-'+new Date().toISOString().slice(0,10)},
+    'Idempotency-Key':'meca-'+stage+'-'+d.id+'-'+Math.floor(Date.now()/1800000)},
    body:params.toString(),signal:AbortSignal.timeout(12000)});
   const session=await obj(sr);
   if(!sr.ok||!session?.url||session.mode!=='payment')return res.status(503).json({message:'Paiement momentanément indisponible'});
