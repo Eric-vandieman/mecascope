@@ -63,12 +63,12 @@ export default async function handler(req,res){
     await replace(d,'acompte_paye',{statut:'echec'});
     return res.status(200).json({ok:true,message:'Recherche clôturée sans solde.'});
    }
-   let plan=d.offre,stage;
+   let plan=d.offre,stage,selectedExpress=null,selectedReservation=false;
    if(action==='admin-quote'){
     if(!['deposee','devis_envoye'].includes(d.statut)||!offers[b.offre]||d.initial_paid_at)return res.status(409).json({message:'Devis non autorisé'});
     if(d.statut==='devis_envoye'&&d.offre!==b.offre)return res.status(409).json({message:'Une proposition a déjà été envoyée. Son tarif ne peut plus être modifié pendant qu’un paiement Stripe peut être en cours.'});
-    const selectedExpress=['24h','48h'].includes(b.express)?b.express:null;
-    const selectedReservation=b.reservation===true;
+    selectedExpress=['24h','48h'].includes(b.express)?b.express:null;
+    selectedReservation=b.reservation===true;
     if(d.statut==='devis_envoye'&&(d.express_option!==selectedExpress||d.reservation_option!==selectedReservation))
       return res.status(409).json({message:'Les options déjà acceptables par paiement ne peuvent plus être modifiées sur ce devis.'});
     plan=b.offre;stage='devis_envoye';
