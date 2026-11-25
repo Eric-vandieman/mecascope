@@ -64,7 +64,8 @@ window.mecaAdminLive=async function(main,path){
      const lines=['DOSSIER '+(row.reference||row.id),'Statut : '+(row.statut==='refuse'?'Devis refusé — dossier clôturé':row.statut||'—')+(row.statut==='devis_envoye'&&row.devis_decision==='accepte'?' (devis accepté, paiement initial attendu)':''),'Client : '+(row.contact||'—'),'E-mail : '+(row.email||'—'),'Créé le : '+(row.cree_le?new Date(row.cree_le).toLocaleString('fr-FR'):'—'),'Type : '+(row.type_dossier==='professionnel'?'Professionnel':'Particulier')];
      lines.push('Téléphone : '+(String(row.telephone||'').trim()||'NON COMMUNIQUÉ — à demander au client'));
      const budget=String(row.details?.budget??'').trim();
-     lines.push('Budget maximum de la pièce : '+(budget?budget:'NON COMMUNIQUÉ — aucun plafond annoncé ; validation du prix nécessaire avant achat'));
+     if(!budget)lines.push('Règle de réussite : une offre fournisseur compatible, disponible et au prix vérifié peut valider la recherche quel que soit le prix de la pièce, sans obligation d’achat.');
+     lines.push('Budget maximum de la pièce : '+(budget?budget:'NON INDIQUÉ — pas de plafond communiqué ; prix fournisseur sans limite contractuelle si offre qualifiée (aucun achat sans accord)'));
      for(const [label,key] of fields){if(key==='budget')continue;const v=row.details?.[key];if(v!==null&&v!==undefined&&String(v).trim())lines.push(label+' : '+String(v))}
      detail.textContent=lines.join('\n');
    }
@@ -139,7 +140,7 @@ window.mecaAdminLive=async function(main,path){
       abroad(row),
       '',
       ...(String(row?.telephone||'').trim()?[]:['Afin de pouvoir vous joindre rapidement si un fournisseur répond ou si une précision est nécessaire, pourriez-vous également me communiquer un numéro de téléphone ?','']),
-      ...(String(d.budget??'').trim()?[]:['Vous n’avez pas indiqué de budget maximal pour l’achat de la pièce. Je pourrai examiner les offres disponibles sans plafond prédéfini, mais je vous demanderai votre accord sur le prix avant toute décision d’achat.','']),
+      ...(String(d.budget??'').trim()?[]:['Vous n’avez pas fixé de budget maximal pour l’achat de la pièce. Je pourrai donc examiner les offres fournisseurs sans plafond de prix. Si je trouve une pièce compatible, réellement disponible, avec un prix fournisseur vérifié, ma mission de recherche sera considérée comme réussie, quel que soit ce prix, et le solde de la prestation sera dû selon le devis. Vous resterez libre d’acheter ou non la pièce : aucun achat ne sera effectué sans votre accord.','']),
       'Compte tenu de ces vérifications, je vous propose la formule '+p.name+' à '+p.price+' €, avec un délai de '+p.days+' jours ouvrés après acceptation, paiement initial et réception des informations nécessaires.',
       '',
       'Vous pourrez choisir sous ce message une recherche Express en 48 h (+20 €) ou en 24 h (+50 €). Cette option se règle à l’avance avec l’acompte : si le délai convenu n’est pas tenu, son supplément sera remboursé. Vous pourrez également demander une réservation de la pièce pendant 24 h auprès du fournisseur (+10 €), indépendamment du délai de recherche choisi ; elle reste sous réserve de confirmation du fournisseur.',
@@ -195,7 +196,7 @@ window.mecaAdminLive=async function(main,path){
            .replace(/\s*Vous restez libre de votre choix\.[\s\S]*$/,'')
            .replace(/\s*Cordialement,[\s\S]*$/,'').trimEnd();
          const phoneLine=telephoneManquant?'\n\nPourriez-vous également me communiquer un numéro de téléphone afin de pouvoir vous joindre rapidement si un fournisseur a besoin d’une confirmation ?':'';
-         const budgetLine=budgetManquant?'\n\nVous n’avez pas indiqué de budget maximal pour l’achat de la pièce. Je pourrai examiner différentes offres et vous demanderai votre accord sur le prix avant tout achat.':'';
+         const budgetLine=budgetManquant?'\n\nVous n’avez pas fixé de budget maximal pour la pièce. Toute offre fournisseur conforme, vérifiée et disponible pourra donc valider ma mission de recherche quel que soit son prix, et le solde de la prestation sera dû. Vous garderez le choix d’acheter ou non la pièce ; aucun achat ne sera effectué sans votre accord.':'';
          personal.value=first+phoneLine+budgetLine+'\n\nVous restez libre de votre choix.\n\nCordialement,\nL’équipe Mécascope';
        }
        aiDetails.textContent='Difficulté : '+(q.difficulte||'à préciser')+'\nPourquoi cette formule : '+(q.justification||'à vérifier')+'\nRisques / contrôles : '+(Array.isArray(q.risques)?q.risques.join(' ; '):q.risques||'à vérifier')+'\nInformations utiles : '+(Array.isArray(q.questions_client)?q.questions_client.join(' ; '):'—')+'\nPistes de recherche : '+(Array.isArray(q.pistes_recherche)?q.pistes_recherche.join(' ; '):'—');
