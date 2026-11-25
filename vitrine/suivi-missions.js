@@ -1,11 +1,11 @@
 'use strict';
 const root=document.getElementById('dossiers'),status=document.getElementById('status');
 const offers={ciblee:'Recherche ciblée : 19 € + 20 €',approfondie:'Recherche approfondie : 39 € + 40 €',expert:'Investigation Expert : 69 € + 80 €'};
-async function send(id,action,offre){
+async function send(id,action,offre,extras={}){
  if(!confirm(action==='admin-quote'?'Envoyer ce devis au client ?':action==='admin-success'?'Recherche réussie : proposer le solde ?':'Clôturer sans solde ?'))return;
  status.textContent='Enregistrement en cours…';
  try{
-  const r=await fetch('/api/unitaire',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,id,offre})});
+  const r=await fetch('/api/unitaire',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,id,offre,...extras})});
   const j=await r.json();if(!r.ok)throw Error(j.message||'Action refusée');
   status.textContent=j.message||'Enregistré';await load();
  }catch(e){status.textContent=e.message}
