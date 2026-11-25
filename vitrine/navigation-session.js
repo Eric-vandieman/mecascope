@@ -135,4 +135,4 @@
   refresh();
 })();
 // Mesure agrégée des visites, identifiant conservé pour l'onglet uniquement.
-(function(){try{let visitor=sessionStorage.getItem('meca-session-visit');if(!visitor){visitor=crypto.randomUUID();sessionStorage.setItem('meca-session-visit',visitor)}const path=location.pathname;fetch('/api/visites',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({visitor,path}),keepalive:true}).catch(()=>{})}catch{}})();
+(function(){try{let visitor=sessionStorage.getItem('meca-session-visit');if(!visitor){visitor=crypto.randomUUID();sessionStorage.setItem('meca-session-visit',visitor)}const path=location.pathname;fetch('/api/unitaire',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'visit',visitor,path}),keepalive:true}).catch(()=>{})}catch{}})();

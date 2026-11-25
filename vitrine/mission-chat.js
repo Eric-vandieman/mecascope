@@ -9,7 +9,7 @@
  const send=document.createElement('button');send.textContent='Envoyer mon message';send.style.marginTop='12px';section.append(send);
  const status=document.createElement('p');status.setAttribute('role','status');section.append(status);main.append(section);
  async function load(message){
-  const r=await fetch('/api/mission-conversation'+(message===undefined?'?token='+encodeURIComponent(token):''),message===undefined?{cache:'no-store'}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,message})});
+  const r=await fetch('/api/unitaire'+(message===undefined?'?action=conversation&t='+encodeURIComponent(token):''),message===undefined?{cache:'no-store'}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'send-message',token,message})});
   const d=await r.json();if(!r.ok)throw Error(d.message||'Conversation indisponible');
   messages.replaceChildren();for(const m of d.messages||[]){const el=document.createElement('p');el.textContent=(m.auteur==='client'?'Vous':'Mécascope')+' — '+new Date(m.cree_le).toLocaleString('fr-FR')+'\n'+m.contenu;messages.append(el)}
   result.replaceChildren();
@@ -19,5 +19,5 @@
  send.onclick=async()=>{const value=input.value.trim();if(!value)return;send.disabled=true;status.textContent='Envoi…';try{await load(value);input.value='';status.textContent='Message enregistré dans votre dossier.'}catch(e){status.textContent=e.message}finally{send.disabled=false}};
  try{await load()}catch(e){status.textContent=e.message}
  // Comptage statistique sans cookie tiers et sans collecte d'IP.
- try{let visitor=sessionStorage.getItem('meca-session-visit');if(!visitor){visitor=crypto.randomUUID();sessionStorage.setItem('meca-session-visit',visitor)}fetch('/api/visites',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({visitor,path:location.pathname}),keepalive:true}).catch(()=>{})}catch{}
+ try{let visitor=sessionStorage.getItem('meca-session-visit');if(!visitor){visitor=crypto.randomUUID();sessionStorage.setItem('meca-session-visit',visitor)}fetch('/api/unitaire',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'visit',visitor,path:location.pathname}),keepalive:true}).catch(()=>{})}catch{}
 })();
