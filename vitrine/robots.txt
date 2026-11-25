@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /administration/
+Disallow: /api/
+Disallow: /espace-pro.html
+Disallow: /mon-espace.html
+Disallow: /compte.html
+Disallow: /connexion.html
+Disallow: /inscription.html
+Disallow: /abonnement.html
+Disallow: /rejoindre-equipe.html
+
+Sitemap: https://www.xn--mcascope-b1a.fr/sitemap.xml
