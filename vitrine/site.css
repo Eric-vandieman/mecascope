@@ -1009,18 +1009,39 @@ body.meca-auth-body{background:#071017 url('/fond-tarifs-client.webp') center ce
 #confirmation-resend-status{min-height:18px;color:#ffcf98;font-size:13px;line-height:1.5;margin:0}
 
 
-/* Navigation Mécascope : un seul indicateur lumineux, sur l'onglet actif uniquement. */
-.meca-new-top .nav a,
-.meca-new-top .nav a:hover,
-.meca-new-top .nav a.current{
-  border-bottom-color:transparent!important;
+/* Navigation unique : tous les anciens traits sont neutralisés. */
+.meca-new-top nav.nav > a,
+.meca-new-top nav.nav > a:hover,
+.meca-new-top nav.nav > a:focus-visible,
+.meca-new-top nav.nav > a.current{
+  position:relative;
+  border:0!important;
+  border-bottom:0!important;
+  background-image:none!important;
+  text-decoration:none!important;
 }
-.meca-new-top .nav a:not(.current)::after{
+.meca-new-top nav.nav > a::before,
+.meca-new-top nav.nav > a::after{
   content:none!important;
+  display:none!important;
+  border:0!important;
+  background:none!important;
   box-shadow:none!important;
 }
-.meca-new-top .nav a.current::after{
+.meca-new-top nav.nav > a.current::after{
   content:""!important;
-  background:#ffb12e!important;
-  box-shadow:0 0 9px 2px #ffb12ebd!important;
+  display:block!important;
+  position:absolute!important;
+  left:0!important;
+  right:0!important;
+  bottom:11px!important;
+  height:2px!important;
+  border:0!important;
+  border-radius:2px!important;
+  background:#ffb52d!important;
+  box-shadow:0 0 7px 1px rgba(255,174,29,.8)!important;
+  pointer-events:none;
+}
+@media(max-width:960px){
+  .meca-new-top nav.nav > a.current::after{bottom:3px!important}
 }
