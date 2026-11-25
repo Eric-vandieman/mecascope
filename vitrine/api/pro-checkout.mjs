@@ -5,13 +5,19 @@ const getCookie=h=>{const value=String(h||'').split(';').map(s=>s.trim()).find(s
 const plans={priorite:['STRIPE_PRICE_PRIORITE',0],pro5:['STRIPE_PRICE_PRO5',10],pro10:['STRIPE_PRICE_PRO10',20]};
 export default async function handler(req,res){
  res.setHeader('Cache-Control','no-store');
+ const configured=process.env.MECASCOPE_ENABLE_LIVE_BILLING==='true'&&
+  (/^((sk|rk)_live_)/).test(process.env.STRIPE_SECRET_KEY||'')&&
+  !!process.env.STRIPE_WEBHOOK_SECRET&&!!process.env.SUPABASE_SERVICE_ROLE_KEY&&
+  !!process.env.SUPABASE_URL&&!!process.env.SUPABASE_PUBLISHABLE_KEY&&
+  !!process.env.STRIPE_PRICE_PRIORITE&&!!process.env.STRIPE_PRICE_PRO5&&!!process.env.STRIPE_PRICE_PRO10;
+ if(req.method==='GET')return res.status(200).json({available:configured});
  if(req.method!=='POST')return res.status(405).json({message:'Méthode non autorisée'});
  if(!req.headers.origin||new URL(req.headers.origin).host!==req.headers.host)return res.status(403).json({message:'Origine non autorisée'});
  const plan=String(req.body?.plan||'');
  if(!Object.hasOwn(plans,plan))return res.status(400).json({message:'Formule invalide'});
  const stripeKey=process.env.STRIPE_SECRET_KEY;
  const price=process.env[plans[plan][0]];
- if(process.env.MECASCOPE_ENABLE_LIVE_BILLING!=='true'||!stripeKey||!(/^((sk|rk)_live_)/).test(stripeKey)||!price||!process.env.STRIPE_WEBHOOK_SECRET||!process.env.SUPABASE_SERVICE_ROLE_KEY){
+ if(!configured||!price){
   return res.status(503).json({message:'La souscription en ligne n’est pas encore activée. Aucun paiement ne sera engagé.'});
  }
  const cookie=getCookie(req.headers.cookie);
