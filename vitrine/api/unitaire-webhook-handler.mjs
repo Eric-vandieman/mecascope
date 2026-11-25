@@ -21,12 +21,25 @@ export default async function handleUnitaire(event,res,{key,url,admin}){
   if(!session.livemode||session.id!==sessionId||session.mode!=='payment'||session.payment_status!=='paid'||session.status!=='complete'
    ||session.metadata?.service!=='mecascope_unitaire'||!/^[a-f0-9-]{36}$/i.test(dossier)||!['initial','solde'].includes(stage))
    throw Error('Session non payée');
-  const d=await fetch(url+'/rest/v1/meca_demandes_unitaires?id=eq.'+encodeURIComponent(dossier)+'&select=id,offre,email,initial_price,solde_price&limit=1',{headers:hdr,signal:AbortSignal.timeout(12000)});
+  const d=await fetch(url+'/rest/v1/meca_demandes_unitaires?id=eq.'+encodeURIComponent(dossier)+'&select=id,offre,email,initial_price,solde_price,express_option,reservation_option,express_validee,reservation_validee&limit=1',{headers:hdr,signal:AbortSignal.timeout(12000)});
   if(!d.ok)throw Error('Dossier manquant');
   const row=(await d.json())[0],entry=prices[stage]?.[row?.offre],price=entry&&process.env[entry[0]];
-  if(!row||!price||session.metadata?.price_id!==price||session.currency!=='eur'
-   ||session.amount_total!==entry[1]||session.line_items?.data?.length!==1
-   ||session.line_items.data[0]?.price?.id!==price
+  if(!row||!price)throw Error('Formule ou prix absent');
+  const expected=[price];let total=entry[1];
+  if(stage==='solde'){
+   if(row.express_validee){
+    const key=row.express_option==='24h'?'STRIPE_PRICE_EXPRESS_24':row.express_option==='48h'?'STRIPE_PRICE_EXPRESS_48':null;
+    if(!key||!process.env[key])throw Error('Express non accepté');
+    expected.push(process.env[key]);total+=row.express_option==='24h'?5000:2000;
+   }
+   if(row.reservation_validee){
+    if(!row.reservation_option||!process.env.STRIPE_PRICE_RESERVATION)throw Error('Réservation non autorisée');
+    expected.push(process.env.STRIPE_PRICE_RESERVATION);total+=1000;
+   }
+  }
+  const observed=(session.line_items?.data||[]).map(item=>item.price?.id).sort();
+  if(session.metadata?.price_id!==price||session.currency!=='eur'
+   ||session.amount_total!==total||JSON.stringify(observed)!==JSON.stringify(expected.sort())
    ||session.customer_details?.email?.toLowerCase()!==String(row.email).toLowerCase()
    ||row[stage==='initial'?'initial_price':'solde_price']!==price)throw Error('Contrôle montant/client échoué');
   const result=await fetch(url+'/rest/v1/rpc/meca_unitaire_confirmer_paiement',{
