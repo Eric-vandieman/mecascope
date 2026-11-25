@@ -14,7 +14,7 @@
  const bytes=str=>{const b64=(str+'='.repeat((4-str.length%4)%4)).replace(/-/g,'+').replace(/_/g,'/');return Uint8Array.from(atob(b64),c=>c.charCodeAt(0))};
  const state=(v,message,enabled,disabled)=>{
   if(message)message.textContent=v;
-  if(enabled)enabled.disabled=v.startsWith('Activées')||v.startsWith('Autorisation refusée')||v.startsWith('Non compatible')||v.startsWith('Erreur de configuration');
+  if(enabled)enabled.disabled=v.startsWith('Activées')||v.startsWith('Autorisation refusée')||v.startsWith('Non compatible');
   if(disabled)disabled.disabled=!v.startsWith('Activées');
  };
  async function updateRegistration(){
@@ -117,7 +117,7 @@
     const subscription=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:bytes(config.publicKey)});
     await api({action:'subscribe',subscription:subscription.toJSON()});
     state('Activées — les alertes Android sont enregistrées',status,enabled,disabled);test.disabled=false;
-   }catch(e){state('Erreur de configuration : '+e.message,status,enabled,disabled);enabled.disabled=false}
+   }catch(e){state('Activation impossible : '+e.message,status,enabled,disabled);enabled.disabled=false}
   };
   disabled.onclick=async()=>{
    disabled.disabled=true;
