@@ -1,3 +1,4 @@
+import handleUnitaire from './unitaire-webhook-handler.mjs';
 import {createHmac,timingSafeEqual} from 'node:crypto';
 // Intégration préparée : ne fonctionne qu'après configuration secrets LIVE + migration SQL.
 export const config={api:{bodyParser:false}};
@@ -37,6 +38,7 @@ export default async function handler(req,res){
   event=JSON.parse(bytes.toString('utf8'));
  }catch{return res.status(400).json({message:'Evénement Stripe invalide'})}
  if(event.livemode!==true)return res.status(400).json({message:'Environnement incorrect'});
+ if(await handleUnitaire(event,res,{key,url,admin}))return;
  const o=event.data?.object||{};
  if(!['invoice.paid','checkout.session.completed','customer.subscription.deleted'].includes(event.type))return res.status(200).json({ignored:true});
  async function stripe(path){
