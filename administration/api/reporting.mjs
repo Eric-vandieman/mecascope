@@ -38,7 +38,16 @@ if(action==='reply'&&b.found){
  }catch{return res.status(503).json({message:'Le solde n’a pas pu être proposé, recommencez.'})}
 }
 try{const r=await fetch(process.env.SUPABASE_URL+'/rest/v1/rpc/'+names[action],{method:'POST',headers:{apikey:process.env.SUPABASE_PUBLISHABLE_KEY,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(args),signal:AbortSignal.timeout(12000)});if(!r.ok)return res.status(403).json({message:'Accès ou opération refusé (autorisation/paiement initial).'});const data=await r.json();
-if(action==='chat')return res.status(200).json({saved:true,id:data,emailed:false,message:'Message enregistré dans le suivi client. Notification e-mail non envoyée.'});
+if(action==='chat'){
+ let emailed=false;
+ try{
+  const notify=await fetch('https://xn--mcascope-b1a.fr/api/unitaire',{
+   method:'POST',headers:{Authorization:'Bearer '+token,Origin:'https://xn--mcascope-b1a.fr','Content-Type':'application/json'},
+   body:JSON.stringify({action:'admin-notify',id:b.id}),signal:AbortSignal.timeout(12000)});
+  emailed=notify.ok;
+ }catch{}
+ return res.status(200).json({saved:true,id:data,emailed,message:emailed?'Message enregistré et e-mail de notification envoyé.':'Message enregistré dans le dossier ; e-mail de notification non confirmé.'});
+}
 if(action==='reply'){
  let emailed=b.found===true;
  if(!b.found)try{const notify=await fetch('https://xn--mcascope-b1a.fr/api/unitaire',{
