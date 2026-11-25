@@ -19,7 +19,7 @@ export default async function handler(req,res){
    const [priceCheck,subscriptionsCheck,databaseCheck]=await Promise.all([
     fetch('https://api.stripe.com/v1/prices/'+encodeURIComponent(process.env.STRIPE_PRICE_PRO5),{headers:stripeHeaders,signal:AbortSignal.timeout(7000)}),
     fetch('https://api.stripe.com/v1/subscriptions?limit=1',{headers:stripeHeaders,signal:AbortSignal.timeout(7000)}),
-    fetch(process.env.SUPABASE_URL.replace(/\\/$/,'')+'/rest/v1/meca_stripe_abonnements?select=stripe_subscription_id&limit=0',{headers:dbHeaders,signal:AbortSignal.timeout(7000)})
+    fetch(process.env.SUPABASE_URL+'/rest/v1/meca_stripe_abonnements?select=stripe_subscription_id&limit=0',{headers:dbHeaders,signal:AbortSignal.timeout(7000)})
    ]);
    if(!priceCheck.ok||!subscriptionsCheck.ok||!databaseCheck.ok)return false;
    const p=await priceCheck.json();
