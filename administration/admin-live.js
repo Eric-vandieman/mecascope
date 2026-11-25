@@ -52,7 +52,7 @@ window.mecaAdminLive=async function(main,path){
     const message=main.querySelector('#meca-compose-preview')?.textContent||'';
     if(found&&(!fields.price||!fields.delay||!fields.supplier)){status.textContent='Complétez prix, délai et fournisseur.';return}
     send.disabled=true;status.textContent='Enregistrement en cours…';
-    try{await call({action:'reply',id:row.id,found,message,country:fields.country==='Autre'?fields.other:fields.country,price:fields.price,delay:fields.delay,condition:fields.condition,fit:fields.fit,supplier:fields.supplier,details:fields.details});status.textContent='Réponse enregistrée. Le client peut la lire depuis son lien personnel.';await refreshHistory()}
+    try{const result=await call({action:'reply',id:row.id,found,message,country:fields.country==='Autre'?fields.other:fields.country,price:fields.price,delay:fields.delay,condition:fields.condition,fit:fields.fit,supplier:fields.supplier,details:fields.details});status.textContent=result.emailed?'Message enregistré et notification envoyée au client.':'Message enregistré. Notification e-mail non confirmée ; le client peut le lire via son lien personnel.';await refreshHistory()}
     catch(e){status.textContent=e.message}
     finally{send.disabled=false}
    };

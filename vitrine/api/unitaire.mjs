@@ -15,7 +15,8 @@ const required=()=>['SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','SUPABASE_PUBLISH
 const db=()=>{const k=process.env.SUPABASE_SERVICE_ROLE_KEY;return {base:process.env.SUPABASE_URL.replace(/\/$/,''),headers:{apikey:k,...(k.startsWith('eyJ')?{Authorization:'Bearer '+k}:{}),'Content-Type':'application/json'}}};
 async function query(path,opts={}){const config=db();const r=await fetch(config.base+'/rest/v1/'+path,{...opts,headers:{...config.headers,...opts.headers},signal:AbortSignal.timeout(12000)});if(!r.ok)throw Error('Database HTTP '+r.status);return obj(r)}
 async function getAdmin(req){
- const token=cookies(req);if(!token)return false;
+ const bearer=String(req.headers.authorization||'');
+ const token=cookies(req)||(bearer.startsWith('Bearer ')?bearer.slice(7):'');if(!token)return false;
  const r=await fetch(db().base+'/auth/v1/user',{headers:{apikey:process.env.SUPABASE_PUBLISHABLE_KEY,Authorization:'Bearer '+token},signal:AbortSignal.timeout(10000)});
  if(!r.ok)return false;
  const u=await obj(r);if(!u?.id||!u.email_confirmed_at)return false;
@@ -61,6 +62,10 @@ export default async function handler(req,res){
    const message=extra==='send-message'?String(req.body?.message||'').trim():null;
    if(!/^[a-f0-9]{64}$/i.test(token)||(message!==null&&(!message||message.length>3000)))return res.status(400).json({message:'Lien ou message incorrect'});
    const result=await query('rpc/meca_client_conversation',{method:'POST',body:JSON.stringify({p_jeton:token,p_message:message})});
+   if(extra==='send-message'){
+     try{await email('contact@xn--mcascope-b1a.fr','Mécascope — réponse client '+safe(result.reference||''),
+       '<div style="font:16px Arial"><h2>Réponse d’un client</h2><p>Dossier : '+safe(result.reference||'')+'</p><p>Consultez la conversation dans l’administration Mécascope.</p></div>')}catch{}
+   }
    return res.status(200).json(result);
   }catch{return res.status(503).json({message:'Dossier ou service indisponible'})}
  }
@@ -69,6 +74,15 @@ export default async function handler(req,res){
  if(req.method==='POST'&&!origin(req))return res.status(403).json({message:'Origine refusée'});
  const b=req.body||{},action=req.method==='GET'?(req.query?.action||'status'):b.action;
  try{
+  if(action==='admin-notify'){
+    if(!(await getAdmin(req)))return res.status(403).json({message:'Administration uniquement'});
+    if(!/^[a-f0-9-]{36}$/i.test(String(b.id||'')))return res.status(400).json({message:'Dossier invalide'});
+    const rows=await query('meca_demandes_unitaires?id=eq.'+encodeURIComponent(b.id)+'&select=reference,email,initial_paid_at&limit=1');
+    if(!rows?.length||!rows[0].initial_paid_at)return res.status(409).json({message:'Recherche non payée'});
+    const d=rows[0];await email(d.email,'Mécascope — nouveau message pour '+d.reference,
+      '<div style="font:16px Arial;max-width:550px;margin:auto"><h2>Mécascope</h2><p>Une nouvelle réponse est disponible pour votre dossier <strong>'+safe(d.reference)+'</strong>.</p><p>Consultez votre lien personnel de suivi de mission reçu dans votre précédent courriel Mécascope. Ne communiquez jamais ce lien.</p></div>');
+    return res.status(200).json({sent:true});
+  }
   if(action==='admin-list'){
    if(!(await getAdmin(req)))return res.status(403).json({message:'Accès réservé à Mécascope'});
    const rows=await query('meca_demandes_unitaires?select=id,reference,contact,email,telephone,details,offre,statut,express_option,reservation_option,express_validee,reservation_validee,initial_paid_at,solde_paid_at,cree_le&order=cree_le.desc&limit=100');
