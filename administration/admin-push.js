@@ -38,10 +38,9 @@
     entry.onclick=async()=>{
      await api({action:'center',mark:n.id}).catch(()=>{});
      host.hidden=true;
-     location.hash='/admin/demandes?dossier='+encodeURIComponent(n.dossier_id)+(n.source_type==='professionnel'?'&source=professionnel':'');
-     if(location.hash.startsWith('#/admin/demandes')&&location.hash.includes('dossier=')){
-      window.dispatchEvent(new HashChangeEvent('hashchange'));
-     }
+     const destination='/admin/demandes?dossier='+encodeURIComponent(n.dossier_id)+(n.source_type==='professionnel'?'&source=professionnel':'');
+     if(location.hash==='#'+destination)window.dispatchEvent(new HashChangeEvent('hashchange'));
+     else location.hash=destination;
     };
     details.append(entry);
    }
