@@ -43,6 +43,27 @@ async function replace(d,status,values){
 export default async function handler(req,res){
  res.setHeader('Cache-Control','no-store');
  if(!['GET','POST'].includes(req.method))return res.status(405).json({message:'Méthode refusée'});
+ const extra=req.method==='GET'?req.query?.action:req.body?.action;
+ if(['visit','conversation','send-message'].includes(extra)){
+  if(req.method==='POST'&&!origin(req))return res.status(403).json({message:'Origine non autorisée'});
+  if(!process.env.SUPABASE_URL||!process.env.SUPABASE_SERVICE_ROLE_KEY)return res.status(503).json({message:'Stockage indisponible'});
+  try{
+   if(extra==='visit'){
+    if(req.method!=='POST')return res.status(405).end();
+    const vid=String(req.body?.visitor||''),route=String(req.body?.path||'');
+    if(!/^[0-9a-f-]{36}$/i.test(vid)||!/^\/[a-z0-9./-]{0,110}$/i.test(route))return res.status(400).end();
+    const visitorHash=createHmac('sha256',process.env.SUPABASE_SERVICE_ROLE_KEY).update(vid).digest('hex');
+    await query('meca_visites_site',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({visiteur_hash:visitorHash,chemin:route})});
+    return res.status(204).end();
+   }
+   if(extra==='conversation'&&req.method!=='GET'||extra==='send-message'&&req.method!=='POST')return res.status(405).end();
+   const token=String(extra==='conversation'?req.query?.t||'':req.body?.token||'');
+   const message=extra==='send-message'?String(req.body?.message||'').trim():null;
+   if(!/^[a-f0-9]{64}$/i.test(token)||(message!==null&&(!message||message.length>3000)))return res.status(400).json({message:'Lien ou message incorrect'});
+   const result=await query('rpc/meca_client_conversation',{method:'POST',body:JSON.stringify({p_jeton:token,p_message:message})});
+   return res.status(200).json(result);
+  }catch{return res.status(503).json({message:'Dossier ou service indisponible'})}
+ }
  if(!required()||process.env.MECASCOPE_ENABLE_LIVE_BILLING!=='true')
   return res.status(503).json({message:'Service temporairement indisponible'});
  if(req.method==='POST'&&!origin(req))return res.status(403).json({message:'Origine refusée'});
