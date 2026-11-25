@@ -52,6 +52,15 @@ export default async function handler(req,res){
   // Ne pas permettre le paiement tant que l'entreprise n'a pas été approuvée.
   // Ce champ doit être ajouté dans le parcours de vérification administrative.
   if(data.garage.verified!==true)return res.status(403).json({message:'Le SIRET de votre établissement doit être validé avant la souscription.'});
+  // Interdire plusieurs abonnements actifs pour un même établissement.
+  // Sinon des factures différentes accorderaient plusieurs lots de crédits au garage.
+  const admin=process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const dbHeaders={apikey:admin,...(admin.startsWith('eyJ')?{Authorization:'Bearer '+admin}:{})};
+  const subscriptions=await fetch(url+'/rest/v1/meca_stripe_abonnements?garage_id=eq.'+encodeURIComponent(data.garage.id)+'&statut=eq.actif&select=stripe_subscription_id&limit=1',{headers:dbHeaders,signal:AbortSignal.timeout(10000)});
+  if(!subscriptions.ok)return res.status(503).json({message:'Vérification de votre abonnement indisponible. Aucun paiement engagé.'});
+  const existing=await subscriptions.json();
+  if(Array.isArray(existing)&&existing.length)return res.status(409).json({message:'Votre établissement possède déjà un abonnement actif. Contactez Mécascope pour changer de formule.'});
+
   const form=new URLSearchParams();
   form.set('mode','subscription');form.set('line_items[0][price]',price);form.set('line_items[0][quantity]','1');
   form.set('client_reference_id',data.garage.id);
