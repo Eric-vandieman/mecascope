@@ -16,7 +16,11 @@
 <a class="btn orange meca-auth-submit" href="/#demande">Rechercher une pièce</a>
 </section>
 <section data-private-panel="demandes" hidden>
-<h2>Mes demandes</h2><p>Le suivi de vos demandes sera affiché ici dès que les recherches particulières seront reliées à votre compte.</p>
+<h2>Mes demandes de pièces</h2><p>Retrouvez vos recherches et accédez au devis, au suivi, aux paiements et à la conversation de chaque dossier.</p>
+<div id="meca-mes-demandes" role="status">Chargement de vos demandes…</div>
+<form id="meca-claim-form" class="meca-team-form"><label for="meca-claim-link">Ajouter une ancienne demande envoyée sans connexion</label>
+<input id="meca-claim-link" name="lien" placeholder="Collez le lien personnel de mission reçu par e-mail" autocomplete="off" required>
+<button type="submit" class="btn dark">Ajouter à mes demandes</button><p id="meca-claim-status" role="status"></p></form>
 <a class="btn orange" href="/#demande">Rechercher une pièce</a>
 </section>
 <section data-private-panel="messages" hidden>
@@ -41,4 +45,4 @@
 </section>
 </div>
 </div>
-</div><div id="meca-guest"><p>Vérification de votre connexion…</p><a href="/connexion.html">Se connecter</a></div><p role="status" class="meca-auth-status" aria-live="polite"></p></div></main><footer class="meca-auth-footer"><a href="/legal.html#mentions">Mentions légales</a> · <a href="/legal.html#cgu">CGU</a> · <a href="/legal.html#cgv">CGV</a> · <a href="/legal.html#confidentialite">Confidentialité</a> · <a href="/legal.html#mediation">Médiation</a></footer><script src="/auth-particulier.js" defer></script><script src="/navigation-session.js?v=navfix-20261125b" defer></script><script src="/messagerie-client.js" defer></script></body></html>
+</div><div id="meca-guest"><p>Vérification de votre connexion…</p><a href="/connexion.html">Se connecter</a></div><p role="status" class="meca-auth-status" aria-live="polite"></p></div></main><footer class="meca-auth-footer"><a href="/legal.html#mentions">Mentions légales</a> · <a href="/legal.html#cgu">CGU</a> · <a href="/legal.html#cgv">CGV</a> · <a href="/legal.html#confidentialite">Confidentialité</a> · <a href="/legal.html#mediation">Médiation</a></footer><script src="/auth-particulier.js" defer></script><script src="/mes-demandes-particulier.js?v=20261125" defer></script><script src="/navigation-session.js?v=navfix-20261125b" defer></script><script src="/messagerie-client.js" defer></script></body></html>

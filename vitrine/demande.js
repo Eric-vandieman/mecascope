@@ -64,13 +64,7 @@ form.addEventListener('submit',async event=>{
   const response=await fetch('/api/demande-piece',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
   const result=await response.json().catch(()=>({}));
   if(!response.ok||!result.sent)throw Error(result.message||'La transmission a échoué.');
-  let proMessage='';
-  try{
-   const pro=await fetch('/api/pro-collaboration',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'search',...payload})});
-   if(pro.ok){const record=await pro.json();proMessage=' · Dossier du garage : '+record.id;}
-   else if(pro.status!==401&&pro.status!==403)proMessage=' · Le dossier n’a pas été ajouté au tableau de bord Pro.';
-  }catch{proMessage=' · Le suivi Pro n’a pas pu être synchronisé.'}
-  setStatus('Demande transmise à Mécascope ! Référence : '+result.reference+proMessage,true);
+  setStatus('Demande transmise à Mécascope ! Référence : '+result.reference,true);
   form.reset();checkFiles();
  }catch(e){
   setStatus(((e&&e.message)||'Erreur d’envoi.')+' Aucun envoi n’a été confirmé.');

@@ -1,3 +1,4 @@
+import {createHash,createHmac} from 'node:crypto';
 // API d'authentification pour les comptes particuliers Mécascope.
 // Utilise uniquement la clé publiable Supabase côté serveur ; aucun secret n'est exposé.
 const cookieName='__Host-mecascope-particulier';
@@ -27,10 +28,54 @@ export default async function handler(req,res){
       const user=await result.json();
       const m=user.user_metadata||{};
       if(m.profil!=='particulier')return res.status(403).json({message:'Ce compte ne correspond pas à un espace particulier.'});
+      if(req.query?.action==='dossiers'){
+        if(!user.email_confirmed_at)return res.status(403).json({message:'Validez votre adresse e-mail pour consulter vos dossiers.'});
+        const admin=process.env.SUPABASE_SERVICE_ROLE_KEY,secret=process.env.STRIPE_WEBHOOK_SECRET;
+        if(!admin)return res.status(503).json({message:'Suivi des dossiers indisponible'});
+        const records=await fetch(url+'/rest/v1/meca_demandes_unitaires?particulier_id=eq.'+encodeURIComponent(user.id)+'&select=id,reference,statut,offre,details,cree_le,initial_paid_at,solde_paid_at,jeton_hash&order=cree_le.desc&limit=100',{
+          headers:{apikey:admin,...(admin.startsWith('eyJ')?{Authorization:'Bearer '+admin}:{})},signal:AbortSignal.timeout(12000)});
+        if(!records.ok)return res.status(503).json({message:'Impossible de récupérer vos demandes.'});
+        const rows=await records.json();
+        const dossiers=rows.map(d=>{
+          let missionUrl=null;
+          const stage=['devis_envoye','acompte_paye','echec'].includes(d.statut)?'devis_envoye':['reussite','solde_paye'].includes(d.statut)?'reussite':null;
+          if(stage&&secret&&d.jeton_hash){
+            const t=createHmac('sha256',secret).update('meca-unitaire-v1:'+d.id+':'+stage).digest('hex');
+            if(createHash('sha256').update(t).digest('hex')===d.jeton_hash)missionUrl='/mission.html?t='+t;
+          }
+          return {reference:d.reference,statut:d.statut,offre:d.offre,details:d.details,cree_le:d.cree_le,paiement_initial_confirme:!!d.initial_paid_at,solde_confirme:!!d.solde_paid_at,missionUrl};
+        });
+        return res.status(200).json({dossiers});
+      }
       return res.status(200).json({email:user.email||null,prenom:m.prenom||'',nom:m.nom||'',telephone:m.telephone||'',authenticated:true});
     }
     const {action}=req.body||{};
     if(action==='logout'){res.setHeader('Set-Cookie',cookie('',0));return res.status(200).json({message:'Déconnexion effectuée.'})}
+    if(action==='claim'){
+      const accessToken=readCookie(req.headers.cookie),missionToken=String(req.body?.missionToken||'').trim();
+      if(!accessToken)return res.status(401).json({message:'Connectez-vous à votre compte particulier.'});
+      if(!/^[a-f0-9]{64}$/i.test(missionToken))return res.status(400).json({message:'Saisissez le lien personnel de mission reçu par e-mail.'});
+      const vr=await fetch(base+'user',{headers:{...headers,Authorization:'Bearer '+accessToken},signal:AbortSignal.timeout(10000)});
+      if(!vr.ok)return res.status(401).json({message:'Session expirée.'});
+      const user=await vr.json();
+      if(!user.email_confirmed_at||user.user_metadata?.profil!=='particulier')return res.status(403).json({message:'Compte particulier confirmé requis.'});
+      const admin=process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if(!admin)return res.status(503).json({message:'Rattachement indisponible'});
+      const dbHeaders={apikey:admin,...(admin.startsWith('eyJ')?{Authorization:'Bearer '+admin}:{}),'Content-Type':'application/json'};
+      const digest=createHash('sha256').update(missionToken).digest('hex');
+      const found=await fetch(url+'/rest/v1/meca_demandes_unitaires?jeton_hash=eq.'+digest+'&select=id,email,particulier_id&limit=1',{headers:dbHeaders,signal:AbortSignal.timeout(10000)});
+      if(!found.ok)return res.status(503).json({message:'Recherche du dossier indisponible'});
+      const d=(await found.json())[0];
+      if(!d||String(d.email||'').toLowerCase()!==String(user.email||'').toLowerCase())return res.status(403).json({message:'Ce dossier ne correspond pas à votre compte.'});
+      if(d.particulier_id&&d.particulier_id!==user.id)return res.status(409).json({message:'Ce dossier est déjà rattaché à un autre compte.'});
+      if(!d.particulier_id){
+        const update=await fetch(url+'/rest/v1/meca_demandes_unitaires?id=eq.'+encodeURIComponent(d.id)+'&particulier_id=is.null',{
+          method:'PATCH',headers:{...dbHeaders,Prefer:'return=representation'},body:JSON.stringify({particulier_id:user.id}),signal:AbortSignal.timeout(10000)});
+        if(!update.ok||(await update.json()).length!==1)return res.status(409).json({message:'Dossier déjà rattaché, actualisez la page.'});
+      }
+      return res.status(200).json({message:'Votre dossier est maintenant visible dans Mes demandes.'});
+    }
+
     if(action==='verify-email-token'){
       const hash=typeof req.body.token_hash==='string'?req.body.token_hash:'';
       if(!/^[a-zA-Z0-9_-]{20,256}$/.test(hash))return res.status(400).json({message:'Lien de confirmation invalide.'});

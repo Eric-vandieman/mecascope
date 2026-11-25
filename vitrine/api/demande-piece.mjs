@@ -48,11 +48,22 @@ export default async function handler(req,res){
  // le suivi du devis et du paiement ne doit jamais dépendre d'une simple boîte e-mail.
  const admin=process.env.SUPABASE_SERVICE_ROLE_KEY,dbUrl=process.env.SUPABASE_URL;
  if(!admin||!dbUrl)return res.status(503).json({message:'Enregistrement du dossier indisponible. Aucun paiement engagé.',sent:false});
+ let particulierId=null;
+ const sessionToken=String(req.headers.cookie||'').split(';').map(v=>v.trim()).find(v=>v.startsWith('__Host-mecascope-particulier='))?.slice('__Host-mecascope-particulier='.length);
+ if(sessionToken&&process.env.SUPABASE_PUBLISHABLE_KEY){
+  try{
+   const userResponse=await fetch(dbUrl+'/auth/v1/user',{headers:{apikey:process.env.SUPABASE_PUBLISHABLE_KEY,Authorization:'Bearer '+decodeURIComponent(sessionToken)},signal:AbortSignal.timeout(8000)});
+   if(userResponse.ok){
+    const user=await userResponse.json();
+    if(user.id&&user.email_confirmed_at&&user.user_metadata?.profil==='particulier'&&String(user.email||'').toLowerCase()===email)particulierId=user.id;
+   }
+  }catch{}
+ }
  const details=Object.fromEntries(names.map(name=>[name,limited(b[name],800)]));
  const saved=await fetch(dbUrl+'/rest/v1/meca_demandes_unitaires',{
   method:'POST',headers:{apikey:admin,...(admin.startsWith('eyJ')?{Authorization:'Bearer '+admin}:{}),
    'Content-Type':'application/json',Prefer:'return=representation'},
-  body:JSON.stringify({reference,contact,email,telephone:phone,details,statut:'deposee'}),
+  body:JSON.stringify({reference,contact,email,telephone:phone,details,statut:'deposee',particulier_id:particulierId}),
   signal:AbortSignal.timeout(12000)
  }).catch(()=>null);
  if(!saved?.ok)return res.status(503).json({message:'Le dossier n’a pas pu être enregistré. Réessayez.',sent:false});
