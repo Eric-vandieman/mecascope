@@ -10,6 +10,7 @@ async function ouvrir(payload){
     const layoutResponse=await fetch('/console.json');
     if(!layoutResponse.ok) throw new Error('Interface indisponible');
     const layout=await layoutResponse.json();
+    window.mecaEnhanceAdminLayout?.(layout);
     const css=document.createElement('link');
     css.rel='stylesheet'; css.href='/console.css';
     document.querySelector('style').remove();
@@ -20,15 +21,15 @@ async function ouvrir(payload){
       document.querySelector('main').outerHTML=layout.pages[path];
       document.querySelectorAll('.side a').forEach(a=>a.classList.toggle('active',a.hash==='#'+path));
       const main=document.querySelector('main');
-      const note=document.createElement('p');
-      note.className='note preview';
-      note.textContent='Aperçu des modules en cours de raccordement. Les chiffres de suivi des garages ci-dessous proviennent de la base Mécascope.';
-      const suivi=document.createElement('div');
-      suivi.className='panel';
-      suivi.textContent=data.entreprises+' entreprises · '+data.etablissements+' établissements · '+data.aVerifier+' entreprises à vérifier';
-      main.querySelector('.pagehead, h1')?.closest('.admin-head-hero, .pagehead')?.after(note);
-      note.after(suivi);
-      main.querySelectorAll('.metric .value').forEach(value=>value.textContent='—');
+      main.querySelectorAll('.metric .value,.stat-tile strong').forEach(value=>value.textContent='—');
+      main.querySelectorAll('.note').forEach(element=>{
+        element.textContent=element.textContent.replace(/démonstration|démo|fictif|fictifs/gi,'non connecté');
+      });
+      const summary=document.createElement('div');
+      summary.className='meca-admin-live-status';
+      summary.textContent='Suivi réel des comptes professionnels : '+Number(data.entreprises||0)+' entreprises · '+Number(data.etablissements||0)+' établissements · '+Number(data.aVerifier||0)+' entreprises à vérifier. Les autres indicateurs attendent une source vérifiée.';
+      main.querySelector('.pagehead')?.after(summary);
+      window.mecaAdminComposer?.(main);
     };
     document.addEventListener('click',async e=>{
       const target=e.target.closest('[data-go],[data-logout]');
