@@ -140,16 +140,15 @@ function drawSearches(){
    card.append(controls);el.append(card);continue;
   }
   if(canEdit){
-   const status=node('select');status.setAttribute('aria-label','Statut de la recherche');
-   for(const [v,t] of [['nouvelle','Nouvelle'],['en_cours','En cours'],['en_attente','En attente'],['terminee','Terminée']]){const o=node('option',t);o.value=v;status.append(o)}status.value=item.statut;
+   controls.append(node('span','Statut de mission (géré par Mécascope) : '+(item.statut||'nouvelle')));
    const assignee=node('select');assignee.setAttribute('aria-label','Collaborateur attribué');
    const blank=node('option','Non attribuée');blank.value='';assignee.append(blank);
    for(const member of current.membres||[]){const o=node('option',member.nom||member.email);o.value=member.id;assignee.append(o)}assignee.value=item.attribue_a||'';
    const save=node('button','Mettre à jour','meca-team-small-button');
    save.addEventListener('click',async()=>{
-    save.disabled=true;try{await request('update-search',{id:item.id,status:status.value,assignee:assignee.value||null});labelStatus('team-searches-feedback','Dossier mis à jour.');await refresh()}
+    save.disabled=true;try{await request('update-search',{id:item.id,assignee:assignee.value||null});labelStatus('team-searches-feedback','Dossier mis à jour.');await refresh()}
     catch(e){labelStatus('team-searches-feedback',e.message)}finally{save.disabled=false}
-   });controls.append(status,assignee,save)
+   });controls.append(assignee,save)
   }else controls.append(node('span','Statut : '+({nouvelle:'Nouvelle',en_cours:'En cours',en_attente:'En attente',terminee:'Terminée'}[item.statut]||item.statut)));
   card.append(controls);el.append(card)
  }
