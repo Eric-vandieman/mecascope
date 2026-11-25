@@ -40,7 +40,7 @@ export default async function handleUnitaire(event,res,{key,url,admin}){
   const observed=(session.line_items?.data||[]).map(item=>item.price?.id).sort();
   if(session.metadata?.price_id!==price||session.currency!=='eur'
    ||session.amount_total!==total||JSON.stringify(observed)!==JSON.stringify(expected.sort())
-   ||session.customer_details?.email?.toLowerCase()!==String(row.email).toLowerCase()
+   ||(session.client_reference_id&&session.client_reference_id!==dossier)
    ||row[stage==='initial'?'initial_price':'solde_price']!==price)throw Error('Contrôle montant/client échoué');
   const result=await fetch(url+'/rest/v1/rpc/meca_unitaire_confirmer_paiement',{
    method:'POST',headers:hdr,
