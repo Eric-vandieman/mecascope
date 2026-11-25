@@ -56,7 +56,19 @@ form.addEventListener('submit',async event=>{
   }catch{proMessage=' · Le suivi Pro n’a pas pu être synchronisé.'}
   setStatus('Demande transmise à Mécascope ! Référence : '+result.reference+proMessage,true);
   form.reset();checkFiles();
- }catch(e){setStatus((e&&e.message)||'Erreur d’envoi. La demande n’a pas été confirmée.');}
+ }catch(e){
+  setStatus(((e&&e.message)||'Erreur d’envoi.')+' Aucun envoi n’a été confirmé.');
+  // Secours explicite, jamais présenté comme une demande envoyée.
+  if(status){
+   const parts=new FormData(form);
+   const brandSelect=form.querySelector('select[name="brand"]');
+   if(brandSelect&&!brandSelect.hidden&&brandSelect.value)parts.set('brand',brandSelect.selectedOptions[0]?.textContent||'');
+   const plain=[...parts.entries()].filter(([,v])=>typeof v==='string').map(([k,v])=>k+' : '+v).join('\\n');
+   const link=document.createElement('a');link.href='mailto:contact@xn--mcascope-b1a.fr?subject='+encodeURIComponent('Mécascope - demande de pièce')+'&body='+encodeURIComponent(plain);
+   link.textContent=' Envoi manuel par e-mail (sans les photos)';link.style.textDecoration='underline';
+   status.append(document.createTextNode(' '),link);
+  }
+ }
  finally{if(button)button.disabled=false}
 });
 })();
