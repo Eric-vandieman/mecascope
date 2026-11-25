@@ -38,8 +38,25 @@ window.mecaAdminLive=async function(main,path){
    const wrap=document.createElement('div');wrap.className='panel';wrap.append(select);
    const history=document.createElement('div');history.id='meca-live-history';history.style.cssText='white-space:pre-wrap;padding:12px;line-height:1.7';wrap.append(history);
    form.before(wrap);
+   const quotePanel=document.createElement('div');quotePanel.className='panel';
+   quotePanel.innerHTML='<h3>Proposition de recherche avant paiement</h3><p class="muted">Choisissez une formule et les options, puis envoyez le devis au client par e-mail.</p><div class="meca-compose-grid"><label>Formule<select id="meca-quote-plan"><option value="ciblee">Recherche ciblée · 39 €</option><option value="approfondie">Recherche approfondie · 79 €</option><option value="expert">Investigation Expert · 149 €</option></select></label><label>Express<select id="meca-quote-express"><option value="">Sans express</option><option value="48h">48 h (+20 € si conditions remplies)</option><option value="24h">24 h (+50 € si conditions remplies)</option></select></label><label class="wide"><input type="checkbox" id="meca-quote-reserve"> Proposer la réservation fournisseur (+10 € uniquement si confirmée)</label></div>';
+   const quoteButton=document.createElement('button');quoteButton.type='button';quoteButton.className='btn orange';quoteButton.textContent='Valider et envoyer le devis';quotePanel.append(quoteButton);
+   const failButton=document.createElement('button');failButton.type='button';failButton.className='btn danger';failButton.textContent='Clôturer la recherche sans résultat';failButton.hidden=true;
+   quotePanel.append(failButton);form.before(quotePanel);
+   form.insertAdjacentHTML('beforeend','<label class="wide"><input type="checkbox" name="expressEligible"> Délai Express tenu et éligible au supplément prévu</label><label class="wide"><input type="checkbox" name="reservationConfirmed"> Réservation fournisseur effectivement confirmée</label>');
+   function showOptions(){const d=dossiers.find(x=>x.id===select.value);quotePanel.hidden=!d||(!['deposee','devis_envoye','acompte_paye'].includes(d.statut));quoteButton.hidden=!d||!['deposee','devis_envoye'].includes(d.statut);failButton.hidden=!d||d.statut!=='acompte_paye'}
+   quoteButton.onclick=async()=>{const d=dossiers.find(x=>x.id===select.value);if(!d)return;
+    if(!confirm('Envoyer la proposition de recherche à '+d.contact+' ?'))return;
+    quoteButton.disabled=true;
+    try{const r=await call({action:'quote',id:d.id,offre:quotePanel.querySelector('#meca-quote-plan').value,express:quotePanel.querySelector('#meca-quote-express').value,reservation:quotePanel.querySelector('#meca-quote-reserve').checked});alert(r.message||'Devis envoyé');location.reload()}
+    catch(e){alert(e.message)}finally{quoteButton.disabled=false}
+   };
+   failButton.onclick=async()=>{const d=dossiers.find(x=>x.id===select.value);if(!d||!confirm('Clôturer cette recherche comme infructueuse, sans solde à payer ?'))return;
+    failButton.disabled=true;try{await call({action:'fail',id:d.id});await call({action:'reply',id:d.id,found:false,message:'Nous vous informons que notre recherche n’a pas permis d’identifier une pièce conforme. Aucun solde de réussite n’est dû. Nous restons à votre disposition pour tout complément.'});alert('Recherche clôturée et client informé.');location.reload()}catch(e){alert(e.message)}finally{failButton.disabled=false}
+   };
+
    async function refreshHistory(){history.textContent='';if(!select.value)return;try{const r=await call({action:'messages',id:select.value});for(const m of r.messages||[]){const p=document.createElement('p');p.textContent=(m.auteur==='client'?'Client':'Mécascope')+' · '+new Date(m.cree_le).toLocaleString('fr-FR')+' : '+m.contenu;history.append(p)}}catch(e){history.textContent=e.message}}
-   select.onchange=()=>{const row=dossiers.find(x=>x.id===select.value);form.elements.ref.value=row?.reference||'';refreshHistory()};
+   select.onchange=()=>{const row=dossiers.find(x=>x.id===select.value);form.elements.ref.value=row?.reference||'';showOptions();refreshHistory()};
    const send=document.createElement('button');send.type='button';send.className='btn orange';send.textContent='Envoyer la réponse dans la conversation';
    const status=document.createElement('p');status.setAttribute('role','status');
    form.after(status);form.after(send);
@@ -52,7 +69,7 @@ window.mecaAdminLive=async function(main,path){
     const message=main.querySelector('#meca-compose-preview')?.textContent||'';
     if(found&&(!fields.price||!fields.delay||!fields.supplier)){status.textContent='Complétez prix, délai et fournisseur.';return}
     send.disabled=true;status.textContent='Enregistrement en cours…';
-    try{const result=await call({action:'reply',id:row.id,found,message,country:fields.country==='Autre'?fields.other:fields.country,price:fields.price,delay:fields.delay,condition:fields.condition,fit:fields.fit,supplier:fields.supplier,details:fields.details});status.textContent=result.emailed?'Message enregistré et notification envoyée au client.':'Message enregistré. Notification e-mail non confirmée ; le client peut le lire via son lien personnel.';await refreshHistory()}
+    try{const result=await call({action:'reply',id:row.id,found,message,country:fields.country==='Autre'?fields.other:fields.country,price:fields.price,delay:fields.delay,condition:fields.condition,fit:fields.fit,supplier:fields.supplier,details:fields.details,expressEligible:fields.expressEligible==='on',reservationConfirmed:fields.reservationConfirmed==='on'});status.textContent=result.emailed?'Message enregistré et notification envoyée au client.':'Message enregistré. Notification e-mail non confirmée ; le client peut le lire via son lien personnel.';await refreshHistory()}
     catch(e){status.textContent=e.message}
     finally{send.disabled=false}
    };
