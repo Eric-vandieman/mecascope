@@ -4,4 +4,4 @@ Disallow: /admin/
 Disallow: /administration/
 Disallow: /api/
 
-Sitemap: https://www.xn--mcascope-b1a.fr/sitemap.xml
+Sitemap: https://xn--mcascope-b1a.fr/sitemap.xml
