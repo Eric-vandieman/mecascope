@@ -41,18 +41,17 @@ export default async function handler(req,res){
           entries.push({dossier:d.reference,stage,session:sid,date:paidAt});
          }
         }
-        const invoices=[];
-        for(const entry of entries.slice(0,25)){
+        const invoices=(await Promise.all(entries.slice(0,20).map(async entry=>{
          try{
-          const response=await fetch('https://api.stripe.com/v1/checkout/sessions/'+encodeURIComponent(entry.session)+'?expand%5B%5D=invoice',{headers:{Authorization:'Bearer '+stripeKey},signal:AbortSignal.timeout(10000)});
-          if(!response.ok)continue;
+          const response=await fetch('https://api.stripe.com/v1/checkout/sessions/'+encodeURIComponent(entry.session)+'?expand%5B%5D=invoice',{headers:{Authorization:'Bearer '+stripeKey},signal:AbortSignal.timeout(6000)});
+          if(!response.ok)return null;
           const session=await response.json();
-          if(!session.livemode||session.payment_status!=='paid'||session.status!=='complete'||session.metadata?.service!=='mecascope_unitaire'||session.metadata?.stage!==entry.stage)continue;
+          if(!session.livemode||session.payment_status!=='paid'||session.status!=='complete'||session.metadata?.service!=='mecascope_unitaire'||session.metadata?.stage!==entry.stage)return null;
           const invoice=session.invoice&&typeof session.invoice==='object'?session.invoice:null;
-          invoices.push({reference:entry.dossier,etape:entry.stage,date:entry.date,montant_centimes:session.amount_total||0,numero:invoice?.number||null,pdf:invoice?.invoice_pdf||null,lien:invoice?.hosted_invoice_url||null});
-         }catch{}
-        }
-        return res.status(200).json({factures:invoices,limite:entries.length>25});
+          return {reference:entry.dossier,etape:entry.stage,date:entry.date,montant_centimes:session.amount_total||0,numero:invoice?.number||null,pdf:invoice?.invoice_pdf||null,lien:invoice?.hosted_invoice_url||null};
+         }catch{return null}
+        }))).filter(Boolean);
+        return res.status(200).json({factures:invoices,limite:entries.length>20});
       }
       if(req.query?.action==='dossiers'){
         if(!user.email_confirmed_at)return res.status(403).json({message:'Validez votre adresse e-mail pour consulter vos dossiers.'});
