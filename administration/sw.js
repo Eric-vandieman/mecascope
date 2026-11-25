@@ -1,4 +1,4 @@
-const CACHE_VERSION='meca-admin-push-v2-brand';
+const CACHE_VERSION='meca-admin-push-v3-ms-officiel';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',event=>event.waitUntil(self.clients.claim()));
 self.addEventListener('push',event=>{
@@ -7,7 +7,7 @@ self.addEventListener('push',event=>{
  const url=typeof data.url==='string'&&/^\/#\/admin(?:\/[a-z-]+)?(?:\?dossier=[a-f0-9-]+)?$/.test(data.url)?data.url:'/#/admin';
  event.waitUntil(self.registration.showNotification(String(data.title||'Mécascope — Notification').slice(0,100),{
   body:String(data.body||'Un événement vous attend dans votre administration.').slice(0,160),
-  icon:'/icon-192.png',badge:'/badge-96.png',color:'#ff951f',tag:String(data.tag||id).slice(0,95),
+  icon:'/logo-ms-officiel.webp',badge:'/badge-96.png',color:'#ff951f',tag:String(data.tag||id).slice(0,95),
   renotify:false,data:{url},silent:false
  }));
 });
