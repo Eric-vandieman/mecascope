@@ -34,9 +34,10 @@ export default async function handler(req,res){
   form.set('mode','subscription');form.set('line_items[0][price]',price);form.set('line_items[0][quantity]','1');
   form.set('client_reference_id',data.garage.id);
   form.set('customer_email',user.email);
-  form.set('metadata[garage_id]',data.garage.id);form.set('metadata[plan]',plan);
+  form.set('metadata[garage_id]',data.garage.id);form.set('metadata[plan]',plan);form.set('metadata[service]','mecascope');
   form.set('subscription_data[metadata][garage_id]',data.garage.id);
   form.set('subscription_data[metadata][plan]',plan);
+  form.set('subscription_data[metadata][service]','mecascope');
   form.set('success_url','https://xn--mcascope-b1a.fr/espace-pro.html?paiement=retour&session_id={CHECKOUT_SESSION_ID}');
   form.set('cancel_url','https://xn--mcascope-b1a.fr/abonnement.html?plan='+encodeURIComponent(plan)+'&paiement=annule');
   const request=await fetch('https://api.stripe.com/v1/checkout/sessions',{
