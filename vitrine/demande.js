@@ -2,7 +2,9 @@ document.querySelector('#demande')?.addEventListener('submit', async event => {
   event.preventDefault();
   const form=event.currentTarget;
   const fields=new FormData(form);
-  const labels={brand:'Marque',model:'Modèle',year:'Année',part:'Pièce recherchée',ref:'Référence',budget:'Budget'};
+  const labels={vehicleType:'Catégorie de véhicule',brand:'Marque',model:'Modèle',year:'Année',part:'Pièce recherchée',ref:'Référence',budget:'Budget'};
+  const brandSelect=form.querySelector('select[name="brand"]');
+  if(brandSelect&&!brandSelect.hidden&&brandSelect.value)fields.set('brand',brandSelect.selectedOptions[0]?.textContent||'');
   const body=Object.entries(labels).map(([key,label])=>label+' : '+(fields.get(key)||'—')).join('\n');
   const mail='mailto:contact@xn--mcascope-b1a.fr?subject='+encodeURIComponent('Mécascope – recherche de pièce')+'&body='+encodeURIComponent(body);
   const button=form.querySelector('[type=submit]'),status=document.getElementById('meca-request-save-status');
