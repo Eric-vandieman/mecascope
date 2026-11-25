@@ -9,8 +9,8 @@ function setStatus(text,ok=false){if(status){status.textContent=text;status.data
 function checkFiles(){
  const selected=[...(files?.files||[])];
  const total=selected.reduce((sum,f)=>sum+f.size,0);
- const valid=selected.length<=5&&total<=3750000&&selected.every(f=>allowed.has(f.type)&&f.size<=1400000);
- if(files)files.setCustomValidity(valid?'':'Jusqu’à 5 photos JPG, PNG ou WebP, 1,4 Mo chacune et 3,7 Mo au total.');
+ const valid=selected.length<=5&&total<=2300000&&selected.every(f=>allowed.has(f.type)&&f.size<=950000);
+ if(files)files.setCustomValidity(valid?'':'Jusqu’à 5 photos JPG, PNG ou WebP, 950 Ko chacune et 2,3 Mo au total.');
  if(count)count.textContent=selected.length+' / 5 photos'+(valid?'':' · Fichiers trop volumineux ou format non accepté');
  if(preview){
   preview.replaceChildren();
