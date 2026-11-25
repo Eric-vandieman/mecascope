@@ -110,7 +110,11 @@ export default async function handler(req,res){
    return res.status(200).json({id,message:'Recherche enregistrée dans votre tableau de bord professionnel.'});
   }
   if(action==='update-search'){
-   const ok=await rpc('meca_modifier_recherche',{p_id:req.body.id,p_statut:req.body.status,p_attribue_a:req.body.assignee||null});
+   if(Object.hasOwn(req.body,'status'))return res.status(403).json({message:'Les statuts de mission sont réservés à Mécascope.'});
+   const current=await rpc('meca_tableau_bord');
+   const item=(current.recherches||[]).find(x=>x.id===req.body.id);
+   if(!item)return res.status(404).json({message:'Recherche introuvable ou non autorisée'});
+   const ok=await rpc('meca_modifier_recherche',{p_id:item.id,p_statut:item.statut,p_attribue_a:req.body.assignee||null});
    return res.status(200).json({ok});
   }
   return res.status(400).json({message:'Action non reconnue'});
