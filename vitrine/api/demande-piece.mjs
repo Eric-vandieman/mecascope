@@ -44,6 +44,19 @@ export default async function handler(req,res){
  const key=process.env.RESEND_API_KEY,from=process.env.MECASCOPE_MAIL_FROM;
  if(!key||!from)return res.status(503).json({message:'L’envoi sécurisé est momentanément indisponible. Aucun dossier n’a été transmis.'});
  const reference='MECA-'+new Date().toISOString().slice(0,10).replaceAll('-','')+'-'+randomUUID().slice(0,8).toUpperCase();
+ // Une demande doit exister en base avant l'envoi du courriel :
+ // le suivi du devis et du paiement ne doit jamais dépendre d'une simple boîte e-mail.
+ const admin=process.env.SUPABASE_SERVICE_ROLE_KEY,dbUrl=process.env.SUPABASE_URL;
+ if(!admin||!dbUrl)return res.status(503).json({message:'Enregistrement du dossier indisponible. Aucun paiement engagé.',sent:false});
+ const details=Object.fromEntries(names.map(name=>[name,limited(b[name],800)]));
+ const saved=await fetch(dbUrl+'/rest/v1/meca_demandes_unitaires',{
+  method:'POST',headers:{apikey:admin,...(admin.startsWith('eyJ')?{Authorization:'Bearer '+admin}:{}),
+   'Content-Type':'application/json',Prefer:'return=representation'},
+  body:JSON.stringify({reference,contact,email,telephone:phone,details,statut:'deposee'}),
+  signal:AbortSignal.timeout(12000)
+ }).catch(()=>null);
+ if(!saved?.ok)return res.status(503).json({message:'Le dossier n’a pas pu être enregistré. Réessayez.',sent:false});
+
  const lines=names.map(name=>descriptions[name]+' : '+limited(b[name],800)).join('\n');
  const body='Nouvelle demande Mécascope — '+reference+'\n\n'+lines+'\n\nClient : '+contact+'\nE-mail : '+email+'\nTéléphone : '+phone+'\nPhotos : '+attachments.length;
  try{
@@ -52,9 +65,9 @@ export default async function handler(req,res){
    body:JSON.stringify({from,to:['contact@xn--mcascope-b1a.fr'],reply_to:email,subject:'Mécascope · Nouvelle demande '+reference,text:body,attachments}),
    signal:AbortSignal.timeout(14000)
   });
-  if(!response.ok)return res.status(503).json({message:'L’envoi de votre dossier n’a pas pu être confirmé. Réessayez ou contactez Mécascope.',sent:false});
+  if(!response.ok)return res.status(200).json({sent:true,emailSent:false,reference,message:'Votre demande est enregistrée, mais la notification à Mécascope n’a pas pu être envoyée. Conservez votre référence.'});
   const confirmation=await response.json().catch(()=>({}));
-  if(!confirmation.id)return res.status(503).json({message:'L’envoi n’a pas pu être confirmé. Vérifiez avec Mécascope avant de réessayer.',sent:false});
-  return res.status(200).json({sent:true,reference,message:'Votre demande a été transmise à Mécascope. Conservez votre référence.'});
- }catch{return res.status(503).json({sent:false,message:'Service indisponible. Votre demande n’a pas pu être confirmée.'})}
+  if(!confirmation.id)return res.status(200).json({sent:true,emailSent:false,reference,message:'Dossier enregistré, notification non confirmée.'});
+  return res.status(200).json({sent:true,emailSent:true,reference,message:'Votre demande a été transmise à Mécascope. Conservez votre référence.'});
+ }catch{return res.status(200).json({sent:true,emailSent:false,reference,message:'Dossier enregistré, mais notification momentanément indisponible. Conservez votre référence.'})}
 }
