@@ -21,16 +21,28 @@ export default async function handleUnitaire(event,res,{key,url,admin}){
   if(!session.livemode||session.id!==sessionId||session.mode!=='payment'||session.payment_status!=='paid'||session.status!=='complete'
    ||session.metadata?.service!=='mecascope_unitaire'||!/^[a-f0-9-]{36}$/i.test(dossier)||!['initial','solde'].includes(stage))
    throw Error('Session non payée');
-  const d=await fetch(url+'/rest/v1/meca_demandes_unitaires?id=eq.'+encodeURIComponent(dossier)+'&select=id,offre,email,initial_price,solde_price,express_option,reservation_option,express_validee,reservation_validee&limit=1',{headers:hdr,signal:AbortSignal.timeout(12000)});
+  const d=await fetch(url+'/rest/v1/meca_demandes_unitaires?id=eq.'+encodeURIComponent(dossier)+'&select=id,offre,email,statut,devis_decision,options_paiement_avance,initial_price,solde_price,express_option,reservation_option,express_validee,reservation_validee&limit=1',{headers:hdr,signal:AbortSignal.timeout(12000)});
   if(!d.ok)throw Error('Dossier manquant');
   const row=(await d.json())[0],entry=prices[stage]?.[row?.offre],price=entry&&process.env[entry[0]];
   if(!row||!price)throw Error('Formule ou prix absent');
   const expected=[price];let total=entry[1];
-  if(stage==='solde'){
+  if(stage==='initial'&&row.options_paiement_avance){
+   if(!['accepte'].includes(row.devis_decision)&&row.statut!=='acompte_paye'&&row.statut!=='reussite'&&row.statut!=='solde_paye')throw Error('Devis non accepté');
+   if(row.express_option){
+    const option=row.express_option==='24h'?'STRIPE_PRICE_EXPRESS_24':row.express_option==='48h'?'STRIPE_PRICE_EXPRESS_48':null;
+    if(!option||!process.env[option])throw Error('Option Express invalide');
+    expected.push(process.env[option]);total+=row.express_option==='24h'?5000:2000;
+   }
+   if(row.reservation_option){
+    if(!process.env.STRIPE_PRICE_RESERVATION)throw Error('Prix réservation indisponible');
+    expected.push(process.env.STRIPE_PRICE_RESERVATION);total+=1000;
+   }
+  }
+  if(stage==='solde'&&!row.options_paiement_avance){
    if(row.express_validee){
-    const key=row.express_option==='24h'?'STRIPE_PRICE_EXPRESS_24':row.express_option==='48h'?'STRIPE_PRICE_EXPRESS_48':null;
-    if(!key||!process.env[key])throw Error('Express non accepté');
-    expected.push(process.env[key]);total+=row.express_option==='24h'?5000:2000;
+    const option=row.express_option==='24h'?'STRIPE_PRICE_EXPRESS_24':row.express_option==='48h'?'STRIPE_PRICE_EXPRESS_48':null;
+    if(!option||!process.env[option])throw Error('Express non accepté');
+    expected.push(process.env[option]);total+=row.express_option==='24h'?5000:2000;
    }
    if(row.reservation_validee){
     if(!row.reservation_option||!process.env.STRIPE_PRICE_RESERVATION)throw Error('Réservation non autorisée');
