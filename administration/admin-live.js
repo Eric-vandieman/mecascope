@@ -61,7 +61,7 @@ window.mecaAdminLive=async function(main,path){
    const fields=[['Type de véhicule','vehicleType'],['Marque','brand'],['Modèle','model'],['Année','year'],['Motorisation','engine'],['Carburant','fuel'],['Boîte','gearbox'],['Finition','trim'],['Pièce recherchée','part'],['Référence de pièce','ref'],['VIN','vin'],['Budget','budget'],['Remarques','notes']];
    function showDossier(row){
      if(!row){detail.textContent='Sélectionnez un dossier.';return}
-     const lines=['DOSSIER '+(row.reference||row.id),'Statut : '+(row.statut||'—'),'Client : '+(row.contact||'—'),'E-mail : '+(row.email||'—'),'Créé le : '+(row.cree_le?new Date(row.cree_le).toLocaleString('fr-FR'):'—'),'Type : '+(row.type_dossier==='professionnel'?'Professionnel':'Particulier')];
+     const lines=['DOSSIER '+(row.reference||row.id),'Statut : '+(row.statut==='refuse'?'Devis refusé — dossier clôturé':row.statut||'—')+(row.statut==='devis_envoye'&&row.devis_decision==='accepte'?' (devis accepté, paiement initial attendu)':''),'Client : '+(row.contact||'—'),'E-mail : '+(row.email||'—'),'Créé le : '+(row.cree_le?new Date(row.cree_le).toLocaleString('fr-FR'):'—'),'Type : '+(row.type_dossier==='professionnel'?'Professionnel':'Particulier')];
      for(const [label,key] of fields){const v=row.details?.[key];if(v!==null&&v!==undefined&&String(v).trim())lines.push(label+' : '+String(v))}
      detail.textContent=lines.join('\n');
    }
@@ -164,7 +164,7 @@ window.mecaAdminLive=async function(main,path){
     quoteButton.textContent=existing?'Renvoyer le devis identique':'Valider et envoyer le devis';
     refreshPreview();
     quotePanel.hidden=!d||!['deposee','devis_envoye','acompte_paye'].includes(d.statut);
-    quoteButton.hidden=!d||!['deposee','devis_envoye'].includes(d.statut);
+    quoteButton.hidden=!d||!['deposee','devis_envoye'].includes(d.statut)||(existing&&d.devis_decision!=='en_attente');
     failButton.hidden=!d||d.statut!=='acompte_paye';
    }
    quoteButton.onclick=async()=>{const d=dossiers.find(x=>x.id===select.value);if(!d)return;
