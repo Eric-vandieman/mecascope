@@ -77,7 +77,7 @@
     const d=result.dossier;
     if(!d){info.textContent='Dossier introuvable.';return}
     info.replaceChildren();
-    for(const [label,value] of [['Référence',d.reference],['Pièce recherchée',d.piece],['Véhicule',[d.marque,d.modele,d.annee].filter(Boolean).join(' ')],['Référence pièce',d.reference_piece],['Budget',d.budget],['Statut',d.statut],['Validation responsable',d.approuvee?'Oui':'Non']]){
+    for(const [label,value] of [['Référence',d.reference],['Garage',d.garage_nom],['Contact',d.contact],['Téléphone',d.telephone],['SIRET',d.siret],['Ville',d.ville],['Pièce recherchée',d.piece],['Véhicule',[d.marque,d.modele,d.annee].filter(Boolean).join(' ')],['Référence pièce',d.reference_piece],['Budget',d.budget],['Statut',d.statut],['Validation responsable',d.approuvee?'Oui':'Non']]){
      const line=document.createElement('p');line.textContent=label+' : '+(value||'—');info.append(line)
     }
    }).catch(e=>info.textContent=e.message);

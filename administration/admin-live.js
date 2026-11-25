@@ -26,6 +26,17 @@ window.mecaAdminLive=async function(main,path){
    }
   }
   const dossiers=Array.isArray(d.dossiers)?d.dossiers:[];
+  if(path==='/admin/demandes'){
+   const requested=new URLSearchParams(location.hash.split('?')[1]||'');
+   const id=requested.get('dossier');
+   if(requested.get('source')!=='professionnel'&&/^[a-f0-9-]{36}$/i.test(id||'')&&!dossiers.some(x=>x.id===id)){
+    try{
+     const response=await fetch('/api/push',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'single-dossier',id}),cache:'no-store'});
+     const result=await response.json();
+     if(response.ok&&result.dossier)dossiers.unshift(result.dossier);
+    }catch{}
+   }
+  }
   if(path==='/admin'){
    const tbody=main.querySelector('.tablewrap tbody');
    if(tbody){tbody.replaceChildren();for(const item of dossiers.slice(0,15)){const tr=document.createElement('tr');for(const v of [item.reference,item.contact,item.details?.brand+' '+item.details?.model,item.statut,item.cree_le?.slice(0,10)]){const td=document.createElement('td');td.textContent=v||'—';tr.append(td)}const td=document.createElement('td');const btn=document.createElement('button');btn.className='btn dark small';btn.textContent='Ouvrir';btn.onclick=()=>{location.hash='#/admin/demandes';sessionStorage.setItem('meca-dossier-selected',item.id)};td.append(btn);tr.append(td);tbody.append(tr)}main.querySelector('.tablewrap .empty')?.remove()}
