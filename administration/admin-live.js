@@ -78,6 +78,45 @@ window.mecaAdminLive=async function(main,path){
    const quoteButton=document.createElement('button');quoteButton.type='button';quoteButton.className='btn orange';quoteButton.textContent='Valider et envoyer le devis';quotePanel.append(quoteButton);
    const failButton=document.createElement('button');failButton.type='button';failButton.className='btn danger';failButton.textContent='Clôturer la recherche sans résultat';failButton.hidden=true;
    quotePanel.append(failButton);form.before(quotePanel);
+   // Qualification IA réservée à l'administrateur, jamais envoyée automatiquement.
+   const aiPanel=document.createElement('section');aiPanel.className='panel';
+   aiPanel.innerHTML='<h2>Estimation IA de la recherche</h2><p class="muted">Analyse interne de la difficulté, du temps de travail estimé et de la formule conseillée. Prix et délais contractuels fixes, validation humaine obligatoire.</p>';
+   const aiBtn=document.createElement('button');aiBtn.type='button';aiBtn.className='btn orange';aiBtn.textContent='Analyser la demande avec l’IA';
+   const aiStatus=document.createElement('p');aiStatus.setAttribute('role','status');
+   const aiOutput=document.createElement('div');aiOutput.style.cssText='white-space:pre-wrap;line-height:1.7;margin-top:12px';
+   aiPanel.append(aiBtn,aiStatus,aiOutput);quotePanel.before(aiPanel);
+   aiBtn.onclick=async()=>{
+     if(!select.value){aiStatus.textContent='Sélectionnez un dossier.';return}
+     const id=select.value;aiBtn.disabled=true;aiStatus.textContent='Qualification commerciale en cours…';aiOutput.replaceChildren();
+     try{
+       const r=await fetch('/api/qualification',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({id}),cache:'no-store'});
+       const response=await r.json().catch(()=>({}));if(!r.ok)throw Error(response.message||'Analyse indisponible');
+       if(id!==select.value)return;
+       const q=response.qualification||{},plan=response.recommandation||{};
+       const hours=[q.temps_interne_heures_min,q.temps_interne_heures_max].filter(v=>v!==null&&v!==undefined).join(' à ');
+       aiOutput.textContent='Formule suggérée : '+(plan.label||'À examiner')+' — '+(plan.prix_eur||'—')+' €'+'\\nDélai contractuel : '+(plan.delai_jours_ouvres||'—')+' jours ouvrés après conditions remplies'+'\\nPaiement initial : '+(plan.acompte_eur||'—')+' € · Solde si résultat : '+(plan.solde_eur||'—')+' €'+'\\nDifficulté : '+(q.difficulte||'—')+' · Confiance : '+(q.confiance||'—')+'\\nTemps de travail interne estimé : '+(hours||'Non estimé')+' heures'+'\\nJustification : '+(q.justification||'Non précisée')+'\\nRisques : '+(q.risques||'À vérifier')+'\\nQuestions au client :\\n'+(Array.isArray(q.questions_client)?q.questions_client.map(x=>'• '+x).join('\\n'):'—')+'\\nPistes fournisseurs :\\n'+(Array.isArray(q.pistes_recherche)?q.pistes_recherche.map(x=>'• '+x).join('\\n'):'—');
+       if(q.formule&&quotePanel.querySelector('#meca-quote-plan')?.querySelector('option[value="'+q.formule+'"]'))quotePanel.querySelector('#meca-quote-plan').value=q.formule;
+       aiStatus.textContent='Analyse prête. Vérifiez-la avant tout devis. Aucune proposition envoyée.';
+     }catch(e){aiStatus.textContent=e.message}finally{aiBtn.disabled=false}
+   };
+   // Conversation de qualification : possible avant paiement, aucun résultat fournisseur révélé.
+   const chatPanel=document.createElement('section');chatPanel.className='panel';
+   chatPanel.innerHTML='<h2>Conversation avec le client</h2><p class="muted">Utilisez ce chat pour demander des précisions avant le devis et échanger pendant la recherche. Les résultats fournisseurs restent soumis au paiement confirmé.</p>';
+   const chatInput=document.createElement('textarea');chatInput.rows=4;chatInput.maxLength=3000;chatInput.placeholder='Votre message au client (référence, photos, dimensions, questions…)';chatInput.style.width='100%';
+   const chatButton=document.createElement('button');chatButton.type='button';chatButton.className='btn orange';chatButton.textContent='Enregistrer le message dans la conversation';
+   const chatStatus=document.createElement('p');chatStatus.setAttribute('role','status');
+   chatPanel.append(chatInput,chatButton,chatStatus);wrap.after(chatPanel);
+   chatButton.onclick=async()=>{
+     const message=chatInput.value.trim(),row=dossiers.find(x=>x.id===select.value);
+     if(!row||!message){chatStatus.textContent='Sélectionnez un dossier et saisissez un message.';return}
+     if(!confirm('Enregistrer ce message visible par le client dans le dossier '+row.reference+' ?'))return;
+     chatButton.disabled=true;chatStatus.textContent='Enregistrement…';
+     try{
+       const response=await call({action:'chat',id:row.id,message});
+       chatInput.value='';chatStatus.textContent=response.message||'Message enregistré dans le dossier.';await refreshHistory();
+     }catch(e){chatStatus.textContent=e.message}finally{chatButton.disabled=false}
+   };
+
    form.insertAdjacentHTML('beforeend','<label class="wide"><input type="checkbox" name="expressEligible"> Délai Express tenu et éligible au supplément prévu</label><label class="wide"><input type="checkbox" name="reservationConfirmed"> Réservation fournisseur effectivement confirmée</label>');
    function showOptions(){const d=dossiers.find(x=>x.id===select.value);quotePanel.hidden=!d||(!['deposee','devis_envoye','acompte_paye'].includes(d.statut));quoteButton.hidden=!d||!['deposee','devis_envoye'].includes(d.statut);failButton.hidden=!d||d.statut!=='acompte_paye'}
    quoteButton.onclick=async()=>{const d=dossiers.find(x=>x.id===select.value);if(!d)return;
