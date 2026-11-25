@@ -28,7 +28,10 @@ async function getAdmin(req){
   body:'{}',signal:AbortSignal.timeout(10000)});
  return verify.ok;
 }
-function minimal(d){const offer=offers[d.offre];const expressMax=d.express_option==='24h'?50:d.express_option==='48h'?20:0;const extra=(d.express_validee?expressMax:0)+(d.reservation_validee?10:0);return {reference:d.reference,statut:d.statut,offre:offer?.label||null,initial:offer?.deposit||null,total:offer?.total||null,solde:offer?offer.total-offer.deposit+(d.statut==='reussite'||d.statut==='solde_paye'?extra:0):null,expressOption:d.express_option||null,reservationOption:!!d.reservation_option,conditionalMax:expressMax+(d.reservation_option?10:0),paid:!!d.initial_paid_at,balancePaid:!!d.solde_paid_at};}
+function minimal(d){const offer=offers[d.offre];const expressFee=d.express_option==='24h'?50:d.express_option==='48h'?20:0;const reservationFee=d.reservation_option?10:0;
+ const prepaid=d.options_paiement_avance===true;const later=prepaid?0:((d.express_validee?expressFee:0)+(d.reservation_validee?reservationFee:0));
+ const initial=offer?offer.deposit+(prepaid?expressFee+reservationFee:0):null;
+ return {reference:d.reference,statut:d.statut,decision:d.devis_decision||'en_attente',offre:offer?.label||null,initial,total:offer?.total||null,solde:offer?offer.total-offer.deposit+(d.statut==='reussite'||d.statut==='solde_paye'?later:0):null,expressOption:d.express_option||null,reservationOption:!!d.reservation_option,optionsPayeesAvance:prepaid,conditionalMax:prepaid?0:expressFee+reservationFee,paid:!!d.initial_paid_at,balancePaid:!!d.solde_paid_at,proposition:d.proposition_texte||null};}
 async function dossier(t){
  if(typeof t!=='string'||!(/^[a-f0-9]{64}$/i.test(t))&&!(t.length>=36&&t.length<=80))return null;
  const rows=await query('meca_demandes_unitaires?jeton_hash=eq.'+hash(t)+'&select=*&limit=1');
@@ -110,8 +113,8 @@ export default async function handler(req,res){
    if(action==='admin-quote'){
     if(!['deposee','devis_envoye'].includes(d.statut)||!offers[b.offre]||d.initial_paid_at)return res.status(409).json({message:'Devis non autorisé'});
     if(d.statut==='devis_envoye'&&d.offre!==b.offre)return res.status(409).json({message:'Une proposition a déjà été envoyée. Son tarif ne peut plus être modifié pendant qu’un paiement Stripe peut être en cours.'});
-    selectedExpress=['24h','48h'].includes(b.express)?b.express:null;
-    selectedReservation=b.reservation===true;
+    selectedExpress=d.statut==='devis_envoye'?d.express_option:null;
+    selectedReservation=d.statut==='devis_envoye'?d.reservation_option:false;
     if(d.statut==='devis_envoye'&&(d.express_option!==selectedExpress||d.reservation_option!==selectedReservation))
       return res.status(409).json({message:'Les options déjà acceptables par paiement ne peuvent plus être modifiées sur ce devis.'});
     plan=b.offre;stage='devis_envoye';
@@ -125,11 +128,11 @@ export default async function handler(req,res){
     stage='reussite';
    }
    const token=createHmac('sha256',process.env.STRIPE_WEBHOOK_SECRET).update('meca-unitaire-v1:'+d.id+':'+stage).digest('hex'),offer=offers[plan];
-   const updated=(action==='admin-success'&&d.statut==='reussite')?d:await replace(d,d.statut,{statut:stage,offre:plan,jeton_hash:hash(token),...(action==='admin-quote'?{initial_price:process.env[offer.initial],solde_price:process.env[offer.balance],express_option:selectedExpress,reservation_option:selectedReservation,proposition_texte:proposal}:{express_validee:b.expressEligible===true,reservation_validee:b.reservationConfirmed===true})});
+   const updated=(action==='admin-success'&&d.statut==='reussite')?d:await replace(d,d.statut,{statut:stage,offre:plan,jeton_hash:hash(token),...(action==='admin-quote'?{initial_price:process.env[offer.initial],solde_price:process.env[offer.balance],express_option:selectedExpress,reservation_option:selectedReservation,options_paiement_avance:true,devis_decision:'en_attente',proposition_texte:proposal}:{express_validee:!d.options_paiement_avance&&b.expressEligible===true,reservation_validee:!d.options_paiement_avance&&b.reservationConfirmed===true})});
    const link='https://xn--mcascope-b1a.fr/mission.html?t='+encodeURIComponent(token);
    const text=action==='admin-quote'?
-    '<h2>Proposition de recherche Mécascope</h2><div style="white-space:pre-line;line-height:1.6">'+safe(updated.proposition_texte||proposal)+'</div><p>Votre demande '+safe(d.reference)+' a été examinée.</p><p>Formule : <b>'+safe(offer.label)+'</b>. Tarif total : <b>'+offer.total+' €</b> dont <b>'+offer.deposit+' €</b> pour démarrer après votre accord.</p><p>Le solde ne sera dû que si une source conforme est trouvée.</p>'+ (selectedExpress?'<p>Option Express '+selectedExpress+' : '+(selectedExpress==='24h'?50:20)+' € uniquement si une source conforme est trouvée dans le délai convenu.</p>':'')+(selectedReservation?'<p>Réservation fournisseur : 10 € uniquement après confirmation.</p>':'')+'<p>Vous restez libre d’accepter ou de refuser.</p>':
-    '<h2>Une source a été identifiée</h2><p>Pour votre dossier '+safe(d.reference)+', Mécascope a identifié une source conforme.</p><p>Le montant à régler est de <b>'+(offer.total-offer.deposit+(updated.express_validee?(updated.express_option==='24h'?50:20):0)+(updated.reservation_validee?10:0))+' €</b>, comprenant uniquement les suppléments conditionnels convenus et confirmés.</p>';
+    '<h2>Votre devis Mécascope</h2><p>Bonjour '+safe(d.contact)+',</p><p>Voici mon message concernant votre demande :</p><div style="white-space:pre-line;line-height:1.6;padding:12px;background:#f4f4f4;color:#222">'+safe(updated.proposition_texte||proposal)+'</div><hr><p><b>Formule proposée : '+safe(offer.label)+' — '+offer.total+' €</b></p><p>Paiement initial : '+offer.deposit+' €. Solde si source conforme : '+(offer.total-offer.deposit)+' €.</p><p>Vous pourrez choisir les options facultatives au moment d’accepter le devis : Express 48 h (+20 €), Express 24 h (+50 €), et service de réservation (+10 €). Elles seront ajoutées au paiement initial, jamais refacturées au solde.</p><p>Le prix de la pièce reste distinct. Vous pouvez accepter ou refuser ce devis sans obligation.</p>':
+    '<h2>Une source a été identifiée</h2><p>Pour votre dossier '+safe(d.reference)+', Mécascope a identifié une source conforme.</p><p>Le solde à régler est de <b>'+(offer.total-offer.deposit+(updated.options_paiement_avance?0:(updated.express_validee?(updated.express_option==='24h'?50:20):0)+(updated.reservation_validee?10:0)))+' €</b>.</p>';
    try{await email(d.email,'Mécascope — '+(action==='admin-quote'?'votre proposition':'résultat de votre recherche')+' '+d.reference,
     '<div style="font:16px Arial;max-width:580px;margin:auto"><h1>Mécascope</h1>'+text+'<p><a href="'+safe(link)+'" style="display:inline-block;background:#ee922b;color:#171717;padding:14px 22px;text-decoration:none">Consulter et décider</a></p><p>Ne communiquez pas ce lien personnel.</p></div>');
    }catch(e){return res.status(503).json({message:'Le dossier est enregistré mais le courriel a échoué. Renouvelez l’envoi depuis la console.'})}
@@ -143,22 +146,39 @@ export default async function handler(req,res){
   const d=await dossier(token);
   if(!d)return res.status(404).json({message:'Lien invalide ou expiré'});
   if(action==='status')return res.status(200).json(minimal(d));
+  if(action==='decision'){
+   if(req.method!=='POST'||!d.options_paiement_avance)return res.status(409).json({message:'Décision indisponible pour cette proposition'});
+   if(d.statut!=='devis_envoye')return res.status(409).json({message:'Ce devis n’est plus en attente de réponse'});
+   const choice=String(b.choice||'');
+   if(!['accepter','refuser'].includes(choice))return res.status(400).json({message:'Choix invalide'});
+   if(d.devis_decision!=='en_attente')return res.status(409).json({message:'Votre décision a déjà été enregistrée'});
+   const express=choice==='accepter'&&['24h','48h'].includes(b.express)?b.express:null;
+   const reservation=choice==='accepter'&&b.reservation===true;
+   const values=choice==='refuser'?{statut:'refuse',devis_decision:'refuse',devis_refuse_le:new Date().toISOString()}:
+     {devis_decision:'accepte',devis_accepte_le:new Date().toISOString(),express_option:express,reservation_option:reservation};
+   const rows=await query('meca_demandes_unitaires?id=eq.'+encodeURIComponent(d.id)+'&statut=eq.devis_envoye&devis_decision=eq.en_attente',{
+    method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({...values,modifie_le:new Date().toISOString()})});
+   if(rows?.length!==1)return res.status(409).json({message:'Ce devis a déjà changé, actualisez la page'});
+   return res.status(200).json({ok:true,decision:rows[0].devis_decision,statut:rows[0].statut,initial:minimal(rows[0]).initial});
+  }
+
   if(action!=='checkout')return res.status(400).json({message:'Action inconnue'});
   const stage=b.stage,offer=offers[d.offre];
   if(!offer||!['initial','solde'].includes(stage))return res.status(400).json({message:'Paiement invalide'});
-  if(stage==='initial'&&d.statut!=='devis_envoye'||stage==='solde'&&d.statut!=='reussite')
+  if(stage==='initial'&&(d.statut!=='devis_envoye'||(d.options_paiement_avance&&d.devis_decision!=='accepte'))||stage==='solde'&&d.statut!=='reussite')
    return res.status(409).json({message:'Ce paiement n’est pas disponible pour le dossier'});
   const price=process.env[stage==='initial'?offer.initial:offer.balance];
   if(!price||price!==d[stage==='initial'?'initial_price':'solde_price'])
    return res.status(503).json({message:'Tarif du dossier non validé'});
   const params=new URLSearchParams();
   params.set('mode','payment');params.set('line_items[0][price]',price);params.set('line_items[0][quantity]','1');
-  if(stage==='solde'){
-   const additions=[d.express_validee?(d.express_option==='24h'?'STRIPE_PRICE_EXPRESS_24':'STRIPE_PRICE_EXPRESS_48'):null,
-    d.reservation_validee?'STRIPE_PRICE_RESERVATION':null].filter(Boolean);
-   for(const key of additions){const extra=process.env[key];if(!extra)return res.status(503).json({message:'Tarif de supplément indisponible'});
-    const i=(Number(params.get('line_items_count')||1));params.set('line_items['+i+'][price]',extra);params.set('line_items['+i+'][quantity]','1');params.set('line_items_count',String(i+1));
-   }params.delete('line_items_count');
+  const additions=stage==='initial'&&d.options_paiement_avance?
+    [d.express_option?(d.express_option==='24h'?'STRIPE_PRICE_EXPRESS_24':'STRIPE_PRICE_EXPRESS_48'):null,d.reservation_option?'STRIPE_PRICE_RESERVATION':null].filter(Boolean):
+    stage==='solde'&&!d.options_paiement_avance?
+    [d.express_validee?(d.express_option==='24h'?'STRIPE_PRICE_EXPRESS_24':'STRIPE_PRICE_EXPRESS_48'):null,d.reservation_validee?'STRIPE_PRICE_RESERVATION':null].filter(Boolean):[];
+  for(let i=0;i<additions.length;i++){
+   const extra=process.env[additions[i]];if(!extra)return res.status(503).json({message:'Tarif de supplément indisponible'});
+   params.set('line_items['+(i+1)+'][price]',extra);params.set('line_items['+(i+1)+'][quantity]','1');
   }
   // Une facture Stripe n'est établie qu'après la confirmation d'un paiement réel.
   params.set('billing_address_collection','required');
