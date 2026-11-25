@@ -98,6 +98,7 @@ window.mecaAdminLive=async function(main,path){
    const price={ciblee:{name:'Recherche ciblée',total:39,initial:19,balance:20,days:3},approfondie:{name:'Recherche approfondie',total:79,initial:39,balance:40,days:5},expert:{name:'Investigation Expert',total:149,initial:69,balance:80,days:7}};
    function buildProposal(){
       const row=dossiers.find(x=>x.id===select.value),plan=price[quotePanel.querySelector('#meca-quote-plan').value]||price.approfondie;
+      if(row?.statut==='devis_envoye'&&row.proposition_texte)return row.proposition_texte;
       const selected=[...checks.querySelectorAll('input:checked')].map(x=>'• '+x.value);
       const option=quotePanel.querySelector('#meca-quote-express').value,reserve=quotePanel.querySelector('#meca-quote-reserve').checked;
       const lines=['Mécascope — Proposition pour le dossier '+(row?.reference||'à sélectionner'),'Bonjour '+(row?.contact||'')+',','',introSelect.value,'','Formule proposée : '+plan.name+' — '+plan.total+' € (paiement initial '+plan.initial+' €, solde de '+plan.balance+' € uniquement en cas de résultat conforme).','Délai de recherche contractuel : '+plan.days+' jours ouvrés, démarrant après acceptation, paiement initial confirmé et réception des informations indispensables.','','Pourquoi cette formule :',reasonSelect.value];
@@ -165,7 +166,7 @@ window.mecaAdminLive=async function(main,path){
    };
 
    form.insertAdjacentHTML('beforeend','<label class="wide"><input type="checkbox" name="expressEligible"> Délai Express tenu et éligible au supplément prévu</label><label class="wide"><input type="checkbox" name="reservationConfirmed"> Réservation fournisseur effectivement confirmée</label>');
-   function showOptions(){refreshPreview();const d=dossiers.find(x=>x.id===select.value);quotePanel.hidden=!d||(!['deposee','devis_envoye','acompte_paye'].includes(d.statut));quoteButton.hidden=!d||!['deposee','devis_envoye'].includes(d.statut);failButton.hidden=!d||d.statut!=='acompte_paye'}
+   function showOptions(){const d=dossiers.find(x=>x.id===select.value);proposalBox.querySelectorAll('select,input,textarea').forEach(x=>x.disabled=d?.statut==='devis_envoye');quoteButton.textContent=d?.statut==='devis_envoye'?'Renvoyer le devis identique':'Valider et envoyer le devis';refreshPreview();quotePanel.hidden=!d||(!['deposee','devis_envoye','acompte_paye'].includes(d.statut));quoteButton.hidden=!d||!['deposee','devis_envoye'].includes(d.statut);failButton.hidden=!d||d.statut!=='acompte_paye'}
    quoteButton.onclick=async()=>{const d=dossiers.find(x=>x.id===select.value);if(!d)return;
     const message=buildProposal();if(message.length<80||message.length>2800){alert('La proposition doit contenir entre 80 et 2 800 caractères. Raccourcissez votre texte si nécessaire.');return}
     if(!confirm('Envoyer ce devis et cet argumentaire dans la messagerie de '+d.contact+', avec un e-mail contenant le lien de paiement ?'))return;
@@ -179,7 +180,7 @@ window.mecaAdminLive=async function(main,path){
 
    async function refreshHistory(){history.textContent='';if(!select.value)return;try{const r=await call({action:'messages',id:select.value});for(const m of r.messages||[]){const p=document.createElement('p');p.textContent=(m.auteur==='client'?'Client':'Mécascope')+' · '+new Date(m.cree_le).toLocaleString('fr-FR')+' : '+m.contenu;history.append(p)}}catch(e){history.textContent=e.message}}
    window.mecaPieceHistory?.(main,select,dossiers);
-   select.onchange=()=>{const row=dossiers.find(x=>x.id===select.value);form.elements.ref.value=row?.reference||'';showDossier(row);showOptions();refreshHistory()};
+   select.onchange=()=>{const row=dossiers.find(x=>x.id===select.value);form.elements.ref.value=row?.reference||'';personal.value='';populateChecks();reasonSelect.selectedIndex=0;aiOutput.replaceChildren();aiStatus.textContent='';showDossier(row);showOptions();refreshHistory()};
    // Alimenter le tableau principal attendu dans Gestion des demandes.
    if(path==='/admin/demandes'){
      const table=main.querySelector('#list-content tbody');
