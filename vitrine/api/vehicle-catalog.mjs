@@ -7,7 +7,7 @@ export default async function handler(req,res){
   const action=String(req.query.action||'makes');
   const make=String(req.query.make||'');
   if(action!=='makes'&&action!=='models')return res.status(400).json({error:'Action invalide'});
-  if(action==='models'&&(!/^\\d{1,7}$/.test(make)))return res.status(400).json({error:'Marque invalide'});
+  if(action==='models'&&(!/^[0-9]{1,7}$/.test(make)))return res.status(400).json({error:'Marque invalide'});
   const path=action==='makes'
     ? 'GetMakesForVehicleType/'+encodeURIComponent(TYPES[type])
     : 'GetModelsForMakeId/'+encodeURIComponent(make);
