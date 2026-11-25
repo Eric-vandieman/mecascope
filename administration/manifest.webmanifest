@@ -1,0 +1,19 @@
+{
+  "id": "/admin",
+  "name": "Mécascope — Administration",
+  "short_name": "Mécascope Admin",
+  "description": "Gestion sécurisée des demandes et notifications Mécascope",
+  "start_url": "/#/admin",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#090a0c",
+  "theme_color": "#ff951f",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
