@@ -9,7 +9,8 @@
    payer.hidden=true;offre.textContent='Référence : '+data.reference+(data.offre?' — '+data.offre:'');
    if(data.statut==='devis_envoye'){
     etat.textContent='Proposition : '+data.total+' € au total, dont '+data.initial+' € à régler pour lancer la recherche après votre accord. Solde : '+data.solde+' € seulement si une source conforme est trouvée.';
-    conditions.textContent='Le paiement se fait sur Stripe, après votre confirmation explicite.';
+    const add=(data.expressOption?' Express '+data.expressOption+' : supplément de '+(data.expressOption==='24h'?50:20)+' € uniquement si le délai convenu est respecté.':'')+(data.reservationOption?' Réservation fournisseur : 10 € uniquement si confirmée.':'');
+    conditions.textContent='Vous acceptez les éventuels suppléments conditionnels indiqués dans le devis :'+(add||' aucun supplément.')+' Le paiement initial se fait sur Stripe après votre confirmation.';
     payer.hidden=false;payer.dataset.stage='initial';payer.textContent="J’accepte et je règle "+data.initial+" €";
    }else if(data.statut==='reussite'){
     etat.textContent='Mécascope a identifié une source conforme. Vous pouvez régler le solde de '+data.solde+' €.';
