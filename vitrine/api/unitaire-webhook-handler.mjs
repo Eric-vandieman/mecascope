@@ -12,6 +12,11 @@ export default async function handleUnitaire(event,res,{key,url,admin}){
   const s=await fetch('https://api.stripe.com/v1/checkout/sessions/'+encodeURIComponent(sessionId)+'?expand[]=line_items',{headers:{Authorization:'Bearer '+key},signal:AbortSignal.timeout(12000)});
   if(!s.ok)throw Error('Stripe indisponible');
   const session=await s.json();
+  // Les moyens asynchrones peuvent signaler checkout.session.completed avant paiement.
+  // On attend checkout.session.async_payment_succeeded plutôt que de réclamer l'argent.
+  if(session.payment_status==='unpaid' && event.type==='checkout.session.completed'){
+   res.status(200).json({received:true,pending:true});return true;
+  }
   const dossier=String(session.metadata?.dossier_id||''),stage=session.metadata?.stage;
   if(!session.livemode||session.id!==sessionId||session.mode!=='payment'||session.payment_status!=='paid'||session.status!=='complete'
    ||session.metadata?.service!=='mecascope_unitaire'||!/^[a-f0-9-]{36}$/i.test(dossier)||!['initial','solde'].includes(stage))
