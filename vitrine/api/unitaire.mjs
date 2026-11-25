@@ -112,6 +112,9 @@ export default async function handler(req,res){
    let plan=d.offre,stage,selectedExpress=null,selectedReservation=false;
    if(action==='admin-quote'){
     if(!['deposee','devis_envoye'].includes(d.statut)||!offers[b.offre]||d.initial_paid_at)return res.status(409).json({message:'Devis non autorisé'});
+    const planFige=d.qualification_ia?.formule;
+    if(!planFige||!offers[planFige])return res.status(409).json({message:'Analyse IA non validée/enregistrée : aucun devis ne peut être transmis.'});
+    if(b.offre!==planFige)return res.status(409).json({message:'Incohérence de formule : ce dossier est fixé sur '+offers[planFige].total+' €. Actualisez la page avant d’envoyer.'});
     if(d.statut==='devis_envoye'&&d.devis_decision!=='en_attente')return res.status(409).json({message:'Devis déjà accepté ou refusé : aucun renvoi ou changement commercial possible.'});
     if(d.statut==='devis_envoye'&&d.offre!==b.offre)return res.status(409).json({message:'Une proposition a déjà été envoyée. Son tarif ne peut plus être modifié pendant qu’un paiement Stripe peut être en cours.'});
     selectedExpress=d.statut==='devis_envoye'?d.express_option:null;
