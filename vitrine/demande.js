@@ -9,8 +9,8 @@ function setStatus(text,ok=false){if(status){status.textContent=text;status.data
 function checkFiles(){
  const selected=[...(files?.files||[])];
  const total=selected.reduce((sum,f)=>sum+f.size,0);
- const valid=selected.length<=5&&total<=2300000&&selected.every(f=>allowed.has(f.type)&&f.size<=950000);
- if(files)files.setCustomValidity(valid?'':'Jusqu’à 5 photos JPG, PNG ou WebP, 950 Ko chacune et 2,3 Mo au total.');
+ const valid=selected.length<=5&&total<=50000000&&selected.every(f=>allowed.has(f.type)&&f.size<=20000000);
+ if(files)files.setCustomValidity(valid?'':'Jusqu’à 5 photos JPG, PNG ou WebP. Les images sont optimisées automatiquement avant l’envoi.');
  if(count)count.textContent=selected.length+' / 5 photos'+(valid?'':' · Fichiers trop volumineux ou format non accepté');
  if(preview){
   preview.replaceChildren();
@@ -22,14 +22,30 @@ function checkFiles(){
 }
 files?.addEventListener('change',checkFiles);
 function readPhoto(file){return new Promise((resolve,reject)=>{
- const reader=new FileReader();
- reader.onerror=()=>reject(Error('Impossible de lire une photo.'));
- reader.onload=()=>{
- const result=String(reader.result||''),data=result.split(',')[1];
- if(!data)return reject(Error('Photo illisible.'));
- resolve({type:file.type,data});
+ const url=URL.createObjectURL(file),image=new Image();
+ image.onerror=()=>{URL.revokeObjectURL(url);reject(Error('Photo illisible : choisissez une image JPG, PNG ou WebP.'))};
+ image.onload=()=>{
+  URL.revokeObjectURL(url);
+  try{
+   const scale=Math.min(1,1600/Math.max(image.naturalWidth,image.naturalHeight));
+   const canvas=document.createElement('canvas');
+   canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));
+   canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
+   const ctx=canvas.getContext('2d');
+   if(!ctx)throw Error('Impossible de préparer les photos.');
+   ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
+   ctx.drawImage(image,0,0,canvas.width,canvas.height);
+   let quality=.8;
+   let data=canvas.toDataURL('image/jpeg',quality).split(',')[1];
+   while(data.length>580000&&quality>.36){
+    quality=Math.max(.35,quality-.1);
+    data=canvas.toDataURL('image/jpeg',quality).split(',')[1];
+   }
+   if(data.length>900000)throw Error('Cette image est trop détaillée. Choisissez une photo moins volumineuse.');
+   resolve({type:'image/jpeg',data});
+  }catch(error){reject(error)}
  };
- reader.readAsDataURL(file);
+ image.src=url;
 })}
 form.addEventListener('submit',async event=>{
  event.preventDefault();
