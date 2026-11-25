@@ -2,7 +2,7 @@ document.querySelector('#demande')?.addEventListener('submit', async event => {
   event.preventDefault();
   const form=event.currentTarget;
   const fields=new FormData(form);
-  const labels={vehicleType:'Catégorie de véhicule',plate:'Immatriculation (facultatif)',brand:'Marque',model:'Modèle',year:'Année',part:'Pièce recherchée',ref:'Référence',budget:'Budget'};
+  const labels={vehicleType:'Catégorie de véhicule',brand:'Marque',model:'Modèle',year:'Année',part:'Pièce recherchée',ref:'Référence',budget:'Budget'};
   const brandSelect=form.querySelector('select[name="brand"]');
   if(brandSelect&&!brandSelect.hidden&&brandSelect.value)fields.set('brand',brandSelect.selectedOptions[0]?.textContent||'');
   const body=Object.entries(labels).map(([key,label])=>label+' : '+(fields.get(key)||'—')).join('\n');
