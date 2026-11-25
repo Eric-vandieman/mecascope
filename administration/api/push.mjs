@@ -15,8 +15,15 @@ async function rpc(fn,args={},token){
  const r=await fetch(base()+'/rest/v1/rpc/'+fn,{
   method:'POST',headers:{apikey:pub(),...token?{Authorization:'Bearer '+token}:{},'Content-Type':'application/json'},
   body:JSON.stringify(args),signal:AbortSignal.timeout(10000)});
- if(!r.ok)throw Object.assign(new Error('Service de notifications indisponible'),{status:r.status});
- return r.json();
+ if(!r.ok){
+  const info=await r.json().catch(()=>({}));
+  const code=String(info?.code||'');
+  const message=code==='42501'?'Accès administrateur refusé par Supabase':code==='PGRST202'?'Fonction de notifications indisponible dans Supabase':code==='23514'?'Abonnement de ce navigateur refusé':r.status===401?'Connexion Supabase expirée':'Échec du service de notifications (HTTP '+r.status+')';
+  throw Object.assign(new Error(message),{status:r.status,code});
+ }
+ if(r.status===204||r.status===205)return null;
+ const body=await r.text();
+ return body?JSON.parse(body):null;
 }
 async function authorized(req){
  const token=cookie(req,'__Host-admin');
@@ -102,5 +109,9 @@ export default async function handler(req,res){
    return json(res,200,{submitted:sent.success,message:'Notification transmise au service Push de votre téléphone'});
   }
   return json(res,400,{message:'Action inconnue'});
- }catch(e){return json(res,e.status===403?403:503,{message:e.status===403?'Accès refusé':'Une erreur est survenue dans le service de notifications'})}
+ }catch(e){const status=e.status===401?401:e.status===403?403:503;
+  const message=e.message&&/^(Accès administrateur|Fonction de notifications|Abonnement de ce navigateur|Connexion Supabase|Échec du service de notifications|Clés VAPID|Destination Push)/.test(e.message)?e.message:'Service de notifications momentanément indisponible';
+  console.error('meca-push-error',{action:String(b.action||'').slice(0,30),status,code:e.code||null,error:String(e.message||'').slice(0,160)});
+  return json(res,status,{message});
+ }
 }
