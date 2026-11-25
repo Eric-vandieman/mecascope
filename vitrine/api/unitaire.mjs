@@ -103,6 +103,9 @@ export default async function handler(req,res){
     await replace(d,'acompte_paye',{statut:'echec'});
     return res.status(200).json({ok:true,message:'Recherche clôturée sans solde.'});
    }
+   const proposal=String(b.proposal||'').trim();
+   if(action==='admin-quote' && (proposal.length<80||proposal.length>2800||!proposal.includes(d.reference)))return res.status(400).json({message:'Complétez votre proposition personnalisée (80 à 2 800 caractères), avec la référence du dossier.'});
+   if(action==='admin-quote' && d.statut==='devis_envoye' && d.proposition_texte && d.proposition_texte!==proposal)return res.status(409).json({message:'Le devis est déjà accessible au paiement. Son argumentaire ne peut être modifié sans une procédure de révision sécurisée.'});
    let plan=d.offre,stage,selectedExpress=null,selectedReservation=false;
    if(action==='admin-quote'){
     if(!['deposee','devis_envoye'].includes(d.statut)||!offers[b.offre]||d.initial_paid_at)return res.status(409).json({message:'Devis non autorisé'});
@@ -122,10 +125,10 @@ export default async function handler(req,res){
     stage='reussite';
    }
    const token=createHmac('sha256',process.env.STRIPE_WEBHOOK_SECRET).update('meca-unitaire-v1:'+d.id+':'+stage).digest('hex'),offer=offers[plan];
-   const updated=(action==='admin-success'&&d.statut==='reussite')?d:await replace(d,d.statut,{statut:stage,offre:plan,jeton_hash:hash(token),...(action==='admin-quote'?{initial_price:process.env[offer.initial],solde_price:process.env[offer.balance],express_option:selectedExpress,reservation_option:selectedReservation}:{express_validee:b.expressEligible===true,reservation_validee:b.reservationConfirmed===true})});
+   const updated=(action==='admin-success'&&d.statut==='reussite')?d:await replace(d,d.statut,{statut:stage,offre:plan,jeton_hash:hash(token),...(action==='admin-quote'?{initial_price:process.env[offer.initial],solde_price:process.env[offer.balance],express_option:selectedExpress,reservation_option:selectedReservation,proposition_texte:proposal}:{express_validee:b.expressEligible===true,reservation_validee:b.reservationConfirmed===true})});
    const link='https://xn--mcascope-b1a.fr/mission.html?t='+encodeURIComponent(token);
    const text=action==='admin-quote'?
-    '<h2>Proposition de recherche Mécascope</h2><p>Votre demande '+safe(d.reference)+' a été examinée.</p><p>Formule : <b>'+safe(offer.label)+'</b>. Tarif total : <b>'+offer.total+' €</b> dont <b>'+offer.deposit+' €</b> pour démarrer après votre accord.</p><p>Le solde ne sera dû que si une source conforme est trouvée.</p>'+ (selectedExpress?'<p>Option Express '+selectedExpress+' : '+(selectedExpress==='24h'?50:20)+' € uniquement si une source conforme est trouvée dans le délai convenu.</p>':'')+(selectedReservation?'<p>Réservation fournisseur : 10 € uniquement après confirmation.</p>':'')+'<p>Vous restez libre d’accepter ou de refuser.</p>':
+    '<h2>Proposition de recherche Mécascope</h2><div style="white-space:pre-line;line-height:1.6">'+safe(updated.proposition_texte||proposal)+'</div>'<p>Votre demande '+safe(d.reference)+' a été examinée.</p><p>Formule : <b>'+safe(offer.label)+'</b>. Tarif total : <b>'+offer.total+' €</b> dont <b>'+offer.deposit+' €</b> pour démarrer après votre accord.</p><p>Le solde ne sera dû que si une source conforme est trouvée.</p>'+ (selectedExpress?'<p>Option Express '+selectedExpress+' : '+(selectedExpress==='24h'?50:20)+' € uniquement si une source conforme est trouvée dans le délai convenu.</p>':'')+(selectedReservation?'<p>Réservation fournisseur : 10 € uniquement après confirmation.</p>':'')+'<p>Vous restez libre d’accepter ou de refuser.</p>':
     '<h2>Une source a été identifiée</h2><p>Pour votre dossier '+safe(d.reference)+', Mécascope a identifié une source conforme.</p><p>Le montant à régler est de <b>'+(offer.total-offer.deposit+(updated.express_validee?(updated.express_option==='24h'?50:20):0)+(updated.reservation_validee?10:0))+' €</b>, comprenant uniquement les suppléments conditionnels convenus et confirmés.</p>';
    try{await email(d.email,'Mécascope — '+(action==='admin-quote'?'votre proposition':'résultat de votre recherche')+' '+d.reference,
     '<div style="font:16px Arial;max-width:580px;margin:auto"><h1>Mécascope</h1>'+text+'<p><a href="'+safe(link)+'" style="display:inline-block;background:#ee922b;color:#171717;padding:14px 22px;text-decoration:none">Consulter et décider</a></p><p>Ne communiquez pas ce lien personnel.</p></div>');
