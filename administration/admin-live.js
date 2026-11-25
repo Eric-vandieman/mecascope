@@ -83,7 +83,7 @@ window.mecaAdminLive=async function(main,path){
    introLabel.append(introSelect);
    const reasonLabel=document.createElement('label');reasonLabel.textContent='Justification de la formule';
    const reasonSelect=document.createElement('select');
-   for(const x of ['La recherche nécessite de vérifier plusieurs sources et de confirmer la compatibilité exacte.','Cette recherche semble ciblée et peut commencer par des fournisseurs spécialisés.','La rareté potentielle de la pièce et les vérifications techniques justifient une investigation élargie.','La recherche requiert une investigation approfondie et des vérifications documentaires supplémentaires.']){const o=document.createElement('option');o.value=x;o.textContent=x;reasonSelect.append(o)}
+   for(const x of ['La recherche nécessite de vérifier plusieurs sources et de confirmer la compatibilité exacte.','La formule à 39 € convient à une recherche ciblée lorsque la référence est suffisamment identifiable et que les pistes initiales sont limitées.','La formule à 79 € est proposée plutôt que celle à 39 € car la recherche nécessite davantage de recoupements, de fournisseurs et de vérifications de compatibilité.','La formule à 149 € est proposée lorsque la rareté potentielle impose une investigation experte et des recherches documentaires plus larges.']){const o=document.createElement('option');o.value=x;o.textContent=x;reasonSelect.append(o)}
    reasonLabel.append(reasonSelect);
    const constraintLabel=document.createElement('h4');constraintLabel.textContent='Contraintes à expliquer (sélectionnez les éléments vérifiés)';
    const checks=document.createElement('div');checks.style.cssText='display:grid;gap:8px';
@@ -141,7 +141,7 @@ window.mecaAdminLive=async function(main,path){
        // L'IA suggère des précautions ; leur reprise commerciale requiert une sélection manuelle.
        aiConstraints=[...(Array.isArray(q.questions_client)?q.questions_client:[]),...(Array.isArray(q.risques)?q.risques:typeof q.risques==='string'?[q.risques]:[])];
        populateChecks(aiConstraints);
-       if(q.justification){personal.value=String(q.justification).slice(0,1100);reasonSelect.value='La recherche nécessite de vérifier plusieurs sources et de confirmer la compatibilité exacte.'}
+       if(q.justification){personal.value=String(q.justification).slice(0,1100);reasonSelect.selectedIndex=q.formule==='ciblee'?1:q.formule==='approfondie'?2:q.formule==='expert'?3:0}
        refreshPreview();
        aiStatus.textContent='Analyse prête. Vérifiez-la avant tout devis. Aucune proposition envoyée.';
      }catch(e){aiStatus.textContent=e.message}finally{aiBtn.disabled=false}
