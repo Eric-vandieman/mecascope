@@ -10,14 +10,30 @@ export default async function handler(req,res){
   !!process.env.STRIPE_WEBHOOK_SECRET&&!!process.env.SUPABASE_SERVICE_ROLE_KEY&&
   !!process.env.SUPABASE_URL&&!!process.env.SUPABASE_PUBLISHABLE_KEY&&
   !!process.env.STRIPE_PRICE_PRIORITE&&!!process.env.STRIPE_PRICE_PRO5&&!!process.env.STRIPE_PRICE_PRO10;
- if(req.method==='GET')return res.status(200).json({available:configured});
+ async function liveAccess(){
+  if(!configured)return false;
+  try{
+   const stripeHeaders={Authorization:'Bearer '+process.env.STRIPE_SECRET_KEY};
+   const dbSecret=process.env.SUPABASE_SERVICE_ROLE_KEY;
+   const dbHeaders={apikey:dbSecret,...(dbSecret.startsWith('eyJ')?{Authorization:'Bearer '+dbSecret}:{})};
+   const [priceCheck,subscriptionsCheck,databaseCheck]=await Promise.all([
+    fetch('https://api.stripe.com/v1/prices/'+encodeURIComponent(process.env.STRIPE_PRICE_PRO5),{headers:stripeHeaders,signal:AbortSignal.timeout(7000)}),
+    fetch('https://api.stripe.com/v1/subscriptions?limit=1',{headers:stripeHeaders,signal:AbortSignal.timeout(7000)}),
+    fetch(process.env.SUPABASE_URL.replace(/\\/$/,'')+'/rest/v1/meca_stripe_abonnements?select=stripe_subscription_id&limit=0',{headers:dbHeaders,signal:AbortSignal.timeout(7000)})
+   ]);
+   if(!priceCheck.ok||!subscriptionsCheck.ok||!databaseCheck.ok)return false;
+   const p=await priceCheck.json();
+   return p.active===true&&p.livemode===true&&p.unit_amount===34900&&p.recurring?.interval==='month';
+  }catch{return false}
+ }
+ if(req.method==='GET')return res.status(200).json({available:await liveAccess()});
  if(req.method!=='POST')return res.status(405).json({message:'Méthode non autorisée'});
  if(!req.headers.origin||new URL(req.headers.origin).host!==req.headers.host)return res.status(403).json({message:'Origine non autorisée'});
  const plan=String(req.body?.plan||'');
  if(!Object.hasOwn(plans,plan))return res.status(400).json({message:'Formule invalide'});
  const stripeKey=process.env.STRIPE_SECRET_KEY;
  const price=process.env[plans[plan][0]];
- if(!configured||!price){
+ if(!configured||!price||!(await liveAccess())){
   return res.status(503).json({message:'La souscription en ligne n’est pas encore activée. Aucun paiement ne sera engagé.'});
  }
  const cookie=getCookie(req.headers.cookie);
