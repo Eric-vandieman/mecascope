@@ -51,6 +51,28 @@ window.mecaAdminLive=async function(main,path){
    const wrap=document.createElement('div');wrap.className='panel';wrap.append(select);
    const history=document.createElement('div');history.id='meca-live-history';history.style.cssText='white-space:pre-wrap;padding:12px;line-height:1.7';wrap.append(history);
    form.before(wrap);
+   // Registre des dossiers réels : visible immédiatement, même sans sélection.
+   const registry=document.createElement('section');
+   registry.className='panel meca-dossiers-registry';
+   const heading=document.createElement('h2');heading.textContent='Dossiers clients à traiter ('+dossiers.length+')';registry.append(heading);
+   const helper=document.createElement('p');helper.className='muted';helper.textContent='Sélectionnez un dossier pour consulter le client, le véhicule et préparer sa réponse.';registry.append(helper);
+   const list=document.createElement('div');list.style.cssText='display:grid;gap:10px';registry.append(list);
+   const detail=document.createElement('div');detail.className='panel';detail.style.cssText='margin-top:14px;white-space:pre-wrap;line-height:1.7';detail.textContent='Sélectionnez un dossier pour afficher ses informations.';registry.append(detail);
+   const fields=[['Type de véhicule','vehicleType'],['Marque','brand'],['Modèle','model'],['Année','year'],['Motorisation','engine'],['Carburant','fuel'],['Boîte','gearbox'],['Finition','trim'],['Pièce recherchée','part'],['Référence de pièce','ref'],['VIN','vin'],['Budget','budget'],['Remarques','notes']];
+   function showDossier(row){
+     if(!row){detail.textContent='Sélectionnez un dossier.';return}
+     const lines=['DOSSIER '+(row.reference||row.id),'Statut : '+(row.statut||'—'),'Client : '+(row.contact||'—'),'E-mail : '+(row.email||'—'),'Créé le : '+(row.cree_le?new Date(row.cree_le).toLocaleString('fr-FR'):'—'),'Type : '+(row.type_dossier==='professionnel'?'Professionnel':'Particulier')];
+     for(const [label,key] of fields){const v=row.details?.[key];if(v!==null&&v!==undefined&&String(v).trim())lines.push(label+' : '+String(v))}
+     detail.textContent=lines.join('\n');
+   }
+   for(const row of dossiers){
+     const button=document.createElement('button');button.type='button';button.className='btn dark small';button.style.cssText='text-align:left;white-space:normal;line-height:1.5;padding:12px';
+     button.textContent=(row.reference||'Dossier')+' · '+(row.contact||'Client')+' · '+(row.details?.brand||'')+' '+(row.details?.model||'')+' · '+(row.statut||'—');
+     button.onclick=()=>{select.value=row.id;select.dispatchEvent(new Event('change'));detail.scrollIntoView?.({block:'nearest',behavior:'smooth'})};
+     list.append(button);
+   }
+   if(!dossiers.length){const empty=document.createElement('p');empty.textContent='Aucun dossier reçu pour le moment.';list.append(empty)}
+   wrap.before(registry);
    const quotePanel=document.createElement('div');quotePanel.className='panel';
    quotePanel.innerHTML='<h3>Proposition de recherche avant paiement</h3><p class="muted">Choisissez une formule et les options, puis envoyez le devis au client par e-mail.</p><div class="meca-compose-grid"><label>Formule<select id="meca-quote-plan"><option value="ciblee">Recherche ciblée · 39 €</option><option value="approfondie">Recherche approfondie · 79 €</option><option value="expert">Investigation Expert · 149 €</option></select></label><label>Express<select id="meca-quote-express"><option value="">Sans express</option><option value="48h">48 h (+20 € si conditions remplies)</option><option value="24h">24 h (+50 € si conditions remplies)</option></select></label><label class="wide"><input type="checkbox" id="meca-quote-reserve"> Proposer la réservation fournisseur (+10 € uniquement si confirmée)</label></div>';
    const quoteButton=document.createElement('button');quoteButton.type='button';quoteButton.className='btn orange';quoteButton.textContent='Valider et envoyer le devis';quotePanel.append(quoteButton);
@@ -70,7 +92,7 @@ window.mecaAdminLive=async function(main,path){
 
    async function refreshHistory(){history.textContent='';if(!select.value)return;try{const r=await call({action:'messages',id:select.value});for(const m of r.messages||[]){const p=document.createElement('p');p.textContent=(m.auteur==='client'?'Client':'Mécascope')+' · '+new Date(m.cree_le).toLocaleString('fr-FR')+' : '+m.contenu;history.append(p)}}catch(e){history.textContent=e.message}}
    window.mecaPieceHistory?.(main,select,dossiers);
-   select.onchange=()=>{const row=dossiers.find(x=>x.id===select.value);form.elements.ref.value=row?.reference||'';showOptions();refreshHistory()};
+   select.onchange=()=>{const row=dossiers.find(x=>x.id===select.value);form.elements.ref.value=row?.reference||'';showDossier(row);showOptions();refreshHistory()};
    const send=document.createElement('button');send.type='button';send.className='btn orange';send.textContent='Envoyer la réponse dans la conversation';
    const status=document.createElement('p');status.setAttribute('role','status');
    form.after(status);form.after(send);
@@ -88,7 +110,7 @@ window.mecaAdminLive=async function(main,path){
     finally{send.disabled=false}
    };
    const deep=new URLSearchParams(location.hash.split('?')[1]||'').get('dossier');
-   const remembered=deep&&/^[a-f0-9-]{36}$/i.test(deep)?deep:sessionStorage.getItem('meca-dossier-selected');if(remembered&&dossiers.some(x=>x.id===remembered)){select.value=remembered;select.dispatchEvent(new Event('change'));sessionStorage.removeItem('meca-dossier-selected')}
+   const remembered=deep&&/^[a-f0-9-]{36}$/i.test(deep)?deep:sessionStorage.getItem('meca-dossier-selected');if(remembered&&dossiers.some(x=>x.id===remembered)){select.value=remembered;select.dispatchEvent(new Event('change'));sessionStorage.removeItem('meca-dossier-selected')}else if(dossiers.length){select.value=dossiers[0].id;select.dispatchEvent(new Event('change'))}
   }
  }catch(e){const p=document.createElement('p');p.className='meca-admin-live-status';p.textContent='Synchronisation indisponible : '+e.message;main.prepend(p)}
 };
