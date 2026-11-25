@@ -152,6 +152,8 @@ export default async function handler(req,res){
    if(d.statut!=='devis_envoye')return res.status(409).json({message:'Ce devis n’est plus en attente de réponse'});
    const choice=String(b.choice||'');
    if(!['accepter','refuser'].includes(choice))return res.status(400).json({message:'Choix invalide'});
+   if(choice==='accepter'&&(!Object.hasOwn(b,'express')||!['','24h','48h'].includes(b.express)||!Object.hasOwn(b,'reservation')||typeof b.reservation!=='boolean'))
+     return res.status(400).json({message:'Veuillez valider explicitement les choix Express et réservation, y compris si vous ne souhaitez aucune option.'});
    if(d.devis_decision!=='en_attente')return res.status(409).json({message:'Votre décision a déjà été enregistrée'});
    const express=choice==='accepter'&&['24h','48h'].includes(b.express)?b.express:null;
    const reservation=choice==='accepter'&&b.reservation===true;
