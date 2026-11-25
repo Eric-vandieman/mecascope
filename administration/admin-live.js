@@ -58,11 +58,14 @@ window.mecaAdminLive=async function(main,path){
    const helper=document.createElement('p');helper.className='muted';helper.textContent='Sélectionnez un dossier pour consulter le client, le véhicule et préparer sa réponse.';registry.append(helper);
    const list=document.createElement('div');list.style.cssText='display:grid;gap:10px';registry.append(list);
    const detail=document.createElement('div');detail.className='panel';detail.style.cssText='margin-top:14px;white-space:pre-wrap;line-height:1.7';detail.textContent='Sélectionnez un dossier pour afficher ses informations.';registry.append(detail);
-   const fields=[['Type de véhicule','vehicleType'],['Marque','brand'],['Modèle','model'],['Année','year'],['Motorisation','engine'],['Carburant','fuel'],['Boîte','gearbox'],['Finition','trim'],['Pièce recherchée','part'],['Référence de pièce','ref'],['VIN','vin'],['Budget','budget'],['Remarques','notes']];
+   const fields=[['Type de véhicule','vehicleType'],['Marque','brand'],['Modèle','model'],['Année','year'],['Motorisation','engine'],['Carburant','fuel'],['Boîte','gearbox'],['Finition','trim'],['Pièce recherchée','part'],['Référence de pièce','ref'],['VIN','vin'],['Budget maximum d’achat de la pièce','budget'],['Remarques','notes']];
    function showDossier(row){
      if(!row){detail.textContent='Sélectionnez un dossier.';return}
      const lines=['DOSSIER '+(row.reference||row.id),'Statut : '+(row.statut==='refuse'?'Devis refusé — dossier clôturé':row.statut||'—')+(row.statut==='devis_envoye'&&row.devis_decision==='accepte'?' (devis accepté, paiement initial attendu)':''),'Client : '+(row.contact||'—'),'E-mail : '+(row.email||'—'),'Créé le : '+(row.cree_le?new Date(row.cree_le).toLocaleString('fr-FR'):'—'),'Type : '+(row.type_dossier==='professionnel'?'Professionnel':'Particulier')];
-     for(const [label,key] of fields){const v=row.details?.[key];if(v!==null&&v!==undefined&&String(v).trim())lines.push(label+' : '+String(v))}
+     lines.push('Téléphone : '+(String(row.telephone||'').trim()||'NON COMMUNIQUÉ — à demander au client'));
+     const budget=String(row.details?.budget??'').trim();
+     lines.push('Budget maximum de la pièce : '+(budget?budget:'NON COMMUNIQUÉ — aucun plafond annoncé ; validation du prix nécessaire avant achat'));
+     for(const [label,key] of fields){if(key==='budget')continue;const v=row.details?.[key];if(v!==null&&v!==undefined&&String(v).trim())lines.push(label+' : '+String(v))}
      detail.textContent=lines.join('\n');
    }
    for(const row of dossiers){
@@ -135,14 +138,16 @@ window.mecaAdminLive=async function(main,path){
       '',
       abroad(row),
       '',
+      ...(String(row?.telephone||'').trim()?[]:['Afin de pouvoir vous joindre rapidement si un fournisseur répond ou si une précision est nécessaire, pourriez-vous également me communiquer un numéro de téléphone ?','']),
+      ...(String(d.budget??'').trim()?[]:['Vous n’avez pas indiqué de budget maximal pour l’achat de la pièce. Je pourrai examiner les offres disponibles sans plafond prédéfini, mais je vous demanderai votre accord sur le prix avant toute décision d’achat.','']),
       'Compte tenu de ces vérifications, je vous propose la formule '+p.name+' à '+p.price+' €, avec un délai de '+p.days+' jours ouvrés après acceptation, paiement initial et réception des informations nécessaires.',
       '',
-      'Vous pourrez choisir sous ce message un délai Express de 48 h (+20 €), de 24 h (+50 €) ou une demande de réservation fournisseur de 24 h (+10 €), sous réserve de confirmation. Les options restent facultatives et sont réglées avec l’acompte. Les suppléments non acquis selon les conditions annoncées sont remboursés.',
+      'Vous pourrez choisir sous ce message une recherche Express en 48 h (+20 €) ou en 24 h (+50 €). Cette option se règle à l’avance avec l’acompte : si le délai convenu n’est pas tenu, son supplément sera remboursé. Vous pourrez également demander une réservation de la pièce pendant 24 h auprès du fournisseur (+10 €), indépendamment du délai de recherche choisi ; elle reste sous réserve de confirmation du fournisseur.',
       '',
       'Vous restez libre de votre choix.',
       '',
       'Cordialement,',
-      'Mécascope'
+      'L’équipe Mécascope'
     ].join('\n');
    }
    function buildProposal(){
@@ -184,9 +189,14 @@ window.mecaAdminLive=async function(main,path){
          const exact=String(plans[key].price)+' €';
          const draft=text.length>75&&text.includes(exact)?text:defaultDraft(row,key);
          const heading=greeting(row);
-         personal.value=draft.replace(/^Bonjour[^\n]*/,heading)
-           .replace(/\s*Vous restez libre de votre choix\.[\s\S]*$/,'').trimEnd()
-           +'\n\nVous restez libre de votre choix.\n\nCordialement,\nMécascope';
+         const telephoneManquant=!String(row.telephone||'').trim();
+         const budgetManquant=!String(row.details?.budget??'').trim();
+         const first=draft.replace(/^Bonjour[^\n]*/,heading)
+           .replace(/\s*Vous restez libre de votre choix\.[\s\S]*$/,'')
+           .replace(/\s*Cordialement,[\s\S]*$/,'').trimEnd();
+         const phoneLine=telephoneManquant?'\n\nPourriez-vous également me communiquer un numéro de téléphone afin de pouvoir vous joindre rapidement si un fournisseur a besoin d’une confirmation ?':'';
+         const budgetLine=budgetManquant?'\n\nVous n’avez pas indiqué de budget maximal pour l’achat de la pièce. Je pourrai examiner différentes offres et vous demanderai votre accord sur le prix avant tout achat.':'';
+         personal.value=first+phoneLine+budgetLine+'\n\nVous restez libre de votre choix.\n\nCordialement,\nL’équipe Mécascope';
        }
        aiDetails.textContent='Difficulté : '+(q.difficulte||'à préciser')+'\nPourquoi cette formule : '+(q.justification||'à vérifier')+'\nRisques / contrôles : '+(Array.isArray(q.risques)?q.risques.join(' ; '):q.risques||'à vérifier')+'\nInformations utiles : '+(Array.isArray(q.questions_client)?q.questions_client.join(' ; '):'—')+'\nPistes de recherche : '+(Array.isArray(q.pistes_recherche)?q.pistes_recherche.join(' ; '):'—');
        aiStatus.textContent='Proposition IA préparée. Vous pouvez modifier librement le message et la formule ; rien n’a été envoyé.';
