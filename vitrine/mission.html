@@ -11,6 +11,7 @@
 <label style="display:block;margin:10px 0"><input type="radio" name="reservation" value="non"> Non — 0 €</label>
 </fieldset>
 <p class="muted">Les options choisies sont payées à l’avance avec l’acompte. Le supplément Express 24 h ou 48 h n’est remboursable qu’après expiration du délai convenu si aucune offre conforme n’a été identifiée dans ce délai ; aucun remboursement Express n’est déclenché avant l’échéance. La réservation fournisseur de 24 h (+10 €) est possible avec ou sans Express, même pour une recherche normale ; elle est remboursée si le fournisseur ne confirme aucune réservation. Le prix et la livraison de la pièce sont distincts.</p>
+<label id="confirmation-sans-plafond" hidden style="display:block;padding:15px;margin:18px 0;border:1px solid #efac64;border-radius:10px;line-height:1.7"><input type="checkbox" id="accord-sans-plafond"> <strong>Budget de la pièce non renseigné — confirmation obligatoire.</strong> Je reconnais que Mécascope peut présenter une offre fournisseur compatible, disponible et à prix vérifié, sans plafond de prix fixé par moi. Une telle offre peut valider la mission de recherche et rendre le solde prévu au devis exigible, même si je décide de ne pas acheter cette pièce. Aucun achat ne sera effectué sans mon accord.</label>
 <div id="resume-paiement" style="font-size:18px;font-weight:700;padding:14px;background:#12202a;border-radius:8px"></div><label style="display:block;margin-top:14px"><input type="checkbox" id="accord-conditions"> Je reconnais avoir consulté les <a href="/legal.html#cgv" target="_blank" rel="noopener noreferrer" style="color:#ffbd74">conditions générales de vente</a> et compris les montants payables immédiatement, les conditions de réalisation et les remboursements des options.</label>
 <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:18px"><button id="accepter" type="button">Valider mes options et accepter le devis</button><button id="refuser" type="button" style="background:#343e49;color:white;border:1px solid #9d8875">Refuser le devis</button></div>
 </div><p id="offre"></p><p id="conditions" class="muted"></p><button id="payer" hidden>Payer mon acompte et mes options</button><p id="erreur" role="alert"></p><p class="muted">Lien personnel : ne le partagez pas. Le retour du navigateur ne confirme pas le paiement. Seul Stripe confirme les fonds au serveur.</p></main><script>
@@ -31,7 +32,7 @@
  function showAmount(){
   if(!current)return;
   const x=selected();
-  accept.disabled=!x.complete||!$('accord-conditions').checked;
+  accept.disabled=!x.complete||!$('accord-conditions').checked||(current.budgetNonRenseigne&&!$('accord-sans-plafond').checked);
   accept.textContent=x.complete?'Accepter le devis de '+euro(current.total)+' € et payer '+euro((current.initial||0)+x.extra):'Choisissez toutes les options pour accepter le devis';
   summary.textContent=(x.complete?'Vos deux choix sont validés. ':'Veuillez choisir explicitement le délai ET la réservation (oui/non) avant de valider. ')+'À régler maintenant : '+euro((current.initial||0)+x.extra)+' (acompte '+euro(current.initial||0)+' + options '+euro(x.extra)+'). Total de la prestation si réussite : '+euro((current.total||0)+x.extra)+'. Solde en cas de réussite : '+euro(current.solde||0)+'.';
  }
@@ -43,6 +44,7 @@
   const r=await fetch('/api/unitaire?action=status&t='+encodeURIComponent(token),{cache:'no-store'});
   const data=await r.json().catch(()=>({}));if(!r.ok)throw Error(data.message||'Dossier inaccessible');
   current=data;quote.hidden=true;payer.hidden=true;erreur.textContent='';
+  $('confirmation-sans-plafond').hidden=!data.budgetNonRenseigne;
   intro.hidden=!data.proposition;intro.textContent=data.proposition||'';
   offre.textContent='Référence : '+data.reference+(data.offre?' — '+data.offre:'');
   if(data.statut==='devis_envoye'&&data.decision==='en_attente'&&data.optionsPayeesAvance){
@@ -72,15 +74,17 @@
  }
  for(const el of document.querySelectorAll('input[name="express"],input[name="reservation"]'))el.addEventListener('change',showAmount);
  $('accord-conditions').addEventListener('change',showAmount);
+ $('accord-sans-plafond').addEventListener('change',showAmount);
  accept.onclick=async()=>{
   const choice=selected();
   if(!choice.complete){erreur.textContent='Choisissez une option de délai ET répondez oui ou non pour la réservation.';return}
   if(!$('accord-conditions').checked){erreur.textContent='Consultez et acceptez les conditions générales avant de continuer.';return}
+  if(current?.budgetNonRenseigne&&!$('accord-sans-plafond').checked){erreur.textContent='Veuillez confirmer la recherche sans plafond de prix avant d’accepter le devis.';return}
   if(!current||!confirm('Vous acceptez le devis de '+euro(current.total)+' € et validez vos options. Paiement immédiat : '+euro(current.initial+choice.extra)+' € ?'))return;
   accept.disabled=true;refuse.disabled=true;erreur.textContent='Enregistrement des options et ouverture de Stripe…';
   let decided=false;
   try{
-   await api({action:'decision',choice:'accepter',express:choice.express,reservation:choice.reservation});
+   await api({action:'decision',choice:'accepter',express:choice.express,reservation:choice.reservation,sansPlafondConfirme:!!$('accord-sans-plafond').checked});
    decided=true;
    const d=await api({action:'checkout',stage:'initial'});
    const u=new URL(d.checkoutUrl);if(u.protocol!=='https:'||!u.hostname.endsWith('.stripe.com'))throw Error('Lien Stripe non reconnu');
