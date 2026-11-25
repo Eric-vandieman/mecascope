@@ -1,7 +1,7 @@
 // Abonnements professionnels : la facturation reste désactivée tant que
 // Stripe LIVE, les prix, le webhook et le registre des crédits ne sont pas raccordés.
 const COOKIE='__Host-mecascope-professional';
-const getCookie=h=>{const value=String(h||'').split(';').map(s=>s.trim()).find(s=>s.startsWith(COOKIE+'='));return value?value.slice(COOKIE.length):''};
+const getCookie=h=>{const value=String(h||'').split(';').map(s=>s.trim()).find(s=>s.startsWith(COOKIE+'='));if(!value)return '';try{return decodeURIComponent(value.slice(COOKIE.length+1))}catch{return ''}};
 const plans={priorite:['STRIPE_PRICE_PRIORITE',0],pro5:['STRIPE_PRICE_PRO5',10],pro10:['STRIPE_PRICE_PRO10',20]};
 export default async function handler(req,res){
  res.setHeader('Cache-Control','no-store');
@@ -23,7 +23,7 @@ export default async function handler(req,res){
  const cookie=getCookie(req.headers.cookie);
  const url=process.env.SUPABASE_URL,key=process.env.SUPABASE_PUBLISHABLE_KEY;
  if(!cookie||!url||!key)return res.status(401).json({message:'Connectez-vous au compte responsable du garage.'});
- const headers={apikey:key,Authorization:'Bearer '+decodeURIComponent(cookie),'Content-Type':'application/json'};
+ const headers={apikey:key,Authorization:'Bearer '+cookie,'Content-Type':'application/json'};
  try{
   const [identity,profile]=await Promise.all([
    fetch(url+'/auth/v1/user',{headers,signal:AbortSignal.timeout(10000)}),
