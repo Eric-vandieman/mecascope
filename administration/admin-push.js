@@ -67,6 +67,22 @@
  }
  async function setup(main,path){
   addCenter();
+  const params=new URLSearchParams(location.hash.split('?')[1]||'');
+  const proId=params.get('dossier');
+  if(path==='/admin/demandes'&&params.get('source')==='professionnel'&&/^[a-f0-9-]{36}$/i.test(proId||'')){
+   const box=document.createElement('section');box.className='panel meca-push-pro-detail';
+   const title=document.createElement('h2');title.textContent='Dossier professionnel';box.append(title);
+   const info=document.createElement('div');info.textContent='Chargement du dossier…';box.append(info);
+   (main.querySelector('.pagehead')||main.firstElementChild)?.after(box);
+   api({action:'pro-detail',id:proId}).then(result=>{
+    const d=result.dossier;
+    if(!d){info.textContent='Dossier introuvable.';return}
+    info.replaceChildren();
+    for(const [label,value] of [['Référence',d.reference],['Pièce recherchée',d.piece],['Véhicule',[d.marque,d.modele,d.annee].filter(Boolean).join(' ')],['Référence pièce',d.reference_piece],['Budget',d.budget],['Statut',d.statut],['Validation responsable',d.approuvee?'Oui':'Non']]){
+     const line=document.createElement('p');line.textContent=label+' : '+(value||'—');info.append(line)
+    }
+   }).catch(e=>info.textContent=e.message);
+  }
   const old=main.querySelector('#meca-push-install');
   if(old)return;
   if(path!=='/admin'&&path!=='/admin/demandes')return;

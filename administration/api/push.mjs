@@ -77,6 +77,7 @@ export default async function handler(req,res){
   if(!token)return json(res,401,{message:'Authentification administrateur requise'});
   if(b.action==='config')return json(res,200,{publicKey:process.env.MECA_VAPID_PUBLIC||null,ready:!!process.env.MECA_VAPID_PRIVATE});
   if(b.action==='center')return json(res,200,await rpc('meca_push_center',{p_mark_read:b.mark||null},token));
+  if(b.action==='pro-detail'){if(!/^[a-f0-9-]{36}$/i.test(String(b.id||'')))return json(res,400,{message:'Dossier invalide'});return json(res,200,{dossier:await rpc('meca_push_pro_dossier',{p_id:b.id},token)})}
   if(b.action==='subscribe'){
    const sub=b.subscription||{},keys=sub.keys||{};
    if(typeof sub.endpoint!=='string'||typeof keys.p256dh!=='string'||typeof keys.auth!=='string')return json(res,400,{message:'Abonnement invalide'});
