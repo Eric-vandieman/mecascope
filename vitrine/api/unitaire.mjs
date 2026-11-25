@@ -115,6 +115,7 @@ export default async function handler(req,res){
     const planFige=d.qualification_ia?.formule;
     if(!planFige||!offers[planFige])return res.status(409).json({message:'Analyse IA non validée/enregistrée : aucun devis ne peut être transmis.'});
     if(b.offre!==planFige)return res.status(409).json({message:'Incohérence de formule : ce dossier est fixé sur '+offers[planFige].total+' €. Actualisez la page avant d’envoyer.'});
+    if(!proposal.includes(String(offers[planFige].total)+' €'))return res.status(409).json({message:'Le message client ne mentionne pas le tarif enregistré de '+offers[planFige].total+' €. Envoi bloqué.'});
     if(d.statut==='devis_envoye'&&d.devis_decision!=='en_attente')return res.status(409).json({message:'Devis déjà accepté ou refusé : aucun renvoi ou changement commercial possible.'});
     if(d.statut==='devis_envoye'&&d.offre!==b.offre)return res.status(409).json({message:'Une proposition a déjà été envoyée. Son tarif ne peut plus être modifié pendant qu’un paiement Stripe peut être en cours.'});
     selectedExpress=d.statut==='devis_envoye'?d.express_option:null;
