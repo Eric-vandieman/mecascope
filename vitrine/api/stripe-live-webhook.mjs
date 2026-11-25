@@ -28,7 +28,7 @@ export default async function handler(req,res){
  if(req.method!=='POST')return res.status(405).end();
  const secret=process.env.STRIPE_WEBHOOK_SECRET,key=process.env.STRIPE_SECRET_KEY;
  const url=process.env.SUPABASE_URL,admin=process.env.SUPABASE_SERVICE_ROLE_KEY;
- if(process.env.MECASCOPE_ENABLE_LIVE_BILLING!=='true'||!secret||!key?.startsWith('sk_live_')||!url||!admin)
+ if(process.env.MECASCOPE_ENABLE_LIVE_BILLING!=='true'||!secret||!(/^((sk|rk)_live_)/).test(key||'')||!url||!admin)
   return res.status(503).json({message:'Facturation non activée'});
  let event;
  try{
@@ -46,7 +46,7 @@ export default async function handler(req,res){
  }
  async function rpc(functionName,body){
   const r=await fetch(url+'/rest/v1/rpc/'+functionName,{
-   method:'POST',headers:{apikey:admin,Authorization:'Bearer '+admin,'Content-Type':'application/json'},
+   method:'POST',headers:{apikey:admin,...(admin.startsWith('eyJ')?{Authorization:'Bearer '+admin}:{}),'Content-Type':'application/json'},
    body:JSON.stringify(body),signal:AbortSignal.timeout(12000)
   });
   if(!r.ok)throw Error('Base des crédits non raccordée');
