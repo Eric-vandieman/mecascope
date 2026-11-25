@@ -102,8 +102,11 @@
    if(!config?.ready||!config?.publicKey){state('Erreur de configuration — clés VAPID absentes',status,enabled,disabled);return}
    await updateRegistration();
    const sub=await registration.pushManager.getSubscription();
-   if(sub&&Notification.permission==='granted')state('Activées — notifications autorisées sur cet appareil',status,enabled,disabled);
-   else state('Désactivées — cliquez pour autoriser les alertes',status,enabled,disabled);
+   if(sub&&Notification.permission==='granted'){
+    await api({action:'subscribe',subscription:sub.toJSON()});
+    state('Activées — notifications enregistrées sur cet appareil',status,enabled,disabled);
+    test.disabled=false;
+   }else{state('Désactivées — cliquez pour autoriser les alertes',status,enabled,disabled);test.disabled=true}
   }catch(e){state('Erreur de configuration : '+e.message,status,enabled,disabled)}
   enabled.onclick=async()=>{
    enabled.disabled=true;status.textContent='Activation…';
@@ -121,7 +124,7 @@
    disabled.disabled=true;
    try{const subscription=await (registration||await updateRegistration()).pushManager.getSubscription();
     if(subscription){await api({action:'unsubscribe',endpoint:subscription.endpoint});await subscription.unsubscribe()}
-    state('Désactivées — les alertes ont été retirées de cet appareil',status,enabled,disabled);
+    state('Désactivées — les alertes ont été retirées de cet appareil',status,enabled,disabled);test.disabled=true;
    }catch(e){status.textContent='Désactivation impossible : '+e.message;disabled.disabled=false}
   };
   test.onclick=async()=>{test.disabled=true;status.textContent='Envoi de test…';
