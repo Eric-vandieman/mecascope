@@ -12,7 +12,7 @@ async function ouvrir(payload){
     const layout=await layoutResponse.json();
     window.mecaEnhanceAdminLayout?.(layout);
     const css=document.createElement('link');
-    css.rel='stylesheet'; css.href='/console.css';
+    css.rel='stylesheet'; css.href='/console.css?v=20261125-1627';
     document.querySelector('style').remove();
     document.head.append(css);
     document.body.innerHTML=layout.shell;
