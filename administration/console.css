@@ -328,3 +328,48 @@ html,body{margin:0;padding:0;max-width:none;width:100%;display:block}.shell,.adm
  .admin-mode .tablewrap{max-width:100%;overflow-x:auto}
  .admin-mode .side{max-width:100vw}
 }
+
+/* Répertoire fournisseur Mécascope : gestion réelle des dossiers */
+.meca-suppliers-root{margin:16px 0 25px;min-width:0}
+.meca-suppliers-root h2{font-size:19px;margin:0 0 7px;color:#ffbd62}
+.meca-supplier-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:15px 0}
+.meca-supplier-toolbar input{flex:2;min-width:190px}
+.meca-supplier-toolbar select{flex:1;min-width:150px}
+.meca-supplier-toolbar input,.meca-supplier-toolbar select,.meca-supplier-modal input,.meca-supplier-modal select,.meca-supplier-modal textarea{color:#f9f9f9;border:1px solid #64605a;border-radius:9px;background:#161a20;padding:10px;max-width:100%}
+.meca-supplier-help{color:#b8bdc5;font-size:12px;line-height:1.6}
+.meca-supplier-summary{display:grid;grid-template-columns:repeat(4,minmax(110px,1fr));gap:12px;margin:16px 0}
+.meca-f-kpi{padding:15px;background:#1b1e23;border:1px solid #57524a;border-radius:12px;display:flex;flex-direction:column;gap:7px}
+.meca-f-kpi strong{font-size:24px;color:#ffb550}.meca-f-kpi span{color:#c9c9c9;font-size:12px}
+.meca-supplier-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,295px),1fr));gap:13px;margin-top:16px}
+.meca-f-supplier-card{background:#15191f;border:1px solid #4d4e53;border-radius:12px;padding:15px;min-width:0}
+.meca-f-supplier-card.contacted{border-color:#6dba81;background:linear-gradient(135deg,#17251e,#16191d)}
+.meca-f-card-title{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.meca-f-card-title strong{font-size:16px;color:#fff}
+.meca-f-tag{font-size:11px;background:#3a2a19;border:1px solid #915d23;border-radius:99px;padding:4px 8px;color:#ffd18a}
+.meca-f-card-sub{font-size:12px;color:#b8bdc3;line-height:1.5;min-height:32px}
+.meca-f-card-stats{display:flex;gap:5px;flex-wrap:wrap}
+.meca-f-card-stats span{font-size:11px;padding:5px;background:#252a30;border-radius:6px;color:#e2e4e7}
+.meca-f-score{color:#f8c47e;font-size:12px}
+.meca-f-already{color:#8de9a4;font-weight:800;font-size:13px}
+.meca-f-last{font-size:12px;color:#adb3bb}
+.meca-f-card-links,.meca-f-card-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
+.meca-f-card-links a{color:#ffc17a;text-decoration:underline;font-size:12px;overflow-wrap:anywhere}
+.meca-f-card-actions .btn{padding:8px 11px;font-size:12px;white-space:normal}
+.meca-f-history{margin:18px 0;padding:12px;background:#171b20;border:1px solid #34383d;border-radius:11px}
+.meca-f-history h3{font-size:15px;color:#ffbe65}
+.meca-f-log{padding:13px;background:#202329;border:1px solid #45484c;border-radius:8px;margin-bottom:9px}
+.meca-f-log p{white-space:pre-wrap;color:#c6c8cf}
+.meca-f-log-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.meca-f-log-controls select{background:#171b20;color:white;border:1px solid #61666d;border-radius:7px;padding:7px}
+.meca-f-label,.meca-f-reminder{font-size:12px;color:#b7c1ca}
+.meca-f-reminder.overdue{color:#ff7777;font-weight:750}
+.meca-supplier-overlay{position:fixed;inset:0;background:#000c;z-index:6000;display:flex;align-items:center;justify-content:center;padding:14px}
+.meca-supplier-modal{background:#15191f;color:white;border:1px solid #ad782f;border-radius:15px;padding:22px;width:min(800px,100%);max-height:90vh;overflow:auto;box-shadow:0 15px 55px #000b}
+.meca-supplier-modal h2{color:#ffc16e;margin:0 0 15px}
+.meca-f-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.meca-f-form-grid label{display:flex;flex-direction:column;gap:7px;color:#ddd;font-weight:600;font-size:12px}
+.meca-f-form-grid label.full{grid-column:1/-1}
+.meca-f-form-grid input,.meca-f-form-grid textarea,.meca-f-form-grid select{width:100%}
+.meca-f-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
+.meca-f-identify{color:#ffd18c;font-weight:700}
+@media(max-width:750px){.meca-supplier-summary{grid-template-columns:repeat(2,1fr)}.meca-supplier-toolbar{flex-direction:column;align-items:stretch}.meca-supplier-toolbar input,.meca-supplier-toolbar select,.meca-supplier-toolbar button{width:100%}.meca-f-form-grid{grid-template-columns:1fr}.meca-supplier-modal{padding:15px}}

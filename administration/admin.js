@@ -31,7 +31,7 @@ async function ouvrir(payload){
       summary.textContent='Suivi réel des comptes professionnels : '+Number(data.entreprises||0)+' entreprises · '+Number(data.etablissements||0)+' établissements · '+Number(data.aVerifier||0)+' entreprises à vérifier. Les autres indicateurs attendent une source vérifiée.';
       main.querySelector('.pagehead')?.after(summary);
       window.mecaAdminComposer?.(main);
-      window.mecaAdminLive?.(main,path);
+      Promise.resolve(window.mecaAdminLive?.(main,path)).catch(()=>{}).finally(()=>window.mecaSuppliers?.(main,path));
       window.mecaPushSetup?.(main,path);
     };
     document.addEventListener('click',async e=>{
