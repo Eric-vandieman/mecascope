@@ -4,6 +4,18 @@ if(req.method!=='POST')return res.status(405).end();
 try{if(new URL(req.headers.origin).host!==req.headers.host)return res.status(403).end()}catch{return res.status(403).end()}
 const token=String(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('__Host-admin='))?.slice(13);
 if(!token)return res.status(401).json({message:'Connexion requise'});
+const quoteAction={quote:'admin-quote',success:'admin-success',fail:'admin-fail'}[req.body?.action];
+if(quoteAction){
+ const b=req.body||{};
+ if(!/^[0-9a-f-]{36}$/i.test(String(b.id||'')))return res.status(400).json({message:'Dossier invalide'});
+ try{const r=await fetch('https://xn--mcascope-b1a.fr/api/unitaire',{
+  method:'POST',headers:{Authorization:'Bearer '+token,Origin:'https://xn--mcascope-b1a.fr','Content-Type':'application/json'},
+  body:JSON.stringify({action:quoteAction,id:b.id,offre:b.offre,express:b.express,reservation:b.reservation,expressEligible:b.expressEligible,reservationConfirmed:b.reservationConfirmed}),
+  signal:AbortSignal.timeout(15000)});
+  const answer=await r.json().catch(()=>({message:'Réponse indisponible'}));
+  return res.status(r.status).json(answer);
+ }catch{return res.status(503).json({message:'La proposition n’a pas pu être transmise.'})}
+}
 const b=req.body||{},names={reporting:'meca_admin_reporting',messages:'meca_admin_messages',reply:'meca_admin_repondre'},action=b.action;
 if(!names[action])return res.status(400).end();
 if(action!=='reporting'&&!/^[0-9a-f-]{36}$/i.test(String(b.id||'')))return res.status(400).end();
