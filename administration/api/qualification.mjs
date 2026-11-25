@@ -28,7 +28,7 @@ export default async function handler(req,res){
   const car=dossier?.details||dossier||{};
   const marque=String(car.brand||car.marque||'').trim();
   const origins={
-    volkswagen:'Allemagne',audi:'Allemagne',bmw:'Allemagne',mercedes:'Allemagne',opel:'Allemagne',porsche:'Allemagne',
+    volkswagen:'Allemagne',vw:'Allemagne',audi:'Allemagne',bmw:'Allemagne',mercedes:'Allemagne',opel:'Allemagne',porsche:'Allemagne',
     peugeot:'France',renault:'France',citroen:'France',citroën:'France',ds:'France',
     fiat:'Italie',alfa:'Italie',ferrari:'Italie',lancia:'Italie',maserati:'Italie',
     seat:'Espagne',cupra:'Espagne',skoda:'République tchèque',škoda:'République tchèque',dacia:'Roumanie',
@@ -39,8 +39,9 @@ export default async function handler(req,res){
     byd:'Chine',mg:'Royaume-Uni / Chine (selon époque et gamme)'
   };
   const keyBrand=marque.toLocaleLowerCase('fr-FR');
-  const paysOrigine=origins[keyBrand]||null;
-  const salutation=civilite?(civilite+' '+contact):('Madame, Monsieur'+(contact?' ('+contact+')':''));
+  const originKey=Object.keys(origins).find(k=>keyBrand===k||keyBrand.startsWith(k+' ')||keyBrand.startsWith(k+'-'));
+  const paysOrigine=originKey?origins[originKey]:null;
+  const salutation=civilite?(civilite+' '+contact):'Madame, Monsieur';
   const indicationPays=paysOrigine&&paysOrigine!=='France'
     ?'La marque '+marque+' est historiquement liée à '+paysOrigine+'. Mentionne comme piste à envisager des fournisseurs de ce pays SI les références et la disponibilité le justifient, sans prétendre qu’une recherche à l’étranger a déjà été faite, ni que le véhicule ou cette pièce y a été fabriqué.'
     :'Commence par des pistes en France et indique qu’une recherche internationale pourra être envisagée si la rareté réelle de la référence le justifie. Ne déduis aucun pays non établi.';
