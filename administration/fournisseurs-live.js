@@ -16,14 +16,15 @@ window.mecaSuppliers=async function(main,path){
  const safeLink=(url,caption)=>{try{const u=new URL(url);if(!['https:','http:'].includes(u.protocol))return null;const a=el('a','meca-supplier-link',caption);a.href=u.href;a.target='_blank';a.rel='noopener noreferrer';return a}catch{return null}};
  const fmtDate=x=>{try{return new Date(x).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})}catch{return '—'}};
  const labels={telephone:'Téléphone',email:'E-mail',formulaire:'Formulaire',autre:'Autre',en_attente:'En attente',positif:'Positif',negatif:'Négatif',sans_reponse:'Sans réponse'};
- const types={automobile:'Automobile',moto:'Moto',agricole:'Agricole',poids_lourd:'Poids lourd',engins:'Engins / TP',multi:'Multisecteur'};
+ const types={automobile:'Automobile',moto:'Moto',quad:'Quad / ATV',scooter:'Scooter',agricole:'Tracteur / agricole',collection:'Véhicule de collection',poids_lourd:'Poids lourd',engins:'Engins / TP',multi:'Multisecteur'};
+ const vehicleTypes=['automobile','moto','quad','scooter','agricole','collection','poids_lourd','engins'];
  const state={suppliers:[],contacts:[],dossier:null,type:'particulier',loading:false};
  const root=el('section','meca-suppliers-root');
  if(isDirectory){
   main.replaceChildren(root);
-  root.innerHTML='<div class="pagehead"><div><h1>Répertoire fournisseurs</h1><p class="muted">Fiches, coordonnées professionnelles et historique réel des contacts</p></div></div><div class="meca-supplier-toolbar"><input id="meca-f-search" placeholder="Rechercher un fournisseur, une pièce, un pays…" aria-label="Rechercher fournisseur"><select id="meca-f-category" aria-label="Catégorie"><option value="">Toutes les catégories</option><option value="automobile">Automobile</option><option value="moto">Moto</option><option value="agricole">Agricole</option><option value="poids_lourd">Poids lourds</option><option value="engins">Engins</option><option value="multi">Multisecteur</option></select><button id="meca-f-add" class="btn orange">+ Ajouter un fournisseur</button></div><p class="meca-supplier-help">Le taux positif mesure les réponses positives parmi les réponses positives ou négatives ; ce n’est pas une garantie de qualité ni de disponibilité. Les contacts sans réponse restent comptés séparément.</p><p id="meca-f-status" role="status"></p><div class="meca-supplier-summary" id="meca-f-metrics"></div><div id="meca-f-list" class="meca-supplier-grid"></div>';
+  root.innerHTML='<div class="pagehead"><div><h1>Répertoire fournisseurs</h1><p class="muted">Fiches, coordonnées professionnelles et historique réel des contacts</p></div></div><div class="meca-supplier-toolbar"><input id="meca-f-search" placeholder="Rechercher un fournisseur, une pièce, un pays…" aria-label="Rechercher fournisseur"><select id="meca-f-category" aria-label="Catégorie"><option value="">Toutes les catégories</option><option value="automobile">Automobile</option><option value="moto">Moto</option><option value="quad">Quad / ATV</option><option value="scooter">Scooter</option><option value="agricole">Tracteur / Agricole</option><option value="collection">Collection</option><option value="poids_lourd">Poids lourds</option><option value="engins">Engins</option><option value="multi">Multisecteur</option></select><button id="meca-f-add" class="btn orange">+ Ajouter un fournisseur</button></div><p class="meca-supplier-help">Le taux positif mesure les réponses positives parmi les réponses positives ou négatives ; ce n’est pas une garantie de qualité ni de disponibilité. Les contacts sans réponse restent comptés séparément.</p><p id="meca-f-status" role="status"></p><div class="meca-supplier-summary" id="meca-f-metrics"></div><div id="meca-f-list" class="meca-supplier-grid"></div>';
  }else{
-  root.innerHTML='<h2>☎ Fournisseurs contactés pour ce dossier</h2><p class="muted">Sélectionne un fournisseur, note ton appel ou ton e-mail, puis renseigne la réponse lorsque tu l’obtiens. Les autres dossiers ne seront pas mélangés.</p><p class="meca-f-context" role="status">Sélectionne un dossier ci-dessus.</p><div class="meca-supplier-toolbar"><input id="meca-f-search" placeholder="Rechercher nom, pays ou spécialité…" aria-label="Rechercher fournisseur"><select id="meca-f-category"><option value="">Toutes catégories</option><option value="automobile">Auto</option><option value="moto">Moto</option><option value="agricole">Agricole</option><option value="poids_lourd">Poids lourd</option><option value="engins">Engins</option><option value="multi">Multisecteur</option></select><button id="meca-f-add" class="btn dark" type="button">+ Fournisseur</button></div><div id="meca-f-history" class="meca-f-history"></div><div id="meca-f-list" class="meca-supplier-grid"></div><p id="meca-f-status" role="status"></p>';
+  root.innerHTML='<h2>☎ Fournisseurs contactés pour ce dossier</h2><p class="muted">Sélectionne un fournisseur, note ton appel ou ton e-mail, puis renseigne la réponse lorsque tu l’obtiens. Les autres dossiers ne seront pas mélangés.</p><p class="meca-f-context" role="status">Sélectionne un dossier ci-dessus.</p><div class="meca-supplier-toolbar"><input id="meca-f-search" placeholder="Rechercher nom, pays ou spécialité…" aria-label="Rechercher fournisseur"><select id="meca-f-category"><option value="">Toutes catégories</option><option value="automobile">Auto</option><option value="moto">Moto</option><option value="quad">Quad / ATV</option><option value="scooter">Scooter</option><option value="agricole">Tracteur / Agricole</option><option value="collection">Collection</option><option value="poids_lourd">Poids lourd</option><option value="engins">Engins</option><option value="multi">Multisecteur</option></select><button id="meca-f-add" class="btn dark" type="button">+ Fournisseur</button></div><div id="meca-f-history" class="meca-f-history"></div><div id="meca-f-list" class="meca-supplier-grid"></div><p id="meca-f-status" role="status"></p>';
   selection.closest('.panel')?.after(root);
  }
  const directorySelect=isDirectory?el('select','meca-f-dossier-select'):null;
@@ -40,13 +41,29 @@ window.mecaSuppliers=async function(main,path){
  const supplierModal=(record=null)=>{
   const overlay=el('div','meca-supplier-overlay');
   const modal=el('form','meca-supplier-modal');
-  modal.innerHTML='<h2>Fiche fournisseur</h2><div class="meca-f-form-grid"><label>Nom<input name="name" required maxlength="160"></label><label>Catégorie<select name="category"><option value="automobile">Automobile</option><option value="moto">Moto</option><option value="agricole">Agricole</option><option value="poids_lourd">Poids lourd</option><option value="engins">Engins / TP</option><option value="multi">Multisecteur</option></select></label><label>Pays<input name="country" maxlength="80" value="France"></label><label>Spécialités<input name="specialties" maxlength="450" placeholder="Ex. boîtes de vitesse anciennes"></label><label>Téléphone<input name="phone" type="tel"></label><label>E-mail<input name="email" type="email"></label><label>Site web<input name="website" type="url" placeholder="https://"></label><label>Page contact<input name="contactUrl" type="url" placeholder="https://"></label><label>Source des coordonnées<input name="sourceUrl" type="url" placeholder="https://"></label><label class="full">Notes internes<textarea name="notes" maxlength="2000" rows="3"></textarea></label></div><div class="meca-f-actions"><button type="submit" class="btn orange">Enregistrer</button><button type="button" class="btn dark" data-close>Annuler</button></div><p role="status"></p>';
+  modal.innerHTML='<h2>Fiche fournisseur</h2><div class="meca-f-form-grid"><label>Nom<input name="name" required maxlength="160"></label><label>Pays<input name="country" maxlength="80" value="France"></label><label>Spécialités<input name="specialties" maxlength="450" placeholder="Ex. boîtes de vitesse anciennes"></label><label>Téléphone<input name="phone" type="tel"></label><label>E-mail<input name="email" type="email"></label><label>Site web<input name="website" type="url" placeholder="https://"></label><label>Page contact<input name="contactUrl" type="url" placeholder="https://"></label><label>Source des coordonnées<input name="sourceUrl" type="url" placeholder="https://"></label><label class="full">Notes internes<textarea name="notes" maxlength="2000" rows="3"></textarea></label></div><div class="meca-f-actions"><button type="submit" class="btn orange">Enregistrer</button><button type="button" class="btn dark" data-close>Annuler</button></div><p role="status"></p>';
   const data={name:record?.nom||'',category:record?.categorie||'automobile',country:record?.pays||'France',specialties:record?.specialites||'',phone:record?.telephone||'',email:record?.email||'',website:record?.site_web||'',contactUrl:record?.contact_url||'',sourceUrl:record?.source_url||'',notes:record?.note_privee||''};
   for(const [key,value] of Object.entries(data))if(modal.elements.namedItem(key))modal.elements.namedItem(key).value=value;
+  const choices=el('fieldset','meca-f-category-choices');
+  const legend=el('legend','','Catégories prises en charge (plusieurs possibles)');choices.append(legend);
+  for(const v of vehicleTypes){
+   const label=el('label','meca-f-choice'),input=document.createElement('input');
+   input.type='checkbox';input.name='vehicleCategory';input.value=v;
+   input.checked=(record?.categories||[record?.categorie||'automobile']).includes(v);
+   label.append(input,document.createTextNode(types[v]));choices.append(label);
+  }
+  modal.querySelector('.meca-f-form-grid').append(choices);
   modal.querySelector('[data-close]').onclick=()=>overlay.remove();
   modal.onsubmit=async ev=>{
    ev.preventDefault();const submit=modal.querySelector('[type=submit]');submit.disabled=true;modal.querySelector('[role=status]').textContent='Enregistrement…';
-   try{await api({action:'save',id:record?.id||null,...Object.fromEntries(new FormData(modal))});overlay.remove();await load()}
+   try{
+    const categories=[...modal.querySelectorAll('input[name="vehicleCategory"]:checked')].map(n=>n.value);
+    if(!categories.length)throw Error('Coche au moins une catégorie de véhicules.');
+    const payload=Object.fromEntries(new FormData(modal));delete payload.vehicleCategory;
+    const result=await api({action:'save',id:record?.id||null,...payload,category:categories[0]});
+    await api({action:'categories',id:result,categories});
+    overlay.remove();await load();
+   }
    catch(e){modal.querySelector('[role=status]').textContent=e.message}finally{submit.disabled=false}
   };
   overlay.append(modal);document.body.append(overlay);
@@ -87,7 +104,7 @@ window.mecaSuppliers=async function(main,path){
  function render(){
   if(!root.isConnected)return;
   const q=search.value.trim().toLocaleLowerCase('fr'),filter=category.value;
-  const sorted=state.suppliers.filter(s=>(!filter||s.categorie===filter)&&(!q||[s.nom,s.pays,s.specialites].join(' ').toLocaleLowerCase('fr').includes(q)))
+  const sorted=state.suppliers.filter(s=>(!filter||(s.categories||[s.categorie]).includes(filter))&&(!q||[s.nom,s.pays,s.specialites].join(' ').toLocaleLowerCase('fr').includes(q)))
    .sort((a,b)=> (state.dossier?(b.contacts_dossier-a.contacts_dossier):0)||((b.nb_positifs+b.nb_negatifs>=3?Number(b.taux_positif):0)-(a.nb_positifs+a.nb_negatifs>=3?Number(a.taux_positif):0))||a.nom.localeCompare(b.nom,'fr'));
   results.replaceChildren();
   if(isDirectory){
@@ -97,7 +114,7 @@ window.mecaSuppliers=async function(main,path){
   }
   for(const s of sorted){
    const card=el('article','meca-f-supplier-card'+(s.contacts_dossier?' contacted':''));
-   const title=el('div','meca-f-card-title');title.append(el('strong','',s.nom),el('span','meca-f-tag',types[s.categorie]||s.categorie));card.append(title);
+   const title=el('div','meca-f-card-title');title.append(el('strong','',s.nom),el('span','meca-f-tag',(s.categories||[s.categorie]).map(c=>types[c]||c).join(' · ')));card.append(title);
    card.append(el('p','meca-f-card-sub',s.pays+' · '+(s.specialites||'Spécialité à préciser')));
    const row=el('div','meca-f-card-stats');
    for(const text of [s.nb_contacts+' contacts',s.nb_positifs+' positifs',s.nb_negatifs+' négatifs',s.nb_sans_reponse+' sans réponse'])row.append(el('span','',text));
@@ -134,7 +151,15 @@ window.mecaSuppliers=async function(main,path){
    if(thisRevision!==revision||!root.isConnected)return;
    state.suppliers=Array.isArray(data.fournisseurs)?data.fournisseurs:[];
    state.contacts=Array.isArray(data.contacts)?data.contacts:[];
-   status.textContent=state.suppliers.length+' fournisseur(s) dans le répertoire';
+   const automaticCategory=data.categorie_dossier;
+   if(dossier){
+    status.textContent=automaticCategory==='inconnu'?
+      'Catégorie du dossier non renseignée : aucun fournisseur proposé avant classification.' :
+      state.suppliers.length+' fournisseur(s) adaptés à '+(types[automaticCategory]||automaticCategory)+' uniquement';
+    if(context)context.textContent='Catégorie détectée : '+(types[automaticCategory]||'À préciser');
+   }else status.textContent=state.suppliers.length+' fournisseur(s) dans le répertoire';
+   category.style.display=dossier?'none':'';
+
    render();
   }catch(e){if(thisRevision===revision){error(e);state.suppliers=[];state.contacts=[];render()}}
  }

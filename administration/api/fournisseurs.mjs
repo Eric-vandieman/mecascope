@@ -4,7 +4,8 @@ const ENDPOINTS={
  save:'meca_fournisseur_enregistrer',
  contact:'meca_fournisseur_contact',
  response:'meca_fournisseur_reponse',
- dossiers:'meca_fournisseurs_dossiers'
+ dossiers:'meca_fournisseurs_dossiers',
+ categories:'meca_fournisseur_categories'
 };
 export default async function handler(req,res){
  res.setHeader('Cache-Control','no-store');
@@ -19,6 +20,10 @@ export default async function handler(req,res){
  const str=(v,n=300)=>String(v??'').trim().slice(0,n);
  let args;
  if(action==='dossiers')args={};
+ else if(action==='categories'){
+  if(!uuid(b.id)||!Array.isArray(b.categories)||!b.categories.length)return res.status(400).json({message:'Catégories requises'});
+  args={p_id:b.id,p_categories:b.categories};
+ }
  else if(action==='list'){
   if(b.dossier&&!uuid(b.dossier))return res.status(400).json({message:'Dossier invalide'});
   args={p_dossier:b.dossier||null,p_type:b.type==='professionnel'?'professionnel':'particulier'};
