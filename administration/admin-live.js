@@ -139,7 +139,7 @@ window.mecaAdminLive=async function(main,path){
       '',
       'Cordialement,',
       'Mécascope'
-    ].join('\\n');
+    ].join('\n');
    }
    function buildProposal(){
      const row=dossiers.find(x=>x.id===select.value);
