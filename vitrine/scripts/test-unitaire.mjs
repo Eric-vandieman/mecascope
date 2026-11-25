@@ -14,7 +14,8 @@ Object.assign(process.env,{
  SUPABASE_URL:db,RESEND_API_KEY:'re_mock',MECASCOPE_MAIL_FROM:'Mécascope <contact@example.org>',
  STRIPE_PRICE_CIBLEE_INITIAL:price.ciblee.initial,STRIPE_PRICE_CIBLEE_SUCCESS:price.ciblee.solde,
  STRIPE_PRICE_APPROFONDIE_INITIAL:price.approfondie.initial,STRIPE_PRICE_APPROFONDIE_SUCCESS:price.approfondie.solde,
- STRIPE_PRICE_EXPERT_INITIAL:price.expert.initial,STRIPE_PRICE_EXPERT_SUCCESS:price.expert.solde
+ STRIPE_PRICE_EXPERT_INITIAL:price.expert.initial,STRIPE_PRICE_EXPERT_SUCCESS:price.expert.solde,
+ STRIPE_PRICE_EXPRESS_24:'price_express24_mock',STRIPE_PRICE_EXPRESS_48:'price_express48_mock',STRIPE_PRICE_RESERVATION:'price_reservation_mock'
 });
 const dossiers=new Map(), emails=[], sessions=new Map(),operations=new Set();
 let checkoutSeq=1,checks=0;
