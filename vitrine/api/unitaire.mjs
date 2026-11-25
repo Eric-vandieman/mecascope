@@ -1,4 +1,4 @@
-import {randomBytes,createHash} from 'node:crypto';
+import {createHash,createHmac} from 'node:crypto';
 const cookieName='__Host-mecascope-professional';
 const hash=t=>createHash('sha256').update(String(t)).digest('hex');
 const offers={
@@ -72,7 +72,7 @@ export default async function handler(req,res){
     if(d.statut!=='acompte_paye'||!d.initial_paid_at||!offers[plan])return res.status(409).json({message:'Solde interdit tant que l’acompte n’est pas confirmé'});
     stage='reussite';
    }
-   const token=randomBytes(32).toString('hex'),offer=offers[plan];
+   const token=createHmac('sha256',process.env.STRIPE_WEBHOOK_SECRET).update('meca-unitaire-v1:'+d.id+':'+stage).digest('hex'),offer=offers[plan];
    const updated=await replace(d,d.statut,{statut:stage,offre:plan,jeton_hash:hash(token),...(action==='admin-quote'?{initial_price:process.env[offer.initial],solde_price:process.env[offer.balance]}:{})});
    const link='https://xn--mcascope-b1a.fr/mission.html?t='+encodeURIComponent(token);
    const text=action==='admin-quote'?
