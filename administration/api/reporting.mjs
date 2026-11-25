@@ -10,7 +10,7 @@ if(quoteAction){
  if(!/^[0-9a-f-]{36}$/i.test(String(b.id||'')))return res.status(400).json({message:'Dossier invalide'});
  try{const r=await fetch('https://xn--mcascope-b1a.fr/api/unitaire',{
   method:'POST',headers:{Authorization:'Bearer '+token,Origin:'https://xn--mcascope-b1a.fr','Content-Type':'application/json'},
-  body:JSON.stringify({action:quoteAction,id:b.id,offre:b.offre,express:b.express,reservation:b.reservation,expressEligible:b.expressEligible,reservationConfirmed:b.reservationConfirmed}),
+  body:JSON.stringify({action:quoteAction,id:b.id,offre:b.offre,express:b.express,reservation:b.reservation,proposal:b.proposal,expressEligible:b.expressEligible,reservationConfirmed:b.reservationConfirmed}),
   signal:AbortSignal.timeout(15000)});
   const answer=await r.json().catch(()=>({message:'Réponse indisponible'}));
   return res.status(r.status).json(answer);
