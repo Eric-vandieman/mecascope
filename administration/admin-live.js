@@ -42,6 +42,8 @@ window.mecaAdminLive=async function(main,path){
    if(tbody){tbody.replaceChildren();for(const item of dossiers.slice(0,15)){const tr=document.createElement('tr');for(const v of [item.reference,item.contact,item.details?.brand+' '+item.details?.model,item.statut,item.cree_le?.slice(0,10)]){const td=document.createElement('td');td.textContent=v||'—';tr.append(td)}const td=document.createElement('td');const btn=document.createElement('button');btn.className='btn dark small';btn.textContent='Ouvrir';btn.onclick=()=>{location.hash='#/admin/demandes';sessionStorage.setItem('meca-dossier-selected',item.id)};td.append(btn);tr.append(td);tbody.append(tr)}main.querySelector('.tablewrap .empty')?.remove()}
   }
   if(['/admin/demandes','/admin/messages'].includes(path)){
+   const query=new URLSearchParams(location.hash.split('?')[1]||'');
+   if(query.get('source')==='professionnel'&&/^[a-f0-9-]{36}$/i.test(query.get('dossier')||'')&&!dossiers.some(x=>x.id===query.get('dossier')))dossiers.unshift({id:query.get('dossier'),reference:'Dossier professionnel',contact:'Client professionnel',type_dossier:'professionnel',statut:'recherche'});
    const form=main.querySelector('#meca-result-form');if(!form)return;
    const select=document.createElement('select');select.id='meca-live-dossier';
    const initial=document.createElement('option');initial.value='';initial.textContent='Choisir un dossier client';select.append(initial);
@@ -86,7 +88,7 @@ window.mecaAdminLive=async function(main,path){
     finally{send.disabled=false}
    };
    const deep=new URLSearchParams(location.hash.split('?')[1]||'').get('dossier');
-   const remembered=deep&&/^[a-f0-9-]{36}$/i.test(deep)?deep:sessionStorage.getItem('meca-dossier-selected');if(remembered&&dossiers.some(x=>x.id===remembered)){select.value=remembered;select.onchange();sessionStorage.removeItem('meca-dossier-selected')}
+   const remembered=deep&&/^[a-f0-9-]{36}$/i.test(deep)?deep:sessionStorage.getItem('meca-dossier-selected');if(remembered&&dossiers.some(x=>x.id===remembered)){select.value=remembered;select.dispatchEvent(new Event('change'));sessionStorage.removeItem('meca-dossier-selected')}
   }
  }catch(e){const p=document.createElement('p');p.className='meca-admin-live-status';p.textContent='Synchronisation indisponible : '+e.message;main.prepend(p)}
 };
