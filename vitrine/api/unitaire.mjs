@@ -21,7 +21,12 @@ async function getAdmin(req){
  if(!r.ok)return false;
  const u=await obj(r);if(!u?.id||!u.email_confirmed_at)return false;
  const a=await query('meca_admins?user_id=eq.'+encodeURIComponent(u.id)+'&select=user_id&limit=1');
- return Array.isArray(a)&&a.length===1;
+ if(Array.isArray(a)&&a.length===1)return true;
+ // L'administration historique utilise un autre registre d'habilitation.
+ const verify=await fetch(db().base+'/rest/v1/rpc/synthese_administration',{
+  method:'POST',headers:{apikey:process.env.SUPABASE_PUBLISHABLE_KEY,Authorization:'Bearer '+token,'Content-Type':'application/json'},
+  body:'{}',signal:AbortSignal.timeout(10000)});
+ return verify.ok;
 }
 function minimal(d){const offer=offers[d.offre];const expressMax=d.express_option==='24h'?50:d.express_option==='48h'?20:0;const extra=(d.express_validee?expressMax:0)+(d.reservation_validee?10:0);return {reference:d.reference,statut:d.statut,offre:offer?.label||null,initial:offer?.deposit||null,total:offer?.total||null,solde:offer?offer.total-offer.deposit+(d.statut==='reussite'||d.statut==='solde_paye'?extra:0):null,expressOption:d.express_option||null,reservationOption:!!d.reservation_option,conditionalMax:expressMax+(d.reservation_option?10:0),paid:!!d.initial_paid_at,balancePaid:!!d.solde_paid_at};}
 async function dossier(t){
