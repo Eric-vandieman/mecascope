@@ -5,6 +5,8 @@ const validEmail=s=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)&&s.length<=254;
 const names=['vehicleType','brand','model','year','engine','trim','vin','fuel','gearbox','ref','part','budget','colourType','notes'];
 const descriptions={vehicleType:'Catégorie',brand:'Marque',model:'Modèle',year:'Année',engine:'Motorisation / cylindrée',trim:'Version / finition',vin:'VIN / numéro de châssis',fuel:'Énergie',gearbox:'Transmission',ref:'Référence OEM',part:'Pièce recherchée',budget:'Budget maximal',colourType:'Couleur',notes:'Précisions'};
 const allowTypes=new Set(['automobile','moto','scooter','quad','agricole','collection']);
+// Limiteur de précaution par instance : compléter par une règle WAF distribuée avant une campagne massive.
+const attempts=new Map();
 function checkOrigin(req){
  try{return req.headers.origin&&new URL(req.headers.origin).host===req.headers.host}catch{return false}
 }
@@ -15,6 +17,12 @@ export default async function handler(req,res){
  if(!String(req.headers['content-type']||'').startsWith('application/json'))return res.status(415).json({message:'Format non pris en charge'});
  const b=req.body||{};
  if(b.website)return res.status(400).json({message:'Demande refusée'});
+ const ip=String(req.headers['x-forwarded-for']||req.socket?.remoteAddress||'unknown').split(',')[0].trim().slice(0,80);
+ const now=Date.now(),entry=attempts.get(ip)||{start:now,count:0};
+ if(now-entry.start>60000){entry.start=now;entry.count=0}
+ entry.count++;attempts.set(ip,entry);
+ if(attempts.size>3000)for(const [key,value] of attempts){if(now-value.start>60000)attempts.delete(key)}
+ if(entry.count>4)return res.status(429).json({message:'Trop de demandes successives. Réessayez dans une minute.'});
  const email=limited(b.email,254).toLowerCase(),contact=limited(b.contact,120);
  const phone=limited(b.phone,22);
  if(!validEmail(email)||contact.length<2||!allowTypes.has(b.vehicleType)||!limited(b.brand)||!limited(b.model)||!limited(b.part)||!/^((19|20)\d{2})$/.test(String(b.year||'')))
