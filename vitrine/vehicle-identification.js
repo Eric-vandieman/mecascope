@@ -35,7 +35,7 @@
  for(const radio of block.querySelectorAll('[name="vehicleMethod"]'))radio.addEventListener('change',()=>{plateZone.hidden=radio.value!=='plate'||!radio.checked});
  block.querySelector('#meca-identify-plate').addEventListener('click',async()=>{
   const p=block.querySelector('#meca-plate').value.trim().toUpperCase(),s=block.querySelector('#meca-plate-status');
-  if(!/^[A-Z]{2}-?\\d{3}-?[A-Z]{2}$/.test(p)){s.textContent='Saisissez une plaque au format AA-123-AA.';return}
+  if(!/^[A-Z]{2}-?[0-9]{3}-?[A-Z]{2}$/.test(p)){s.textContent='Saisissez une plaque au format AA-123-AA.';return}
   s.textContent='Recherche en cours…';
   try{const response=await fetch('/api/vehicle-plate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plate:p})});const data=await response.json();if(!response.ok){s.textContent=data.message||'Service de plaque indisponible. Utilisez la recherche manuelle.';return} s.textContent='Véhicule identifié : vérifiez les informations.';if(data.make){if(!brandSelect.hidden)fallback(brandSelect,brandFallback,moreBrand);brandFallback.value=data.make}if(data.model){if(!modelSelect.hidden)fallback(modelSelect,modelFallback,moreModel);modelFallback.value=data.model}if(data.year)form.querySelector('[name="year"]').value=data.year;}catch{s.textContent='Service indisponible. Identifiez le véhicule manuellement.'}
  });
