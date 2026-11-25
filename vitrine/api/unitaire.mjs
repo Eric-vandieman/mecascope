@@ -82,8 +82,8 @@ export default async function handler(req,res){
   if(action==='admin-notify'){
     if(!(await getAdmin(req)))return res.status(403).json({message:'Administration uniquement'});
     if(!/^[a-f0-9-]{36}$/i.test(String(b.id||'')))return res.status(400).json({message:'Dossier invalide'});
-    const rows=await query('meca_demandes_unitaires?id=eq.'+encodeURIComponent(b.id)+'&select=reference,email,initial_paid_at&limit=1');
-    if(!rows?.length||!rows[0].initial_paid_at)return res.status(409).json({message:'Recherche non payée'});
+    const rows=await query('meca_demandes_unitaires?id=eq.'+encodeURIComponent(b.id)+'&select=reference,email,statut&limit=1');
+    if(!rows?.length||['echec','solde_paye'].includes(rows[0].statut))return res.status(409).json({message:'Dossier absent ou clôturé'});
     const d=rows[0];await email(d.email,'Mécascope — nouveau message pour '+d.reference,
       '<div style="font:16px Arial;max-width:550px;margin:auto"><h2>Mécascope</h2><p>Une nouvelle réponse est disponible pour votre dossier <strong>'+safe(d.reference)+'</strong>.</p><p>Consultez votre lien personnel de suivi de mission reçu dans votre précédent courriel Mécascope. Ne communiquez jamais ce lien.</p></div>');
     return res.status(200).json({sent:true});
