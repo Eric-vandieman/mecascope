@@ -2,7 +2,7 @@
 const env=process.env;
 const key=env.STRIPE_SECRET_KEY,db=env.SUPABASE_SERVICE_ROLE_KEY,url=env.SUPABASE_URL;
 if(!/^(sk|rk)_live_/.test(key||'')||!db||!url||!env.STRIPE_PRICE_PRO5) {
- console.error('BILLING PREFLIGHT: missing required server configuration',JSON.stringify({stripe:!!key,db:!!db,url:!!url,price:!!env.STRIPE_PRICE_PRO5,production:env.VERCEL_ENV==='production'}));process.exitCode=1;
+ console.error('BILLING PREFLIGHT: missing required server configuration',JSON.stringify({stripe:!!key,db:!!db,url:!!url,price:!!env.STRIPE_PRICE_PRO5,production:env.VERCEL_ENV==='production',stripeLiveFormat:/^(sk|rk)_live_/.test(key||''),supabaseSecretFormat:db?.startsWith('sb_secret_')||db?.startsWith('eyJ')}));process.exitCode=1;
 }else{
  try{
   const stripeHeaders={Authorization:'Bearer '+key};
