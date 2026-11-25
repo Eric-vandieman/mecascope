@@ -84,7 +84,7 @@ window.mecaAdminLive=async function(main,path){
    const quoteHeader=document.createElement('h3');quoteHeader.textContent='Ma proposition de recherche';quotePanel.append(quoteHeader);
    const quoteHelp=document.createElement('p');quoteHelp.className='muted';quoteHelp.textContent='L’IA prépare un message à partir du dossier. Relisez-le, adaptez-le avec vos mots, puis envoyez. Votre client choisira lui-même les options Express 48 h (+20 €), Express 24 h (+50 €) et demande de réservation 24 h (+10 €) au moment d’accepter le devis.';quotePanel.append(quoteHelp);
    const planLabel=document.createElement('label');planLabel.textContent='Formule proposée';
-   const planSelect=document.createElement('select');planSelect.id='meca-quote-plan';
+   const planSelect=document.createElement('select');planSelect.id='meca-quote-plan';const pendingOption=document.createElement('option');pendingOption.value='';pendingOption.textContent='Analyse du dossier en cours…';planSelect.append(pendingOption);
    for(const [key,name] of [['ciblee','Recherche ciblée — 39 € · 3 jours ouvrés'],['approfondie','Recherche approfondie — 79 € · 5 jours ouvrés'],['expert','Investigation Expert — 149 € · 7 jours ouvrés']]){const option=document.createElement('option');option.value=key;option.textContent=name;planSelect.append(option)}
    planLabel.append(planSelect);quotePanel.append(planLabel);planSelect.disabled=true;
    const titleLabel=document.createElement('label');titleLabel.textContent='Civilité (ne pas deviner à partir du nom)';
@@ -222,8 +222,8 @@ window.mecaAdminLive=async function(main,path){
      quoteButton.textContent=existing?'Renvoyer le même devis':'Envoyer ma proposition au client';
      draftDirty=false;
      const key=row?.qualification_ia?.formule||row?.offre;
-     if(key&&plans[key])planSelect.value=key;
-     personal.value=existing?(row.proposition_texte||''):(row?defaultDraft(row,key&&plans[key]?key:'approfondie'):'');
+     planSelect.value=key&&plans[key]?key:'';
+     personal.value=existing?(row.proposition_texte||''):(row&&key&&plans[key]?defaultDraft(row,key):'');
      proposalStatus.textContent='';aiDetails.textContent='';aiStatus.textContent='';currentAiDossier=null;
      if(row?.qualification_ia?.formule)renderAssessment(row.qualification_ia);
      else if(row?.statut==='deposee'){renderAssessment(null);analyzeCurrent()}
@@ -234,6 +234,8 @@ window.mecaAdminLive=async function(main,path){
      const fixed=row.qualification_ia?.formule;
      if(!fixed||fixed!==planSelect.value){proposalStatus.textContent='Le tarif n’est pas cohérent avec le bilan IA enregistré. Envoi bloqué.';return}
      const message=buildProposal();
+     const requiredPrice=String(plans[fixed].price)+' €';
+     if(!message.includes(requiredPrice)){proposalStatus.textContent='Le message doit contenir le tarif exact enregistré : '+requiredPrice+'. Corrigez la proposition avant envoi.';return}
      if(message.length<80||message.length>2800){proposalStatus.textContent='Vérifiez votre message (80 à 2 800 caractères, référence comprise).';return}
      if(!confirm('Envoyer votre proposition de '+(plans[planSelect.value]?.price||'—')+' € à '+(row.contact||'ce client')+' avec toutes les options facultatives à sélectionner sur son devis ?'))return;
      quoteButton.disabled=true;proposalStatus.textContent='Envoi de votre proposition…';
