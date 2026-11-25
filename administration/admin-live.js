@@ -83,6 +83,10 @@ window.mecaAdminLive=async function(main,path){
    const planSelect=document.createElement('select');planSelect.id='meca-quote-plan';
    for(const [key,name] of [['ciblee','Recherche ciblée — 39 € · 3 jours ouvrés'],['approfondie','Recherche approfondie — 79 € · 5 jours ouvrés'],['expert','Investigation Expert — 149 € · 7 jours ouvrés']]){const option=document.createElement('option');option.value=key;option.textContent=name;planSelect.append(option)}
    planLabel.append(planSelect);quotePanel.append(planLabel);
+   const titleLabel=document.createElement('label');titleLabel.textContent='Civilité (ne pas deviner à partir du nom)';
+   const titleSelect=document.createElement('select');
+   for(const [value,label] of [['','Madame, Monsieur (si inconnue)'],['Monsieur','Monsieur'],['Madame','Madame']]){const o=document.createElement('option');o.value=value;o.textContent=label;titleSelect.append(o)}
+   titleLabel.append(titleSelect);quotePanel.append(titleLabel);
    const aiPanel=document.createElement('div');aiPanel.style.cssText='padding:10px 0';
    const aiBtn=document.createElement('button');aiBtn.type='button';aiBtn.className='btn dark';aiBtn.textContent='↻ Préparer / actualiser avec l’IA';
    const aiStatus=document.createElement('p');aiStatus.setAttribute('role','status');aiStatus.className='muted';
@@ -93,6 +97,9 @@ window.mecaAdminLive=async function(main,path){
    const personal=document.createElement('textarea');personal.rows=11;personal.maxLength=2600;personal.style.cssText='display:block;width:100%;line-height:1.65;padding:12px';personal.placeholder='L’IA prépare automatiquement votre proposition ici. Vous pouvez tout réécrire avant de l’envoyer.';
    personalLabel.append(personal);quotePanel.append(personalLabel);
    const priceInfo=document.createElement('p');priceInfo.className='muted';quotePanel.append(priceInfo);
+   const optionPreview=document.createElement('section');optionPreview.style.cssText='padding:12px 15px;border:1px solid #555;border-radius:9px;margin:12px 0';
+   optionPreview.innerHTML='<h4>Formulaire que le client verra SOUS votre signature</h4><p>Choix obligatoire du délai : ◯ Sans Express (0 €) &nbsp; ◯ 48 h (+20 €) &nbsp; ◯ 24 h (+50 €)</p><p>Réservation fournisseur 24 h : ◯ Oui (+10 €) &nbsp; ◯ Non (0 €)</p><p>☐ Conditions générales acceptées</p><p><b>Boutons :</b> Confirmer mon devis et payer / Refuser le devis</p><p class="muted">Aucune option n’est précochée. Le client choisit, confirme et paie. Cette partie n’est pas à rédiger dans votre message.</p>';
+   quotePanel.append(optionPreview);
    const quoteButton=document.createElement('button');quoteButton.type='button';quoteButton.className='btn orange';quoteButton.textContent='Envoyer ma proposition au client';quotePanel.append(quoteButton);
    const proposalStatus=document.createElement('p');proposalStatus.setAttribute('role','status');quotePanel.append(proposalStatus);
    const failButton=document.createElement('button');failButton.type='button';failButton.className='btn danger';failButton.textContent='Clôturer la recherche sans résultat';failButton.hidden=true;quotePanel.append(failButton);
@@ -104,13 +111,35 @@ window.mecaAdminLive=async function(main,path){
    const chatStatus=document.createElement('p');chatStatus.setAttribute('role','status');chatPanel.append(chatInput,chatButton,chatStatus);wrap.append(chatPanel);
    const plans={ciblee:{price:39,initial:19,solde:20,days:3,name:'Recherche ciblée'},approfondie:{price:79,initial:39,solde:40,days:5,name:'Recherche approfondie'},expert:{price:149,initial:69,solde:80,days:7,name:'Investigation Expert'}};
    const dossierName=row=>String(row?.contact||'').trim();
+   const countryByBrand={volkswagen:'Allemagne',audi:'Allemagne',bmw:'Allemagne',mercedes:'Allemagne',opel:'Allemagne',porsche:'Allemagne',renault:'France',peugeot:'France',citroen:'France',citroën:'France',fiat:'Italie',alfa:'Italie',seat:'Espagne',skoda:'République tchèque',škoda:'République tchèque',toyota:'Japon',nissan:'Japon',honda:'Japon',volvo:'Suède',saab:'Suède',hyundai:'Corée du Sud',kia:'Corée du Sud',ford:'États-Unis',chevrolet:'États-Unis'};
+   const greeting=row=>titleSelect.value
+     ?'Bonjour '+titleSelect.value+(dossierName(row)?' '+dossierName(row):'')+','
+     :'Bonjour Madame, Monsieur,';
+   const abroad=row=>{const brand=String(row?.details?.brand||'').toLocaleLowerCase('fr-FR').trim();const country=countryByBrand[brand];return country&&country!=='France'?'Si les premières pistes françaises ne suffisent pas, je pourrai également solliciter des fournisseurs en '+country+', pays historiquement lié à la marque '+String(row?.details?.brand||'')+'. Cela reste une piste de recherche, sans garantie de disponibilité ni d’origine de la pièce.':'Je commencerai par des pistes françaises et, si cette référence est difficile à trouver, j’élargirai la recherche à des fournisseurs étrangers appropriés.'};
+   let draftDirty=false;personal.addEventListener('input',()=>{draftDirty=true});
    function defaultDraft(row,formule){
     const p=plans[formule]||plans.approfondie,d=row?.details||{};
     const vehicle=[d.brand,d.model,d.year].filter(Boolean).join(' ');
     const part=String(d.part||'la pièce demandée');
     const reference=d.ref?(' (référence '+d.ref+')'):'';
-    const greeting=dossierName(row)?'Bonjour '+dossierName(row)+',':'Bonjour,';
-    return greeting+'\n\nJ’ai regardé votre demande concernant '+part+reference+(vehicle?' pour votre '+vehicle:'')+'. Pour éviter de vous orienter vers une pièce qui ne conviendrait pas, je vais d’abord vérifier les références compatibles et les fournisseurs susceptibles de l’avoir. La disponibilité reste à confirmer.\n\nPour cette recherche, je vous propose la formule '+p.name+' à '+p.price+' €, avec un délai de '+p.days+' jours ouvrés à compter de la validation et du paiement initial. '+(formule==='approfondie'?'Le travail nécessite des vérifications plus étendues qu’une recherche ciblée à 39 €. ':formule==='expert'?'La difficulté suppose une recherche auprès de sources spécialisées. ':'Cette formule permet de commencer par une recherche ciblée. ')+'\n\nSi vous le souhaitez, vous pourrez choisir directement sur le devis une recherche Express en 48 h (+20 €), en 24 h (+50 €) ou une demande de réservation auprès du fournisseur (+10 €). Ces options sont facultatives et réglées avec l’acompte ; elles sont remboursables si leurs conditions de réalisation ne sont pas remplies. Le prix d’achat de la pièce reste distinct.\n\nJe reste disponible si vous souhaitez une précision.\n\nCordialement,\nMécascope';
+    return [
+      greeting(row),
+      '',
+      'J’ai étudié votre demande concernant '+part+reference+(vehicle?' pour votre '+vehicle:'')+'.',
+      '',
+      'Je vais d’abord vérifier les références exactes et la compatibilité pour éviter de vous orienter vers une mauvaise pièce. Il faudra également confirmer les stocks réels auprès de fournisseurs adaptés.',
+      '',
+      abroad(row),
+      '',
+      'Compte tenu de ces vérifications, je vous propose la formule '+p.name+' à '+p.price+' €, avec un délai de '+p.days+' jours ouvrés après acceptation, paiement initial et réception des informations nécessaires.',
+      '',
+      'Vous pourrez choisir sous ce message un délai Express de 48 h (+20 €), de 24 h (+50 €) ou une demande de réservation fournisseur de 24 h (+10 €), sous réserve de confirmation. Les options restent facultatives et sont réglées avec l’acompte. Les suppléments non acquis selon les conditions annoncées sont remboursés.',
+      '',
+      'Vous restez libre de votre choix.',
+      '',
+      'Cordialement,',
+      'Mécascope'
+    ].join('\\n');
    }
    function buildProposal(){
      const row=dossiers.find(x=>x.id===select.value);
@@ -132,14 +161,20 @@ window.mecaAdminLive=async function(main,path){
      if(!force&&currentAiDossier===id)return;
      currentAiDossier=id;aiBtn.disabled=true;aiStatus.textContent='L’IA examine la demande et prépare une réponse…';
      try{
-       const r=await fetch('/api/qualification',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,contact:row.contact||''}),cache:'no-store'});
+       const r=await fetch('/api/qualification',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,contact:row.contact||'',civilite:titleSelect.value||null}),cache:'no-store'});
        const data=await r.json().catch(()=>({}));if(!r.ok)throw Error(data.message||'Analyse indisponible');
        if(select.value!==id)return;
        const q=data.qualification||{};const key=plans[q.formule]?q.formule:'approfondie';
        if(row.statut==='deposee'){
-         planSelect.value=key;
-         const proposal=String(q.message_client||'').trim();
-         personal.value=proposal.length>75?proposal:defaultDraft(row,key);
+         if(!draftDirty){
+           planSelect.value=key;
+           const proposal=String(q.message_client||'').trim();
+           // Même mise en page : on ne reformate jamais une modification manuelle.
+           const output=proposal.length>75?proposal:defaultDraft(row,key);
+           const heading=greeting(row);
+           personal.value=output.replace(/^Bonjour[^\\n]*,?/,heading).replace(/\\s*Vous restez libre de votre choix\\.[\\s\\S]*$/,'').trimEnd()
+             +'\\n\\nVous restez libre de votre choix.\\n\\nCordialement,\\nMécascope';
+         } else aiStatus.textContent='Votre message a été modifié : l’IA ne l’écrase pas. Ses conseils restent accessibles ci-dessous.';
        }
        aiDetails.textContent='Difficulté : '+(q.difficulte||'à préciser')+'\nPourquoi cette formule : '+(q.justification||'à vérifier')+'\nRisques / contrôles : '+(Array.isArray(q.risques)?q.risques.join(' ; '):q.risques||'à vérifier')+'\nInformations utiles : '+(Array.isArray(q.questions_client)?q.questions_client.join(' ; '):'—')+'\nPistes de recherche : '+(Array.isArray(q.pistes_recherche)?q.pistes_recherche.join(' ; '):'—');
        aiStatus.textContent='Proposition IA préparée. Vous pouvez modifier librement le message et la formule ; rien n’a été envoyé.';
@@ -147,7 +182,11 @@ window.mecaAdminLive=async function(main,path){
      }catch(e){if(select.value===id){aiStatus.textContent='IA indisponible : '+e.message+' — vous pouvez utiliser et modifier le brouillon déjà préparé.';currentAiDossier=null}}
      finally{aiBtn.disabled=false}
    }
-   aiBtn.onclick=()=>analyzeCurrent(true);
+   aiBtn.onclick=()=>{if(draftDirty&&!confirm('Vous avez modifié votre texte. Relancer l’IA affichera ses conseils mais conservera votre texte. Continuer ?'))return;analyzeCurrent(true)};
+   titleSelect.onchange=()=>{
+     if(draftDirty){proposalStatus.textContent='Civilité modifiée : corrigez seulement la salutation si vous avez déjà personnalisé le texte.';return}
+     const row=dossiers.find(x=>x.id===select.value);if(row&&row.statut==='deposee'){personal.value=personal.value.replace(/^Bonjour[^\\n]*/,greeting(row))}
+   };
    chatButton.onclick=async()=>{
      const row=dossiers.find(x=>x.id===select.value),message=chatInput.value.trim();
      if(!row||!message){chatStatus.textContent='Choisissez un dossier et écrivez votre message.';return}
@@ -166,6 +205,7 @@ window.mecaAdminLive=async function(main,path){
      planSelect.value=existing&&plans[row.offre]?row.offre:'approfondie';
      planSelect.disabled=existing;personal.disabled=existing;
      quoteButton.textContent=existing?'Renvoyer le même devis':'Envoyer ma proposition au client';
+     draftDirty=false;
      personal.value=existing?(row.proposition_texte||''):(row?defaultDraft(row,planSelect.value):'');
      setPriceInfo();
      proposalStatus.textContent='';
