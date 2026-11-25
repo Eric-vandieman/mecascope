@@ -54,9 +54,9 @@ export default async function handler(req,res){
  }
  try{
   if(event.type==='customer.subscription.deleted'){
-   // Aucun crédit supplémentaire ; retrait des avantages futurs à traiter
-   // dans le cycle d'expiration contractuel.
-   return res.status(200).json({ignored:true,reason:'Fin abonnement enregistrée côté Stripe'});
+   if(o.metadata?.service!=='mecascope')return res.status(200).json({ignored:true});
+   await rpc('meca_stripe_statut_abonnement',{p_subscription:o.id,p_statut:'resilie'});
+   return res.status(200).json({received:true});
   }
   let subscriptionId='';
   if(event.type==='checkout.session.completed'){
@@ -69,10 +69,14 @@ export default async function handler(req,res){
   if(!subscriptionId)return res.status(200).json({ignored:true});
   const s=await stripe('subscriptions/'+encodeURIComponent(subscriptionId));
   if(!s.livemode||s.id!==subscriptionId||!s.customer)throw Error('Abonnement non vérifié');
+  // Ce compte Stripe est partagé avec d'autres produits de l'entreprise.
+  // Les événements des autres applications ne doivent jamais créer de crédit Mécascope.
+  if(s.metadata?.service!=='mecascope')return res.status(200).json({ignored:true});
   const garage=id(s.metadata?.garage_id),plan=s.metadata?.plan;
   if(!/^[a-f0-9-]{36}$/i.test(garage)||!Object.hasOwn(plans,plan))throw Error('Garage ou formule absent');
   const [envKey,credits]=plans[plan],expectedPrice=process.env[envKey];
   if(!expectedPrice||!s.items?.data?.some(item=>id(item.price)===expectedPrice))throw Error('Prix Stripe non reconnu');
+  if(!['active','past_due','trialing'].includes(s.status))throw Error('Abonnement non actif');
   await rpc('meca_stripe_lier_abonnement',{
    p_garage:garage,p_subscription:subscriptionId,p_customer:id(s.customer),
    p_plan:plan,p_price:expectedPrice,p_credits:credits
