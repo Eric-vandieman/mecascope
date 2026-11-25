@@ -113,6 +113,7 @@ export default async function handler(req,res){
       return res.status(409).json({message:'Les options déjà acceptables par paiement ne peuvent plus être modifiées sur ce devis.'});
     plan=b.offre;stage='devis_envoye';
    }else{
+    if(action==='admin-success'&&d.statut==='reussite'&&d.initial_paid_at)return res.status(200).json({ok:true,already:true,message:'Résultat déjà proposé, aucun nouvel envoi effectué.'});
     if(d.statut!=='acompte_paye'||!d.initial_paid_at||!offers[plan])return res.status(409).json({message:'Solde interdit tant que l’acompte n’est pas confirmé'});
     if((b.expressEligible===true&&!d.express_option)||(b.reservationConfirmed===true&&!d.reservation_option))
       return res.status(409).json({message:'Supplément non accepté dans le devis initial'});
