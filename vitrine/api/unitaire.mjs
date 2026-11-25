@@ -105,7 +105,7 @@ export default async function handler(req,res){
   params.set('cancel_url','https://xn--mcascope-b1a.fr/mission.html?t='+encodeURIComponent(token)+'&paiement=annule');
   const sr=await fetch('https://api.stripe.com/v1/checkout/sessions',{
    method:'POST',headers:{Authorization:'Bearer '+process.env.STRIPE_SECRET_KEY,'Content-Type':'application/x-www-form-urlencoded',
-    'Idempotency-Key':'meca-'+stage+'-'+d.id+'-'+Math.floor(Date.now()/1800000)},
+    'Idempotency-Key':'meca-unitaire-'+stage+'-'+d.id},
    body:params.toString(),signal:AbortSignal.timeout(12000)});
   const session=await obj(sr);
   if(!sr.ok||!session?.url||session.mode!=='payment')return res.status(503).json({message:'Paiement momentanément indisponible'});
