@@ -93,6 +93,26 @@ window.mecaAdminLive=async function(main,path){
    async function refreshHistory(){history.textContent='';if(!select.value)return;try{const r=await call({action:'messages',id:select.value});for(const m of r.messages||[]){const p=document.createElement('p');p.textContent=(m.auteur==='client'?'Client':'Mécascope')+' · '+new Date(m.cree_le).toLocaleString('fr-FR')+' : '+m.contenu;history.append(p)}}catch(e){history.textContent=e.message}}
    window.mecaPieceHistory?.(main,select,dossiers);
    select.onchange=()=>{const row=dossiers.find(x=>x.id===select.value);form.elements.ref.value=row?.reference||'';showDossier(row);showOptions();refreshHistory()};
+   // Alimenter le tableau principal attendu dans Gestion des demandes.
+   if(path==='/admin/demandes'){
+     const table=main.querySelector('#list-content tbody');
+     if(table){
+       table.replaceChildren();
+       for(const row of dossiers){
+         const tr=document.createElement('tr');
+         const vehicle=[row.details?.brand,row.details?.model,row.details?.year].filter(Boolean).join(' ')||'—';
+         for(const value of [row.reference||row.id,row.contact||'—',vehicle,row.statut||'—',row.cree_le?new Date(row.cree_le).toLocaleString('fr-FR'):'—']){
+           const td=document.createElement('td');td.textContent=value;tr.append(td);
+         }
+         const action=document.createElement('td');
+         const open=document.createElement('button');open.type='button';open.className='btn orange small';open.textContent='Ouvrir / traiter';
+         open.onclick=()=>{select.value=row.id;select.dispatchEvent(new Event('change'));registry.scrollIntoView({block:'start',behavior:'smooth'})};
+         action.append(open);tr.append(action);table.append(tr);
+       }
+       main.querySelector('#list-content .empty')?.remove();
+       if(!dossiers.length){const message=document.createElement('p');message.className='empty';message.textContent='Aucun dossier client enregistré.';main.querySelector('#list-content .tablewrap')?.append(message)}
+     }
+   }
    const send=document.createElement('button');send.type='button';send.className='btn orange';send.textContent='Envoyer la réponse dans la conversation';
    const status=document.createElement('p');status.setAttribute('role','status');
    form.after(status);form.after(send);
