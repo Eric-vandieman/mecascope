@@ -40,8 +40,8 @@ async function load(){
     x.append(ex,document.createTextNode(' Express '+(d.express_option||'(non souscrit)')+' : source conforme trouvée dans le délai convenu'));div.append(x);
     const y=document.createElement('label'),rv=document.createElement('input');rv.type='checkbox';rv.disabled=!d.reservation_option;
     y.append(rv,document.createTextNode(' Réservation fournisseur effectivement confirmée'));div.append(y);
-    const b=document.createElement('button');b.textContent='Source trouvée : proposer le solde';
-    b.onclick=()=>send(d.id,'admin-success',undefined,{expressEligible:ex.checked,reservationConfirmed:rv.checked});div.append(b);
+    const b=document.createElement('button');b.textContent='Renseigner le résultat dans l’administration';
+    b.onclick=()=>{location.href='https://mecascope-administration.vercel.app/#/admin/demandes?dossier='+encodeURIComponent(d.id)};div.append(b);
     const f=document.createElement('button');f.textContent='Échec : clôturer sans solde';f.onclick=()=>send(d.id,'admin-fail');div.append(f);
    }
    root.append(div);

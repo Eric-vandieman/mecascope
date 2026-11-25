@@ -113,14 +113,16 @@ export default async function handler(req,res){
       return res.status(409).json({message:'Les options déjà acceptables par paiement ne peuvent plus être modifiées sur ce devis.'});
     plan=b.offre;stage='devis_envoye';
    }else{
-    if(action==='admin-success'&&d.statut==='reussite'&&d.initial_paid_at)return res.status(200).json({ok:true,already:true,message:'Résultat déjà proposé, aucun nouvel envoi effectué.'});
-    if(d.statut!=='acompte_paye'||!d.initial_paid_at||!offers[plan])return res.status(409).json({message:'Solde interdit tant que l’acompte n’est pas confirmé'});
+    if(action==='admin-success'&&d.statut==='reussite'&&d.initial_paid_at&&d.solde_email_envoye_le)return res.status(200).json({ok:true,already:true,message:'Résultat déjà notifié au client.'});
+    if(!['acompte_paye','reussite'].includes(d.statut)||!d.initial_paid_at||!offers[plan])return res.status(409).json({message:'Solde interdit tant que l’acompte n’est pas confirmé'});
+    const verifiedResult=await query('meca_resultats_fournisseurs?dossier_id=eq.'+d.id+'&select=dossier_id&limit=1');
+    if(!verifiedResult?.length)return res.status(409).json({message:'Enregistrez le résultat fournisseur avant de proposer le solde.'});
     if((b.expressEligible===true&&!d.express_option)||(b.reservationConfirmed===true&&!d.reservation_option))
       return res.status(409).json({message:'Supplément non accepté dans le devis initial'});
     stage='reussite';
    }
    const token=createHmac('sha256',process.env.STRIPE_WEBHOOK_SECRET).update('meca-unitaire-v1:'+d.id+':'+stage).digest('hex'),offer=offers[plan];
-   const updated=await replace(d,d.statut,{statut:stage,offre:plan,jeton_hash:hash(token),...(action==='admin-quote'?{initial_price:process.env[offer.initial],solde_price:process.env[offer.balance],express_option:selectedExpress,reservation_option:selectedReservation}:{express_validee:b.expressEligible===true,reservation_validee:b.reservationConfirmed===true})});
+   const updated=(action==='admin-success'&&d.statut==='reussite')?d:await replace(d,d.statut,{statut:stage,offre:plan,jeton_hash:hash(token),...(action==='admin-quote'?{initial_price:process.env[offer.initial],solde_price:process.env[offer.balance],express_option:selectedExpress,reservation_option:selectedReservation}:{express_validee:b.expressEligible===true,reservation_validee:b.reservationConfirmed===true})});
    const link='https://xn--mcascope-b1a.fr/mission.html?t='+encodeURIComponent(token);
    const text=action==='admin-quote'?
     '<h2>Proposition de recherche Mécascope</h2><p>Votre demande '+safe(d.reference)+' a été examinée.</p><p>Formule : <b>'+safe(offer.label)+'</b>. Tarif total : <b>'+offer.total+' €</b> dont <b>'+offer.deposit+' €</b> pour démarrer après votre accord.</p><p>Le solde ne sera dû que si une source conforme est trouvée.</p>'+ (selectedExpress?'<p>Option Express '+selectedExpress+' : '+(selectedExpress==='24h'?50:20)+' € uniquement si une source conforme est trouvée dans le délai convenu.</p>':'')+(selectedReservation?'<p>Réservation fournisseur : 10 € uniquement après confirmation.</p>':'')+'<p>Vous restez libre d’accepter ou de refuser.</p>':
@@ -128,6 +130,10 @@ export default async function handler(req,res){
    try{await email(d.email,'Mécascope — '+(action==='admin-quote'?'votre proposition':'résultat de votre recherche')+' '+d.reference,
     '<div style="font:16px Arial;max-width:580px;margin:auto"><h1>Mécascope</h1>'+text+'<p><a href="'+safe(link)+'" style="display:inline-block;background:#ee922b;color:#171717;padding:14px 22px;text-decoration:none">Consulter et décider</a></p><p>Ne communiquez pas ce lien personnel.</p></div>');
    }catch(e){return res.status(503).json({message:'Le dossier est enregistré mais le courriel a échoué. Renouvelez l’envoi depuis la console.'})}
+   if(action==='admin-success'){
+    try{await query('meca_demandes_unitaires?id=eq.'+d.id,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({solde_email_envoye_le:new Date().toISOString()})})}
+    catch{return res.status(503).json({message:'Courriel transmis, confirmation d’envoi non enregistrée. Vérifiez le dossier avant de recommencer.'})}
+   }
    return res.status(200).json({ok:true,statut:updated.statut,message:'Proposition transmise au client.'});
   }
   const token=req.method==='GET'?req.query?.t:b.token;

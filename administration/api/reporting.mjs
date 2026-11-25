@@ -22,6 +22,13 @@ if(action!=='reporting'&&!/^[0-9a-f-]{36}$/i.test(String(b.id||'')))return res.s
 const args=action==='messages'?{p_dossier:b.id}:action==='reply'?{p_dossier:b.id,p_contenu:String(b.message||'').trim().slice(0,3000),p_pays:b.found?String(b.country||'').trim():null,p_prix_centimes:b.found?Math.round(Number(b.price)*100):null,p_delai:b.found?String(b.delay||'').trim():null,p_etat:b.found?String(b.condition||'').trim():null,p_compatibilite:b.found?String(b.fit||'').trim():null,p_fournisseur:b.found?String(b.supplier||'').trim():null,p_precisions:String(b.details||'').trim().slice(0,3000)}:{};
 if(action==='reply'&&(!args.p_contenu||(b.found&&(!args.p_pays||!args.p_delai||!args.p_fournisseur||!Number.isSafeInteger(args.p_prix_centimes)||args.p_prix_centimes<0))))return res.status(400).json({message:'Champs incomplets'});
 if(action==='reply'&&b.found){
+ try{
+  const prep=await fetch(process.env.SUPABASE_URL+'/rest/v1/rpc/meca_admin_preparer_resultat',{
+   method:'POST',headers:{apikey:process.env.SUPABASE_PUBLISHABLE_KEY,Authorization:'Bearer '+token,'Content-Type':'application/json'},
+   body:JSON.stringify({p_dossier:b.id,p_pays:args.p_pays,p_prix_centimes:args.p_prix_centimes,p_delai:args.p_delai,p_etat:args.p_etat,p_compatibilite:args.p_compatibilite,p_fournisseur:args.p_fournisseur,p_precisions:args.p_precisions}),
+   signal:AbortSignal.timeout(12000)});
+  if(!prep.ok)return res.status(409).json({message:'Résultat fournisseur non enregistré. Aucun solde proposé.'});
+ }catch{return res.status(503).json({message:'Résultat indisponible. Aucun solde proposé.'})}
  try{const confirmation=await fetch('https://xn--mcascope-b1a.fr/api/unitaire',{
   method:'POST',headers:{Authorization:'Bearer '+token,Origin:'https://xn--mcascope-b1a.fr','Content-Type':'application/json'},
   body:JSON.stringify({action:'admin-success',id:b.id,expressEligible:b.expressEligible===true,reservationConfirmed:b.reservationConfirmed===true}),
