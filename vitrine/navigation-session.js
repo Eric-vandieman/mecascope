@@ -13,6 +13,24 @@
     if(location.pathname==='/qui-sommes-nous.html'){about.classList.add('current');about.setAttribute('aria-current','page');}
     if(accueil)accueil.after(about);else mainNav.prepend(about);
   }
+  // Un seul onglet actif en fonction de l'URL réelle.
+  // Le hash #demande désigne la recherche sur la page d'accueil.
+  const path=window.location.pathname.replace(/\/+$/,'')||'/';
+  const hash=window.location.hash;
+  const activeHref=path==='/qui-sommes-nous.html'?'/qui-sommes-nous.html'
+    :path==='/tarifs.html'?'/tarifs.html'
+    :path==='/'||path==='/index.html'?(hash==='#demande'?'/#demande':'/')
+    :['/compte.html','/espace-pro.html'].includes(path)?'/compte.html#professionnel'
+    :null;
+  const navigation=header.querySelector('nav.nav');
+  if(navigation){
+    for(const a of navigation.querySelectorAll('a')){
+      const selected=activeHref!==null&&a.getAttribute('href')===activeHref;
+      a.classList.toggle('current',selected);
+      if(selected)a.setAttribute('aria-current','page');
+      else a.removeAttribute('aria-current');
+    }
+  }
   const login=header.querySelector('.meca-login');
   const register=header.querySelector('.meca-register');
   if(!login)return;
