@@ -28,6 +28,32 @@ export default async function handler(req,res){
       const user=await result.json();
       const m=user.user_metadata||{};
       if(m.profil!=='particulier')return res.status(403).json({message:'Ce compte ne correspond pas à un espace particulier.'});
+      if(req.query?.action==='factures'){
+        if(!user.email_confirmed_at)return res.status(403).json({message:'Confirmez votre adresse e-mail.'});
+        const admin=process.env.SUPABASE_SERVICE_ROLE_KEY,stripeKey=process.env.STRIPE_SECRET_KEY;
+        if(!admin||!stripeKey)return res.status(503).json({message:'Service de facturation indisponible.'});
+        const list=await fetch(url+'/rest/v1/meca_demandes_unitaires?particulier_id=eq.'+encodeURIComponent(user.id)+'&select=reference,offre,initial_session,solde_session,initial_paid_at,solde_paid_at&order=cree_le.desc&limit=100',{headers:{apikey:admin,...(admin.startsWith('eyJ')?{Authorization:'Bearer '+admin}:{})},signal:AbortSignal.timeout(10000)});
+        if(!list.ok)return res.status(503).json({message:'Historique indisponible.'});
+        const dossiers=await list.json();const entries=[];
+        for(const d of dossiers){
+         for(const [stage,sid,paidAt] of [['initial',d.initial_session,d.initial_paid_at],['solde',d.solde_session,d.solde_paid_at]]){
+          if(!paidAt||!/^cs_live_[a-zA-Z0-9_]+$/.test(String(sid||'')))continue;
+          entries.push({dossier:d.reference,stage,session:sid,date:paidAt});
+         }
+        }
+        const invoices=[];
+        for(const entry of entries.slice(0,25)){
+         try{
+          const response=await fetch('https://api.stripe.com/v1/checkout/sessions/'+encodeURIComponent(entry.session)+'?expand%5B%5D=invoice',{headers:{Authorization:'Bearer '+stripeKey},signal:AbortSignal.timeout(10000)});
+          if(!response.ok)continue;
+          const session=await response.json();
+          if(!session.livemode||session.payment_status!=='paid'||session.status!=='complete'||session.metadata?.service!=='mecascope_unitaire'||session.metadata?.stage!==entry.stage)continue;
+          const invoice=session.invoice&&typeof session.invoice==='object'?session.invoice:null;
+          invoices.push({reference:entry.dossier,etape:entry.stage,date:entry.date,montant_centimes:session.amount_total||0,numero:invoice?.number||null,pdf:invoice?.invoice_pdf||null,lien:invoice?.hosted_invoice_url||null});
+         }catch{}
+        }
+        return res.status(200).json({factures:invoices,limite:entries.length>25});
+      }
       if(req.query?.action==='dossiers'){
         if(!user.email_confirmed_at)return res.status(403).json({message:'Validez votre adresse e-mail pour consulter vos dossiers.'});
         const admin=process.env.SUPABASE_SERVICE_ROLE_KEY,secret=process.env.STRIPE_WEBHOOK_SECRET;

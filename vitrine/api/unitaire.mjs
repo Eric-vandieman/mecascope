@@ -157,6 +157,11 @@ export default async function handler(req,res){
     const i=(Number(params.get('line_items_count')||1));params.set('line_items['+i+'][price]',extra);params.set('line_items['+i+'][quantity]','1');params.set('line_items_count',String(i+1));
    }params.delete('line_items_count');
   }
+  // Une facture Stripe n'est établie qu'après la confirmation d'un paiement réel.
+  params.set('billing_address_collection','required');
+  params.set('invoice_creation[enabled]','true');
+  params.set('invoice_creation[invoice_data][description]','Mécascope — '+d.reference+' — '+(stage==='initial'?'paiement initial':'solde de recherche'));
+  params.set('invoice_creation[invoice_data][footer]','Mécascope · Eric Van Dieman EI · SIRET 518 613 617 00035 · TVA non applicable, article 293 B du CGI.');
   params.set('customer_email',d.email);params.set('client_reference_id',d.id);
   params.set('metadata[service]','mecascope_unitaire');params.set('metadata[dossier_id]',d.id);
   params.set('metadata[stage]',stage);params.set('metadata[price_id]',price);

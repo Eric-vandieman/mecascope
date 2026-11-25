@@ -42,6 +42,32 @@ form.addEventListener('submit',async e=>{
  }catch(e){status.textContent=e.message}
  finally{button.disabled=false}
 });
+
+async function loadInvoices(){
+ const el=document.getElementById('meca-factures-particulier');if(!el)return;
+ el.replaceChildren(add('p','','Chargement des paiements confirmés…'));
+ try{
+  const response=await fetch('/api/particulier-auth?action=factures',{credentials:'same-origin',cache:'no-store'});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw Error(data.message||'Service de facturation indisponible');
+  el.replaceChildren();
+  if(!data.factures?.length){el.append(add('p','','Aucun paiement confirmé pour le moment.'));return}
+  for(const item of data.factures){
+   const box=document.createElement('article');box.style.cssText='border:1px solid #8a633e;border-radius:10px;margin:10px 0;padding:14px';
+   const title=add('h3','',item.reference+' — '+(item.etape==='initial'?'Paiement initial':'Solde'));box.append(title);
+   const euros=new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(Number(item.montant_centimes||0)/100);
+   box.append(add('p','','Paiement confirmé le '+new Date(item.date).toLocaleDateString('fr-FR')+' · '+euros));
+   if(item.numero)box.append(add('p','','Facture n° '+item.numero));
+   const href=item.pdf||item.lien;
+   if(href){try{const u=new URL(href);if(u.protocol==='https:'&&(u.hostname==='stripe.com'||u.hostname.endsWith('.stripe.com'))){const a=document.createElement('a');a.href=u.href;a.target='_blank';a.rel='noopener noreferrer';a.className='btn orange';a.textContent='Consulter / télécharger la facture';box.append(a)}}catch{}}
+   else box.append(add('p','','Facture non disponible pour ce paiement. Contactez Mécascope pour obtenir un justificatif.'));
+   el.append(box);
+  }
+  if(data.limite)el.append(add('p','','Seuls les 25 paiements récents sont affichés ici.'));
+ }catch(e){el.replaceChildren(add('p','',e.message))}
+}
+document.querySelector('[data-private-tab="factures"]')?.addEventListener('click',loadInvoices);
+
 window.addEventListener('meca-auth-updated',load);
 document.querySelector('[data-private-tab="demandes"]')?.addEventListener('click',load);
 })();
