@@ -10,7 +10,7 @@ export default async function handler(req,res){
   if(action==='models'&&(!/^[0-9]{1,7}$/.test(make)))return res.status(400).json({error:'Marque invalide'});
   const path=action==='makes'
     ? 'GetMakesForVehicleType/'+encodeURIComponent(TYPES[type])
-    : 'GetModelsForMakeId/'+encodeURIComponent(make);
+    : 'GetModelsForMakeIdYear/makeId/'+encodeURIComponent(make)+'/vehicletype/'+encodeURIComponent(TYPES[type]);
   try{
     const ac=new AbortController();const timer=setTimeout(()=>ac.abort(),9000);
     let upstream;
