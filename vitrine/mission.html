@@ -31,7 +31,8 @@
  function showAmount(){
   if(!current)return;
   const x=selected();
-  accept.disabled=!x.complete;
+  accept.disabled=!x.complete||!$('accord-conditions').checked;
+  accept.textContent=x.complete?'Accepter le devis de '+euro(current.total)+' € et payer '+euro((current.initial||0)+x.extra):'Choisissez toutes les options pour accepter le devis';
   summary.textContent=(x.complete?'Vos deux choix sont validés. ':'Veuillez choisir explicitement le délai ET la réservation (oui/non) avant de valider. ')+'À régler maintenant : '+euro((current.initial||0)+x.extra)+' (acompte '+euro(current.initial||0)+' + options '+euro(x.extra)+'). Total de la prestation si réussite : '+euro((current.total||0)+x.extra)+'. Solde en cas de réussite : '+euro(current.solde||0)+'.';
  }
  async function api(payload){
@@ -70,6 +71,7 @@
   else etat.textContent='Demande reçue, étude en cours.';
  }
  for(const el of document.querySelectorAll('input[name="express"],input[name="reservation"]'))el.addEventListener('change',showAmount);
+ $('accord-conditions').addEventListener('change',showAmount);
  accept.onclick=async()=>{
   const choice=selected();
   if(!choice.complete){erreur.textContent='Choisissez une option de délai ET répondez oui ou non pour la réservation.';return}
