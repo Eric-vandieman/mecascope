@@ -26,6 +26,14 @@ window.mecaSuppliers=async function(main,path){
   root.innerHTML='<h2>☎ Fournisseurs contactés pour ce dossier</h2><p class="muted">Sélectionne un fournisseur, note ton appel ou ton e-mail, puis renseigne la réponse lorsque tu l’obtiens. Les autres dossiers ne seront pas mélangés.</p><p class="meca-f-context" role="status">Sélectionne un dossier ci-dessus.</p><div class="meca-supplier-toolbar"><input id="meca-f-search" placeholder="Rechercher nom, pays ou spécialité…" aria-label="Rechercher fournisseur"><select id="meca-f-category"><option value="">Toutes catégories</option><option value="automobile">Auto</option><option value="moto">Moto</option><option value="agricole">Agricole</option><option value="poids_lourd">Poids lourd</option><option value="engins">Engins</option><option value="multi">Multisecteur</option></select><button id="meca-f-add" class="btn dark" type="button">+ Fournisseur</button></div><div id="meca-f-history" class="meca-f-history"></div><div id="meca-f-list" class="meca-supplier-grid"></div><p id="meca-f-status" role="status"></p>';
   selection.closest('.panel')?.after(root);
  }
+ const directorySelect=isDirectory?el('select','meca-f-dossier-select'):null;
+ if(directorySelect){
+  directorySelect.setAttribute('aria-label','Dossier de recherche');
+  const place=el('div','meca-f-dossier-chooser');
+  place.append(el('strong','','Travailler sur un dossier : '),directorySelect);
+  root.querySelector('.meca-supplier-toolbar')?.before(place);
+  directorySelect.onchange=load;
+ }
  const search=root.querySelector('#meca-f-search'),category=root.querySelector('#meca-f-category'),results=root.querySelector('#meca-f-list'),status=root.querySelector('#meca-f-status');
  const history=root.querySelector('#meca-f-history'),context=root.querySelector('.meca-f-context');
  const error=e=>{status.textContent=String(e?.message||e)};
@@ -114,8 +122,11 @@ window.mecaSuppliers=async function(main,path){
  let revision=0;
  async function load(){
   const thisRevision=++revision;
-  const dossier=!isDirectory?(selection?.value||null):null;
-  const type=location.hash.includes('source=professionnel')?'professionnel':'particulier';
+  const params=new URLSearchParams(location.hash.split('?')[1]||'');
+  const selected=directorySelect?.value||'';
+  const [chosenType,chosenId]=selected.split('|');
+  const dossier=isDirectory?(chosenId||null):(params.get('source')==='professionnel'?params.get('dossier'):(selection?.value||params.get('dossier')||null));
+  const type=isDirectory?(chosenType||'particulier'):(params.get('source')==='professionnel'?'professionnel':'particulier');
   state.dossier=dossier;state.type=type;
   status.textContent='Chargement des fournisseurs…';
   try{
@@ -130,5 +141,12 @@ window.mecaSuppliers=async function(main,path){
  root.querySelector('#meca-f-add').onclick=()=>supplierModal();
  search.oninput=render;category.onchange=render;
  if(selection)selection.addEventListener('change',load);
+ if(directorySelect){
+  directorySelect.append(new Option('Répertoire général — choisir un dossier',''));
+  try{
+   const dossiers=await api({action:'dossiers'});
+   for(const d of dossiers||[])directorySelect.append(new Option(d.reference+' · '+d.client+' ('+(d.type==='professionnel'?'Pro':'Particulier')+')',d.type+'|'+d.id));
+  }catch(e){error(e)}
+ }
  await load();
 };
