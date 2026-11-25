@@ -3,6 +3,16 @@
 (function(){
   const header=document.querySelector('.meca-new-top');
   if(!header)return;
+  // Lien public partagé : conserver les en-têtes historiques inchangés.
+  const mainNav=header.querySelector('nav.nav');
+  if(mainNav && !mainNav.querySelector('a[href="/qui-sommes-nous.html"]')){
+    const accueil=mainNav.querySelector('a[href="/"]');
+    const about=document.createElement('a');
+    about.href='/qui-sommes-nous.html';
+    about.innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/></svg><span>Qui sommes-nous ?</span>';
+    if(location.pathname==='/qui-sommes-nous.html'){about.classList.add('current');about.setAttribute('aria-current','page');}
+    if(accueil)accueil.after(about);else mainNav.prepend(about);
+  }
   const login=header.querySelector('.meca-login');
   const register=header.querySelector('.meca-register');
   if(!login)return;
