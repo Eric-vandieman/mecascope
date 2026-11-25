@@ -1007,3 +1007,20 @@ body.meca-auth-body{background:#071017 url('/fond-tarifs-client.webp') center ce
 .meca-confirmation-resend button{width:100%;margin:4px 0 0;white-space:normal}
 .meca-confirmation-resend button:disabled{opacity:.6}
 #confirmation-resend-status{min-height:18px;color:#ffcf98;font-size:13px;line-height:1.5;margin:0}
+
+
+/* Navigation Mécascope : un seul indicateur lumineux, sur l'onglet actif uniquement. */
+.meca-new-top .nav a,
+.meca-new-top .nav a:hover,
+.meca-new-top .nav a.current{
+  border-bottom-color:transparent!important;
+}
+.meca-new-top .nav a:not(.current)::after{
+  content:none!important;
+  box-shadow:none!important;
+}
+.meca-new-top .nav a.current::after{
+  content:""!important;
+  background:#ffb12e!important;
+  box-shadow:0 0 9px 2px #ffb12ebd!important;
+}
