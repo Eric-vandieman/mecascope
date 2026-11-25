@@ -24,7 +24,16 @@ async function load(){
     const s=document.createElement('select');
     for(const [id,label] of Object.entries(offers)){const o=document.createElement('option');o.value=id;o.textContent=label;s.append(o)}
     if(d.offre)s.value=d.offre;div.append(s);
-    const b=document.createElement('button');b.textContent='Accepter et envoyer le devis';b.onclick=()=>send(d.id,'admin-quote',s.value);div.append(b);
+    const express=document.createElement('select');
+    for(const [val,label] of [['','Sans option express'],['48h','Express 48 h (+20 € si délai tenu)'],['24h','Express 24 h (+50 € si délai tenu)']]){
+     const o=document.createElement('option');o.value=val;o.textContent=label;express.append(o)
+    }
+    express.value=d.express_option||'';div.append(express);
+    const reservation=document.createElement('label'),reserve=document.createElement('input');reserve.type='checkbox';
+    reserve.checked=d.reservation_option===true;
+    reservation.append(reserve,document.createTextNode(' Réservation fournisseur (+10 € uniquement si confirmée)'));div.append(reservation);
+    const b=document.createElement('button');b.textContent='Accepter et envoyer le devis';
+    b.onclick=()=>send(d.id,'admin-quote',s.value,{express:express.value,reservation:reserve.checked});div.append(b);
    }
    if(d.statut==='acompte_paye'){
     const b=document.createElement('button');b.textContent='Source trouvée : proposer le solde';b.onclick=()=>send(d.id,'admin-success');div.append(b);
