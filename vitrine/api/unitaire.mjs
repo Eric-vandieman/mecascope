@@ -86,7 +86,7 @@ export default async function handler(req,res){
     if(!(await getAdmin(req)))return res.status(403).json({message:'Administration uniquement'});
     if(!/^[a-f0-9-]{36}$/i.test(String(b.id||'')))return res.status(400).json({message:'Dossier invalide'});
     const rows=await query('meca_demandes_unitaires?id=eq.'+encodeURIComponent(b.id)+'&select=reference,email,statut&limit=1');
-    if(!rows?.length||['echec','solde_paye'].includes(rows[0].statut))return res.status(409).json({message:'Dossier absent ou clôturé'});
+    if(!rows?.length||['echec','refuse','solde_paye'].includes(rows[0].statut))return res.status(409).json({message:'Dossier absent ou clôturé'});
     const d=rows[0];await email(d.email,'Mécascope — nouveau message pour '+d.reference,
       '<div style="font:16px Arial;max-width:550px;margin:auto"><h2>Mécascope</h2><p>Une nouvelle réponse est disponible pour votre dossier <strong>'+safe(d.reference)+'</strong>.</p><p>Consultez votre lien personnel de suivi de mission reçu dans votre précédent courriel Mécascope. Ne communiquez jamais ce lien.</p></div>');
     return res.status(200).json({sent:true});
@@ -112,6 +112,7 @@ export default async function handler(req,res){
    let plan=d.offre,stage,selectedExpress=null,selectedReservation=false;
    if(action==='admin-quote'){
     if(!['deposee','devis_envoye'].includes(d.statut)||!offers[b.offre]||d.initial_paid_at)return res.status(409).json({message:'Devis non autorisé'});
+    if(d.statut==='devis_envoye'&&d.devis_decision!=='en_attente')return res.status(409).json({message:'Devis déjà accepté ou refusé : aucun renvoi ou changement commercial possible.'});
     if(d.statut==='devis_envoye'&&d.offre!==b.offre)return res.status(409).json({message:'Une proposition a déjà été envoyée. Son tarif ne peut plus être modifié pendant qu’un paiement Stripe peut être en cours.'});
     selectedExpress=d.statut==='devis_envoye'?d.express_option:null;
     selectedReservation=d.statut==='devis_envoye'?d.reservation_option:false;
