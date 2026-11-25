@@ -6,7 +6,7 @@
 <label style="display:block;margin:10px 0"><input type="radio" name="express" value="48h"> Express 48 heures — +20 €</label>
 <label style="display:block;margin:10px 0"><input type="radio" name="express" value="24h"> Express 24 heures — +50 €</label></fieldset>
 <label style="display:block;padding:12px 16px;border:1px solid #725431;border-radius:9px;margin-bottom:16px"><input type="checkbox" id="option-reservation"> Service de réservation fournisseur — +10 € (facultatif)</label>
-<p class="muted">Les options retenues sont réglées avec le paiement initial. Le supplément Express correspond au service prioritaire demandé, sous réserve de validation de sa faisabilité par Mécascope. La réservation n'est pas une garantie de disponibilité de la pièce. Les conditions de réalisation et de remboursement éventuel des options doivent être communiquées clairement avant paiement.</p>
+<p class="muted">Les options cochées sont facturées immédiatement avec l'acompte. Le délai Express porte sur la recherche et non sur la livraison ou la garantie de trouver une pièce. La réservation est un service demandé auprès d'un fournisseur, sans garantie que la pièce soit disponible. Le prix de la pièce et sa livraison restent séparés du devis Mécascope.</p>
 <div id="resume-paiement" style="font-size:18px;font-weight:700;padding:14px;background:#12202a;border-radius:8px"></div>
 <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:18px"><button id="accepter" type="button">Accepter le devis</button><button id="refuser" type="button" style="background:#343e49;color:white;border:1px solid #9d8875">Refuser le devis</button></div>
 </div><p id="offre"></p><p id="conditions" class="muted"></p><button id="payer" hidden>Payer mon acompte et mes options</button><p id="erreur" role="alert"></p><p class="muted">Lien personnel : ne le partagez pas. Le retour du navigateur ne confirme pas le paiement. Seul Stripe confirme les fonds au serveur.</p></main><script>
@@ -25,7 +25,7 @@
  function showAmount(){
   if(!current)return;
   const x=selected();
-  summary.textContent='À régler maintenant : '+euro((current.initial||0)+x.extra)+' (acompte '+euro(current.initial||0)+' + options '+euro(x.extra)+').';
+  summary.textContent='À régler maintenant : '+euro((current.initial||0)+x.extra)+' (acompte '+euro(current.initial||0)+' + options '+euro(x.extra)+'). Total de la prestation si réussite : '+euro((current.total||0)+x.extra)+'. Solde en cas de réussite : '+euro(current.solde||0)+'.';
  }
  async function api(payload){
   const r=await fetch('/api/unitaire',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,...payload}),cache:'no-store'});
