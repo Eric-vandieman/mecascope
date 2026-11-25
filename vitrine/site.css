@@ -355,7 +355,7 @@ html{scroll-behavior:smooth}#demande{scroll-margin-top:90px}.btn{text-decoration
 .meca-showcase-photo{position:absolute;inset:0;z-index:-2;background:linear-gradient(90deg,#0000 0%,#050b11e8 32%,#050b11e8 68%,#0000 100%),url('/decor-mecanique.svg') center top/cover no-repeat}
 .meca-showcase-interior{width:min(1060px,calc(100% - 38px));margin:auto;display:flex;align-items:center;flex-direction:column;text-align:center;justify-content:center;padding:22px 0 34px}
 .meca-showcase-logo{display:block;width:min(450px,43vw);height:clamp(108px,16vh,170px);object-fit:contain;filter:drop-shadow(0 5px 15px #000b);margin:0 auto 12px}
-.meca-showcase h1{color:#fff;font-size:clamp(30px,3.45vw,62px);font-style:italic;font-weight:900;letter-spacing:-1.5px;line-height:1.06;margin:4px 0 0;white-space:nowrap;text-shadow:0 3px 12px #000}
+.meca-showcase h1,.meca-showcase .meca-showcase-heading{color:#fff;font-size:clamp(30px,3.45vw,62px);font-style:italic;font-weight:900;letter-spacing:-1.5px;line-height:1.06;margin:4px 0 0;white-space:nowrap;text-shadow:0 3px 12px #000}
 .meca-showcase-sub{font-size:clamp(23px,2.7vw,46px);font-weight:850;color:#ff8c11;font-style:italic;margin:7px 0 30px;letter-spacing:-1px;text-shadow:0 3px 12px #000}
 .meca-showcase-benefits{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch;gap:0;width:min(900px,100%);margin:0 auto 31px}
 .meca-showcase-benefit{display:flex;align-items:center;flex-direction:column;gap:9px;padding:0 26px;min-height:140px;position:relative}
@@ -391,7 +391,7 @@ html{scroll-behavior:smooth}#demande{scroll-margin-top:90px}.btn{text-decoration
 .meca-new-top .nav a{padding:12px 0}
 .meca-new-top .nav a.current:after{bottom:3px}
 .meca-showcase{min-height:calc(100svh - 115px)}
-.meca-showcase h1{font-size:clamp(24px,4.3vw,45px)}
+.meca-showcase h1,.meca-showcase .meca-showcase-heading{font-size:clamp(24px,4.3vw,45px)}
 .meca-showcase-logo{width:min(360px,75vw)}
 }
 @media(max-width:600px){
@@ -405,7 +405,7 @@ html{scroll-behavior:smooth}#demande{scroll-margin-top:90px}.btn{text-decoration
 .meca-showcase{min-height:calc(100svh - 110px);background-position:center top}
 .meca-showcase-interior{padding:30px 0;width:calc(100% - 24px)}
 .meca-showcase-logo{height:100px;margin-bottom:0}
-.meca-showcase h1{font-size:clamp(18px,5.4vw,32px);letter-spacing:-.5px}
+.meca-showcase h1,.meca-showcase .meca-showcase-heading{font-size:clamp(18px,5.4vw,32px);letter-spacing:-.5px}
 .meca-showcase-sub{font-size:clamp(19px,5vw,29px);margin:12px 0 25px}
 .meca-showcase-benefits{gap:5px;margin-bottom:25px}
 .meca-showcase-benefit{padding:0 5px;min-height:110px;gap:7px}
@@ -615,8 +615,8 @@ body:has(.meca-home-decor){background:transparent}
  .meca-new-top .meca-brand-full-logo{max-height:44px!important}
 }
 /* Le nouveau titre plus long s'adapte en préservant la composition. */
-.meca-showcase h1{font-size:clamp(26px,3.1vw,56px);white-space:nowrap}
-@media(max-width:600px){.meca-showcase h1{font-size:clamp(17px,4.95vw,30px)}}
+.meca-showcase h1,.meca-showcase .meca-showcase-heading{font-size:clamp(26px,3.1vw,56px);white-space:nowrap}
+@media(max-width:600px){.meca-showcase h1,.meca-showcase .meca-showcase-heading{font-size:clamp(17px,4.95vw,30px)}}
 
 
 /* Tarifs : photographie fournie par le client, unique et fixe sur toute la page. */
