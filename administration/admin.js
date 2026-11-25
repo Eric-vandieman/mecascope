@@ -17,7 +17,8 @@ async function ouvrir(payload){
     document.head.append(css);
     document.body.innerHTML=layout.shell;
     const afficher=()=>{
-      const path=Object.hasOwn(layout.pages,location.hash.slice(1))?location.hash.slice(1):'/admin';
+      const requested=location.hash.slice(1).split('?')[0];
+      const path=Object.hasOwn(layout.pages,requested)?requested:'/admin';
       document.querySelector('main').outerHTML=layout.pages[path];
       document.querySelectorAll('.side a').forEach(a=>a.classList.toggle('active',a.hash==='#'+path));
       const main=document.querySelector('main');
@@ -31,6 +32,7 @@ async function ouvrir(payload){
       main.querySelector('.pagehead')?.after(summary);
       window.mecaAdminComposer?.(main);
       window.mecaAdminLive?.(main,path);
+      window.mecaPushSetup?.(main,path);
     };
     document.addEventListener('click',async e=>{
       const target=e.target.closest('[data-go],[data-logout]');

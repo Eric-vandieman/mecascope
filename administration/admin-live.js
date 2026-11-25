@@ -73,7 +73,8 @@ window.mecaAdminLive=async function(main,path){
     catch(e){status.textContent=e.message}
     finally{send.disabled=false}
    };
-   const remembered=sessionStorage.getItem('meca-dossier-selected');if(remembered&&dossiers.some(x=>x.id===remembered)){select.value=remembered;select.onchange();sessionStorage.removeItem('meca-dossier-selected')}
+   const deep=new URLSearchParams(location.hash.split('?')[1]||'').get('dossier');
+   const remembered=deep&&/^[a-f0-9-]{36}$/i.test(deep)?deep:sessionStorage.getItem('meca-dossier-selected');if(remembered&&dossiers.some(x=>x.id===remembered)){select.value=remembered;select.onchange();sessionStorage.removeItem('meca-dossier-selected')}
   }
  }catch(e){const p=document.createElement('p');p.className='meca-admin-live-status';p.textContent='Synchronisation indisponible : '+e.message;main.prepend(p)}
 };

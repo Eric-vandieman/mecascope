@@ -304,3 +304,27 @@ html,body{margin:0;padding:0;max-width:none;width:100%;display:block}.shell,.adm
 .meca-admin-live-status{padding:12px 16px;border:1px solid #60503a;border-radius:12px;background:#171a1e;margin:16px 0;line-height:1.6}
 .meca-admin-live-status strong{color:#ffbf72}
 @media(max-width:780px){.meca-single-cards,.meca-compose-grid{grid-template-columns:1fr}.meca-compose-grid .wide{grid-column:auto}}
+
+
+/* PWA : navigation et notifications administrateur */
+.meca-push-bell-wrap{position:relative;margin-left:auto;z-index:100}
+.meca-push-bell{color:#ffb44b;background:#171b20;border:1px solid #73512c;border-radius:10px;padding:10px 14px;min-width:60px;font-size:17px}
+.meca-push-center{position:absolute;right:0;top:calc(100% + 10px);width:min(420px,90vw);max-height:75vh;overflow-y:auto;z-index:200;background:#14191f;border:1px solid #bd7936;border-radius:12px;padding:14px;box-shadow:0 15px 55px #000b}
+.meca-push-center h2{font-size:17px;margin:5px 0 12px}
+.meca-push-items{max-height:54vh;overflow-y:auto}
+.meca-push-item{display:block;text-align:left;width:100%;background:#202831;border:1px solid #434d57;border-radius:8px;color:#ebf0f2;padding:11px;margin:6px 0;line-height:1.45;white-space:normal}
+.meca-push-item.unread{border-color:#f8ab48;background:#352b21}
+.meca-push-settings{margin:14px 0 22px}
+.meca-push-settings button{margin:6px 10px 6px 0}
+.meca-push-status{color:#f8c17a;margin:10px 0;line-height:1.5}
+.meca-push-pro-detail{padding:16px;border:1px solid #b67d35;border-radius:10px;margin:12px 0;background:#1d252d}
+@media(max-width:740px){
+ .admin-top{padding:8px 12px!important;gap:8px!important;min-height:58px;height:auto!important}
+ .meca-push-bell-wrap{margin-left:0}
+ .meca-push-center{position:fixed;top:65px;right:8px;left:8px;width:auto;max-height:75vh}
+ .meca-push-settings button{width:100%;min-height:44px;margin:6px 0}
+ .admin-mode .main{width:100%!important;min-width:0!important;padding:12px!important}
+ .admin-mode .metrics,.admin-mode .meca-single-cards{grid-template-columns:repeat(auto-fit,minmax(145px,1fr))!important}
+ .admin-mode .tablewrap{max-width:100%;overflow-x:auto}
+ .admin-mode .side{max-width:100vw}
+}
