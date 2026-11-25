@@ -50,7 +50,7 @@ export default async function handler(req,res){
  try{
   if(action==='admin-list'){
    if(!(await getAdmin(req)))return res.status(403).json({message:'Accès réservé à Mécascope'});
-   const rows=await query('meca_demandes_unitaires?select=id,reference,contact,email,telephone,details,offre,statut,initial_paid_at,solde_paid_at,cree_le&order=cree_le.desc&limit=100');
+   const rows=await query('meca_demandes_unitaires?select=id,reference,contact,email,telephone,details,offre,statut,express_option,reservation_option,express_validee,reservation_validee,initial_paid_at,solde_paid_at,cree_le&order=cree_le.desc&limit=100');
    return res.status(200).json({dossiers:rows});
   }
   if(['admin-quote','admin-success','admin-fail'].includes(action)){
