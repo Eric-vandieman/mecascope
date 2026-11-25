@@ -18,7 +18,7 @@ window.mecaSuppliers=async function(main,path){
  const labels={telephone:'Téléphone',email:'E-mail',formulaire:'Formulaire',autre:'Autre',en_attente:'En attente',positif:'Positif',negatif:'Négatif',sans_reponse:'Sans réponse'};
  const types={automobile:'Automobile',moto:'Moto',quad:'Quad / ATV',scooter:'Scooter',agricole:'Tracteur / agricole',collection:'Véhicule de collection',poids_lourd:'Poids lourd',engins:'Engins / TP',multi:'Multisecteur'};
  const vehicleTypes=['automobile','moto','quad','scooter','agricole','collection','poids_lourd','engins'];
- const state={suppliers:[],contacts:[],dossier:null,type:'particulier',loading:false};
+ const state={suppliers:[],contacts:[],dossier:null,type:'particulier',vehicleCategory:null,loading:false};
  const root=el('section','meca-suppliers-root');
  if(isDirectory){
   main.replaceChildren(root);
@@ -84,7 +84,7 @@ window.mecaSuppliers=async function(main,path){
   if(!history)return;history.replaceChildren();
   const contacts=state.contacts;
   if(!state.dossier){context.textContent='Sélectionne d’abord un dossier pour voir ses contacts.';return}
-  context.textContent=contacts.length+' contact(s) enregistrés sur ce dossier';
+  context.textContent=(state.vehicleCategory==='inconnu'?'Catégorie à renseigner':(types[state.vehicleCategory]||'Catégorie non détectée'))+' · '+contacts.length+' contact(s) enregistrés sur ce dossier';
   if(!contacts.length){history.append(el('p','muted','Aucun fournisseur contacté pour ce dossier.'));return}
   const title=el('h3','','Historique des fournisseurs contactés');history.append(title);
   const supplierMap=new Map(state.suppliers.map(s=>[s.id,s]));
@@ -152,7 +152,9 @@ window.mecaSuppliers=async function(main,path){
    state.suppliers=Array.isArray(data.fournisseurs)?data.fournisseurs:[];
    state.contacts=Array.isArray(data.contacts)?data.contacts:[];
    const automaticCategory=data.categorie_dossier;
+   state.vehicleCategory=automaticCategory;
    if(dossier){
+    category.value='';
     status.textContent=automaticCategory==='inconnu'?
       'Catégorie du dossier non renseignée : aucun fournisseur proposé avant classification.' :
       state.suppliers.length+' fournisseur(s) adaptés à '+(types[automaticCategory]||automaticCategory)+' uniquement';
