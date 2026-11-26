@@ -10,7 +10,7 @@
  const status=document.createElement('p');status.setAttribute('role','status');section.append(status);main.append(section);
  async function load(message){
   const r=await fetch('/api/unitaire'+(message===undefined?'?action=conversation&t='+encodeURIComponent(token):''),message===undefined?{cache:'no-store'}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'send-message',token,message})});
-  const d=await r.json();if(!r.ok)throw Error(d.message||'Conversation indisponible');
+  const d=await r.json();if(!r.ok){if(r.status===403){input.hidden=true;send.hidden=true;result.textContent='🔒 Après paiement, créez votre compte particulier Mécascope ou connectez-vous avec la même adresse e-mail confirmée. Vos messages et le suivi seront accessibles depuis votre espace.';}throw Error(d.message||'Conversation indisponible')};
   messages.replaceChildren();for(const m of d.messages||[]){const el=document.createElement('p');el.textContent=(m.auteur==='client'?'Vous':'Mécascope')+' — '+new Date(m.cree_le).toLocaleString('fr-FR')+'\n'+m.contenu;messages.append(el)}
   result.replaceChildren();
   if(d.resultat){for(const [label,value] of [['Pays',d.resultat.pays],['Prix de la pièce',new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(d.resultat.prix_centimes/100)],['Délai estimé',d.resultat.delai],['État',d.resultat.etat],['Compatibilité',d.resultat.compatibilite],['Fournisseur',d.resultat.fournisseur||'Coordonnées communiquées après confirmation du paiement du solde']]){const row=document.createElement('p');row.textContent=label+' : '+value;result.append(row)}}
