@@ -56,8 +56,9 @@ async function dispatch(id){
  if(!claimed?.claimed)return {ignored:true};
  const data=claimed;
  const url='/#/'+'admin/demandes?dossier='+encodeURIComponent(data.dossier_id);
- const result=await deliver(data.subscribers,{id:data.id,title:'🔧 Mécascope — Nouvelle alerte',
-  body:data.event_type==='paiement_initial'?'Paiement confirmé : dossier à démarrer':
+ const isUrgent=data.event_type==='demande_urgente';
+ const result=await deliver(data.subscribers,{id:data.id,title:isUrgent?'🚨🚨 MÉCASCOPE — DEMANDE URGENTE':'🔧 Mécascope — Nouvelle alerte',urgent:isUrgent,
+  body:isUrgent?'Nouveau client en urgence : ouvrir la demande en priorité. Aucun délai Express n’est encore souscrit.':data.event_type==='paiement_initial'?'Paiement confirmé : dossier à démarrer':
    data.event_type==='solde_regle'?'Solde confirmé sur un dossier':
    data.event_type==='message_client'?'Nouveau message client':
    'Une nouvelle activité nécessite votre attention',
