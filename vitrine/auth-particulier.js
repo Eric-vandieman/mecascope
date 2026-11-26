@@ -61,6 +61,7 @@ if(privateBox){
         dt.textContent=key;dd.textContent=value;details.append(dt,dd);
       }
     }
+    if(location.hash==='#demandes')document.querySelector('[data-private-tab="demandes"]')?.click();
     window.dispatchEvent(new Event('meca-auth-updated'));
   }).catch(()=>{setStatus('Impossible de vérifier la connexion pour le moment.')});
   privateBox.querySelector('.meca-logout').addEventListener('click',async()=>{
