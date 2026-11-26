@@ -73,7 +73,7 @@ async function dossier(t){
 }
 async function email(to,subject,html,options={}){
  const sender=options.devis?'Mécascope <contact@xn--mcascope-b1a.fr>':process.env.MECASCOPE_MAIL_FROM;
- const plain=String(html).replace(/<br\\s*\\/?>/gi,'\\n').replace(/<\\/p>/gi,'\\n\\n').replace(/<\\/div>/gi,'\\n').replace(/<[^>]+>/g,' ').replace(/&#39;/g,"'").replace(/&quot;/g,'"').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').replace(/[ \\t]+/g,' ').trim();
+ const plain=String(html).replace(/<[^>]*>/g,' ').replace(/&#39;/g,"'").replace(/&quot;/g,'"').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').replace(/ +/g,' ').trim();
  const r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+process.env.RESEND_API_KEY,'Content-Type':'application/json'},
  body:JSON.stringify({from:sender,reply_to:'contact@xn--mcascope-b1a.fr',to:[to],subject,html,text:plain}),signal:AbortSignal.timeout(12000)});
  if(!r.ok)throw Error('Envoi du courriel impossible');
