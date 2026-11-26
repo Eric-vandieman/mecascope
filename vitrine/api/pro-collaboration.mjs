@@ -1,4 +1,4 @@
-import {randomBytes,createHash} from 'node:crypto';
+import {randomBytes,randomUUID,createHash,createHmac} from 'node:crypto';
 const COOKIE='__Host-mecascope-professional';
 const cookieToken=h=>{const s=String(h||'').split(';').map(x=>x.trim()).find(x=>x.startsWith(COOKIE+'='));return s?decodeURIComponent(s.slice(COOKIE.length+1)):null};
 const message=e=>typeof e==='string'?e:'Action impossible';
@@ -24,7 +24,46 @@ export default async function handler(req,res){
   if(!response.ok)return res.status(401).json({message:'Session expirée'});
   const user=await response.json();
   if(user.user_metadata?.profil==='particulier')return res.status(403).json({message:'Accès professionnel uniquement'});
-  const action=req.method==='GET'?(req.query?.view==='credits'?'credits':req.query?.view==='messages'?'messages':'dashboard'):req.body?.action;
+  const action=req.method==='GET'?(req.query?.view==='credits'?'credits':req.query?.view==='messages'?'messages':req.query?.view==='oneoff'?'oneoff-list':'dashboard'):req.body?.action;
+  if(action==='oneoff-list'||action==='oneoff-create'){
+   const board=await rpc('meca_tableau_bord');
+   if(!board?.garage?.id)return res.status(403).json({message:'Établissement professionnel non rattaché'});
+   if(action==='oneoff-list'&&board.permissions?.view!==true)return res.status(403).json({message:'Consultation des recherches non autorisée'});
+   if(action==='oneoff-create'&&board.permissions?.create!==true)return res.status(403).json({message:'Création de recherches non autorisée par votre établissement'});
+   const admin=process.env.SUPABASE_SERVICE_ROLE_KEY,secret=process.env.STRIPE_WEBHOOK_SECRET;
+   if(!admin||!secret)return res.status(503).json({message:'Recherches ponctuelles indisponibles'});
+   const dbHeaders={apikey:admin,...(admin.startsWith('eyJ')?{Authorization:'Bearer '+admin}:{}),'Content-Type':'application/json'};
+   const table=url+'/rest/v1/meca_demandes_unitaires';
+   if(action==='oneoff-list'){
+    const q='?garage_id=eq.'+encodeURIComponent(board.garage.id)+'&select=id,reference,contact,details,offre,statut,devis_decision,urgent,devis_envoye_le,initial_paid_at,solde_paid_at,cree_le&order=cree_le.desc&limit=150';
+    const response=await fetch(table+q,{headers:dbHeaders,signal:AbortSignal.timeout(12000)});
+    if(!response.ok)throw Error('Impossible de récupérer les recherches ponctuelles');
+    const rows=await response.json();
+    const out=rows.map(row=>{
+     const stage=['reussite','solde_paye'].includes(row.statut)?'reussite':'devis_envoye';
+     const available=['devis_envoye','acompte_paye','reussite','solde_paye','echec','refuse'].includes(row.statut);
+     const token=available?createHmac('sha256',secret).update('meca-unitaire-v1:'+row.id+':'+stage).digest('hex'):null;
+     return {reference:row.reference,contact:row.contact,details:row.details,offre:row.offre,statut:row.statut,decision:row.devis_decision,urgent:row.urgent,
+      devis_envoye_le:row.devis_envoye_le,acompte_confirme:!!row.initial_paid_at,solde_confirme:!!row.solde_paid_at,cree_le:row.cree_le,
+      lien:token?'/mission.html?t='+encodeURIComponent(token):null};
+    });
+    return res.status(200).json({recherches:out});
+   }
+   if(req.method!=='POST')return res.status(405).json({message:'Méthode non autorisée'});
+   if(!user.id||!user.email_confirmed_at||user.user_metadata?.profil!=='professionnel')return res.status(403).json({message:'Compte professionnel confirmé requis'});
+   const b=req.body||{},clean=(value,max)=>typeof value==='string'?value.trim().slice(0,max):'';
+   const brand=clean(b.brand,100),model=clean(b.model,120),part=clean(b.part,220);
+   if(!brand||!model||!part)return res.status(400).json({message:'Marque, modèle et pièce recherchée sont obligatoires'});
+   const details={vehicleType:clean(b.vehicleType,80),brand,model,part,year:clean(b.year,4),ref:clean(b.ref,140),
+    engine:clean(b.engine,140),vin:clean(b.vin,60),budget:clean(b.budget,40),notes:clean(b.notes,700)};
+   const reference='MECA-'+new Date().toISOString().slice(0,10).replaceAll('-','')+'-'+randomUUID().slice(0,8).toUpperCase();
+   const contact=String(user.user_metadata?.contact||board.garage.contact||board.garage.nom||'Contact professionnel').slice(0,140);
+   const record={reference,contact,email:String(user.email).toLowerCase(),telephone:String(user.user_metadata?.telephone||board.garage.telephone||'').slice(0,30),
+    details,urgent:b.urgent===true,statut:'deposee',garage_id:board.garage.id,pro_createur_id:user.id};
+   const saved=await fetch(table,{method:'POST',headers:{...dbHeaders,Prefer:'return=representation'},body:JSON.stringify(record),signal:AbortSignal.timeout(12000)});
+   if(!saved.ok)throw Error('Enregistrement de la recherche impossible');
+   return res.status(200).json({reference,message:'Demande à l’unité enregistrée. Mécascope vous enverra une proposition avant tout paiement. Aucun crédit Pro consommé.'});
+  }
   if(action==='messages'){
    const messages=await rpc('meca_messages_lire_pro');
    return res.status(200).json({messages:Array.isArray(messages)?messages:[]});
