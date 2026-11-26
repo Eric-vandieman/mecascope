@@ -17,6 +17,22 @@ window.mecaAdminLive=async function(main,path){
   label('Récurrence mensuelle',eur(d.abonnements_ca_centimes||0));
   if(path==='/admin'){
    const block=main.querySelector('.metrics.six');
+   if(block&&!main.querySelector('#meca-proposals-awaiting-tile')){
+    const tile=document.createElement('div');tile.className='metric meca-proposals-awaiting-tile';
+    tile.id='meca-proposals-awaiting-tile';
+    tile.style.cssText='cursor:pointer;border:1px solid rgba(235,161,75,.65)';
+    tile.setAttribute('role','button');tile.tabIndex=0;
+    const title=document.createElement('div');title.className='label';title.textContent='Propositions envoyées — en attente';
+    const value=document.createElement('div');value.className='value';value.textContent=String(d.propositions_en_attente||0);
+    const note=document.createElement('small');note.textContent=(d.propositions_relance_24h||0)+' à relancer après 24 h · '+(d.propositions_relance_48h||0)+' après 48 h';
+    const body=document.createElement('div');body.append(title,value,note);tile.append(body);
+    const go=()=>{location.hash='#/admin/demandes?filtre=devis_en_attente'};
+    tile.onclick=go;tile.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}};
+    block.append(tile);
+   }
+  }
+  if(path==='/admin'){
+   const block=main.querySelector('.metrics.six');
    if(block&&!main.querySelector('#meca-visitors-tile')){
     const div=document.createElement('div');div.className='metric';div.id='meca-visitors-tile';
     div.innerHTML='<div><div class="label">Visiteurs aujourd’hui</div><div class="value"></div><div class="meca-single-card-desc"></div></div>';
@@ -45,12 +61,15 @@ window.mecaAdminLive=async function(main,path){
    const query=new URLSearchParams(location.hash.split('?')[1]||'');
    if(query.get('source')==='professionnel'&&/^[a-f0-9-]{36}$/i.test(query.get('dossier')||'')&&!dossiers.some(x=>x.id===query.get('dossier')))dossiers.unshift({id:query.get('dossier'),reference:'Dossier professionnel',contact:'Client professionnel',type_dossier:'professionnel',statut:'recherche'});
    const form=main.querySelector('#meca-result-form');if(!form)return;
+   const compactDemandes=path==='/admin/demandes';
+   const composerPanel=form.closest('section.panel');
    const select=document.createElement('select');select.id='meca-live-dossier';
    const initial=document.createElement('option');initial.value='';initial.textContent='Choisir un dossier client';select.append(initial);
    for(const row of dossiers){const option=document.createElement('option');option.value=row.id;option.textContent=row.reference+' — '+row.contact+' ('+row.statut+')';select.append(option)}
    const wrap=document.createElement('div');wrap.className='panel';wrap.append(select);
    const history=document.createElement('div');history.id='meca-live-history';history.style.cssText='white-space:pre-wrap;padding:12px;line-height:1.7';wrap.append(history);
    form.before(wrap);
+   if(compactDemandes){wrap.hidden=true;wrap.style.display='none';if(composerPanel){composerPanel.hidden=true;composerPanel.style.display='none'}}
    // Registre des dossiers réels : visible immédiatement, même sans sélection.
    const registry=document.createElement('section');
    registry.className='panel meca-dossiers-registry';
@@ -58,6 +77,7 @@ window.mecaAdminLive=async function(main,path){
    const helper=document.createElement('p');helper.className='muted';helper.textContent='Sélectionnez un dossier pour consulter le client, le véhicule et préparer sa réponse.';registry.append(helper);
    const list=document.createElement('div');list.style.cssText='display:grid;gap:10px';registry.append(list);
    const detail=document.createElement('div');detail.className='panel';detail.style.cssText='margin-top:14px;white-space:pre-wrap;line-height:1.7';detail.textContent='Sélectionnez un dossier pour afficher ses informations.';registry.append(detail);
+   if(compactDemandes){registry.hidden=true;registry.style.display='none';wrap.insertBefore(detail,wrap.firstChild);detail.hidden=true}
    const fields=[['Type de véhicule','vehicleType'],['Marque','brand'],['Modèle','model'],['Année','year'],['Motorisation','engine'],['Carburant','fuel'],['Boîte','gearbox'],['Finition','trim'],['Pièce recherchée','part'],['Référence de pièce','ref'],['VIN','vin'],['Budget maximum d’achat de la pièce','budget'],['Remarques','notes']];
    function showDossier(row){
      if(!row){detail.textContent='Sélectionnez un dossier.';return}
@@ -261,6 +281,19 @@ window.mecaAdminLive=async function(main,path){
 
    async function refreshHistory(){history.textContent='';if(!select.value)return;try{const r=await call({action:'messages',id:select.value});for(const m of r.messages||[]){const p=document.createElement('p');p.textContent=(m.auteur==='client'?'Client':'Mécascope')+' · '+new Date(m.cree_le).toLocaleString('fr-FR')+' : '+m.contenu;history.append(p)}}catch(e){history.textContent=e.message}}
    window.mecaPieceHistory?.(main,select,dossiers);
+   function openTreatment(id){
+    if(!dossiers.some(x=>x.id===id))return;
+    select.value=id;
+    if(compactDemandes){
+      wrap.hidden=false;wrap.style.display='';
+      if(composerPanel){composerPanel.hidden=false;composerPanel.style.display=''}
+      detail.hidden=false;
+      if(sendButton){sendButton.hidden=false;status.hidden=false}
+    }
+    select.dispatchEvent(new Event('change'));
+    (compactDemandes?wrap:registry).scrollIntoView?.({block:'start',behavior:'smooth'});
+   }
+   let sendButton=null;
    select.onchange=()=>{const row=dossiers.find(x=>x.id===select.value);form.elements.ref.value=row?.reference||'';showDossier(row);showOptions();refreshHistory()};
    // Alimenter le tableau principal attendu dans Gestion des demandes.
    if(path==='/admin/demandes'){
@@ -275,7 +308,7 @@ window.mecaAdminLive=async function(main,path){
          }
          const action=document.createElement('td');
          const open=document.createElement('button');open.type='button';open.className='btn orange small';open.textContent='Ouvrir / traiter';
-         open.onclick=()=>{select.value=row.id;select.dispatchEvent(new Event('change'));registry.scrollIntoView({block:'start',behavior:'smooth'})};
+         open.onclick=()=>openTreatment(row.id);
          action.append(open);tr.append(action);table.append(tr);
        }
        main.querySelector('#list-content .empty')?.remove();
@@ -285,6 +318,8 @@ window.mecaAdminLive=async function(main,path){
    const send=document.createElement('button');send.type='button';send.className='btn orange';send.textContent='Envoyer la réponse dans la conversation';
    const status=document.createElement('p');status.setAttribute('role','status');
    form.after(status);form.after(send);
+   sendButton=send;
+   if(compactDemandes){send.hidden=true;status.hidden=true}
    send.onclick=async()=>{
     const row=dossiers.find(x=>x.id===select.value);
     if(!row){status.textContent='Sélectionnez un dossier.';return}
@@ -299,7 +334,9 @@ window.mecaAdminLive=async function(main,path){
     finally{send.disabled=false}
    };
    const deep=new URLSearchParams(location.hash.split('?')[1]||'').get('dossier');
-   const remembered=deep&&/^[a-f0-9-]{36}$/i.test(deep)?deep:sessionStorage.getItem('meca-dossier-selected');if(remembered&&dossiers.some(x=>x.id===remembered)){select.value=remembered;select.dispatchEvent(new Event('change'));sessionStorage.removeItem('meca-dossier-selected')}else if(dossiers.length){select.value=dossiers[0].id;select.dispatchEvent(new Event('change'))}
+   const remembered=deep&&/^[a-f0-9-]{36}$/i.test(deep)?deep:sessionStorage.getItem('meca-dossier-selected');
+   if(remembered&&dossiers.some(x=>x.id===remembered)){openTreatment(remembered);sessionStorage.removeItem('meca-dossier-selected')}
+   else if(!compactDemandes&&dossiers.length){select.value=dossiers[0].id;select.dispatchEvent(new Event('change'))}
   }
  }catch(e){const p=document.createElement('p');p.className='meca-admin-live-status';p.textContent='Synchronisation indisponible : '+e.message;main.prepend(p)}
 };
