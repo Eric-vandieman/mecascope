@@ -80,6 +80,18 @@ export default async function handler(req,res){
       const user=await result.json();
       const m=user.user_metadata||{};
       if(m.profil!=='particulier')return res.status(403).json({message:'Ce compte ne correspond pas à un espace particulier.'});
+      // Les demandes payées déposées sans compte sont automatiquement rattachées
+      // UNIQUEMENT après confirmation de la propriété de la même adresse e-mail.
+      if(user.id&&user.email&&user.email_confirmed_at&&process.env.SUPABASE_SERVICE_ROLE_KEY){
+        const adminKey=process.env.SUPABASE_SERVICE_ROLE_KEY;
+        const adminHeaders={apikey:adminKey,...(adminKey.startsWith('eyJ')?{Authorization:'Bearer '+adminKey}:{}),'Content-Type':'application/json',Prefer:'return=minimal'};
+        const paidMatch='&initial_paid_at=not.is.null&particulier_id=is.null&email=eq.'+encodeURIComponent(String(user.email).toLowerCase());
+        const attach=await fetch(url+'/rest/v1/meca_demandes_unitaires?'+paidMatch.slice(1),{
+          method:'PATCH',headers:adminHeaders,body:JSON.stringify({particulier_id:user.id}),signal:AbortSignal.timeout(12000)
+        }).catch(()=>null);
+        if(!attach?.ok && req.query?.action==='dossiers')
+          return res.status(503).json({message:'Rattachement de votre mission payée momentanément indisponible. Réessayez.'});
+      }
       if(req.query?.action==='factures'){
         if(!user.email_confirmed_at)return res.status(403).json({message:'Confirmez votre adresse e-mail.'});
         const admin=process.env.SUPABASE_SERVICE_ROLE_KEY,stripeKey=process.env.STRIPE_SECRET_KEY;
