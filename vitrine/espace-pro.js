@@ -20,11 +20,46 @@ async function request(action,fields){
  const r=await fetch(collab,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...fields})});
  const data=await r.json();if(!r.ok)throw Error(data.message||'Demande refusée');return data
 }
+async function refreshOneoffs(){
+ const el=document.getElementById('pro-oneoff-list');if(!el)return;
+ if(current.permissions?.view!==true){
+  el.replaceChildren(node('p','Vous n’avez pas l’autorisation de consulter les recherches de ce garage.'));return;
+ }
+ try{
+  const r=await fetch('/api/pro-collaboration?view=oneoff',{credentials:'same-origin',cache:'no-store'});
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok)throw Error(data.message||'Suivi à l’unité indisponible');
+  el.replaceChildren();
+  for(const item of data.recherches||[]){
+   const card=node('article',undefined,'meca-team-search');
+   card.style.cssText='border:1px solid #986d43;margin:10px 0;padding:13px;border-radius:10px';
+   const title=node('strong',(item.urgent?'🚨 URGENT — ':'')+(item.reference||'Dossier')+' · '+[item.details?.brand,item.details?.model].filter(Boolean).join(' '));
+   const info=node('p','Pièce : '+(item.details?.part||'—')+' · Statut : '+({
+    deposee:'En étude gratuite',devis_envoye:item.decision==='accepte'?'Devis accepté — acompte attendu':item.decision==='refuse'?'Devis refusé':'Devis disponible — réponse attendue',
+    acompte_paye:'Acompte payé — recherche en cours',reussite:'Pièce trouvée — solde à régler',
+    solde_paye:'Mission réglée',refuse:'Devis refusé',echec:'Recherche infructueuse'
+   }[item.statut]||item.statut));
+   const amount=node('p','Formule : '+({ciblee:'Recherche ciblée — 39 €',approfondie:'Recherche approfondie — 79 €',expert:'Investigation Expert — 149 €'}[item.offre]||'À déterminer après analyse'));
+   const kind=node('small','Prestation à l’unité · aucun crédit Pro débité');
+   card.append(title,info,amount,kind);
+   if(item.lien){
+    const a=node('a',item.statut==='devis_envoye'?'Consulter et décider':'Consulter le dossier et ses messages','btn orange');
+    a.href=item.lien;a.style.cssText='display:inline-block;margin:12px 0;text-decoration:none';card.append(a);
+   }
+   el.append(card);
+  }
+  if(!(data.recherches||[]).length)el.append(node('p','Aucune prestation à l’unité pour cet établissement. Déposez une demande gratuite ci-dessus.'));
+  labelStatus('pro-oneoff-list-feedback','Suivi des recherches à l’unité synchronisé.');
+ }catch(e){
+  el.replaceChildren(node('p','Suivi des recherches momentanément indisponible.'));
+  labelStatus('pro-oneoff-list-feedback',e.message);
+ }
+}
 async function refresh(){
  const response=await fetch(collab,{credentials:'same-origin',cache:'no-store'});
  let data;try{data=await response.json()}catch{data={}};
  if(!response.ok)throw Error(data.message||'Service indisponible');
- current=data;applyAccess();drawTeam();drawSearches();drawStats();await refreshCreditBalance().catch(()=>{});return data
+ current=data;applyAccess();drawTeam();drawSearches();drawStats();await Promise.all([refreshCreditBalance().catch(()=>{}),refreshOneoffs().catch(()=>{})]);return data
 }
 async function refreshCreditBalance(){
  const response=await fetch('/api/pro-collaboration?view=credits',{credentials:'same-origin',cache:'no-store'});
@@ -44,6 +79,7 @@ async function refreshCreditBalance(){
 function applyAccess(){
  const role=current.role;
  const p=current.permissions||{};
+ const oneoff=document.getElementById('pro-oneoff-form');if(oneoff){oneoff.hidden=p.create!==true;}
  const tabMap={equipe:role==='owner'||role==='manager',recherches:p.view===true,statistiques:role==='owner'||role==='manager',credits:true,etablissements:true,messages:true,factures:true,vehicules:true,export:role==='owner'};
  for(const b of tabs){const visible=tabMap[b.dataset.workspaceTab]!==false;b.hidden=!visible;}
  for(const [name,allowed] of Object.entries(tabMap)){const panel=document.querySelector('[data-workspace-panel="'+name+'"]');if(panel)panel.dataset.allowed=String(allowed);}
@@ -203,6 +239,25 @@ setInterval(()=>{
     refresh().catch(()=>{});
   }
 },30000);
+const oneoffForm=document.getElementById('pro-oneoff-form');
+if(oneoffForm)oneoffForm.addEventListener('submit',async event=>{
+ event.preventDefault();
+ const btn=oneoffForm.querySelector('button[type="submit"]');
+ if(current.permissions?.create!==true){labelStatus('pro-oneoff-feedback','Votre rôle ne permet pas de créer une recherche. Demandez l’autorisation au responsable.');return}
+ btn.disabled=true;labelStatus('pro-oneoff-feedback','Enregistrement de votre demande gratuite…');
+ try{
+  const fd=new FormData(oneoffForm),values=Object.fromEntries(fd);
+  const payload={action:'oneoff-create',...values,urgent:fd.has('urgent')};
+  const r=await fetch('/api/pro-collaboration',{method:'POST',credentials:'same-origin',
+   headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),cache:'no-store'});
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok)throw Error(data.message||'Impossible de déposer la recherche');
+  labelStatus('pro-oneoff-feedback',data.message+' Référence : '+data.reference);
+  oneoffForm.reset();
+  await refreshOneoffs();
+ }catch(e){labelStatus('pro-oneoff-feedback','Demande non confirmée : '+e.message)}
+ finally{btn.disabled=false}
+});
 document.getElementById('workspace-export-data').addEventListener('click',async()=>{
  const status=document.getElementById('workspace-export-status');
  if(current.role!=='owner'){status.textContent='Export réservé au titulaire du garage.';return}
