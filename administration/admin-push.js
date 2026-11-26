@@ -88,6 +88,86 @@
   if(interval)clearInterval(interval);
   interval=setInterval(()=>{if(document.querySelector('#meca-push-bell'))fetchCenter(panel,button);else clearInterval(interval)},45000);
  }
+ const catalog=[
+  ['Demandes clients','nouvelle_demande','Nouvelle demande particulière'],
+  ['Demandes clients','demande_urgente','Nouvelle demande signalée urgente'],
+  ['Demandes clients','nouvelle_demande_pro','Nouvelle demande professionnelle'],
+  ['Demandes clients','demande_pro_validee','Demande professionnelle validée'],
+  ['Devis','devis_emis','Proposition envoyée au client'],
+  ['Devis','devis_accepte','Devis accepté par le client'],
+  ['Devis','devis_refuse','Devis refusé par le client'],
+  ['Paiements','paiement_initial','Acompte confirmé par Stripe'],
+  ['Paiements','solde_regle','Paiement du solde confirmé'],
+  ['Recherche','dossier_urgent','Option Express sélectionnée'],
+  ['Recherche','piece_trouvee','Pièce trouvée / résultat fournisseur'],
+  ['Recherche','recherche_infructueuse','Recherche clôturée sans résultat'],
+  ['Communication','message_client','Nouveau message client']
+ ];
+ const planned=[
+  ['Suivi et délais','relance_devis','Devis sans réponse après 24 h / 48 h'],
+  ['Suivi et délais','echeance_sla','Délai contractuel proche de l’échéance'],
+  ['Suivi et délais','infos_attente','Informations complémentaires reçues'],
+  ['Suivi et délais','reservation','Réservation fournisseur confirmée / échouée'],
+  ['Comptes et équipes','compte_client','Compte client créé ou confirmé'],
+  ['Comptes et équipes','equipe_pro','Collaborateur Pro invité / ajouté'],
+  ['Comptes et équipes','abonnement_pro','Souscription / renouvellement Pro'],
+  ['Comptes et équipes','credits_pro','Crédits Pro faibles / expirés'],
+  ['Gestion financière','remboursement','Remboursement / réclamation'],
+  ['Gestion financière','paiement_echoue','Paiement refusé ou abandonné']
+ ];
+ async function preferencesTable(area){
+  const section=document.createElement('section');section.className='panel';section.id='meca-notification-preferences';
+  section.style.cssText='margin-top:18px';
+  const title=document.createElement('h2');title.textContent='Mes préférences de notifications';
+  const desc=document.createElement('p');desc.className='muted';desc.textContent='Pour chaque situation, choisissez une alerte Push sur vos appareils et/ou un événement visible dans la cloche 🔔. Les réglages sont enregistrés dès que vous les modifiez. Les alertes masquées restent dans le journal technique pour l’audit.';
+  const note=document.createElement('p');note.className='muted';note.setAttribute('role','status');note.textContent='Chargement des préférences…';
+  const tableWrap=document.createElement('div');tableWrap.style.cssText='overflow-x:auto;width:100%';
+  const table=document.createElement('table');table.className='table';table.style.cssText='width:100%;min-width:520px;border-collapse:collapse';
+  const thead=document.createElement('thead'),header=document.createElement('tr');
+  for(const label of ['Événement / situation','Push Android','Cloche 🔔','État']){
+   const cell=document.createElement('th');cell.textContent=label;cell.scope='col';cell.style.cssText='padding:12px 8px;text-align:left';header.append(cell);
+  }
+  thead.append(header);table.append(thead);
+  const tbody=document.createElement('tbody');table.append(tbody);tableWrap.append(table);
+  section.append(title,desc,note,tableWrap);area.after(section);
+  let data;
+  try{data=await api({action:'preferences'});}catch(e){note.textContent='Impossible de charger les préférences : '+e.message;return}
+  const settings=new Map((data.preferences||[]).map(x=>[x.event_type,x]));
+  const renderGroup=(name,items,available)=>{
+   const group=document.createElement('tr'),h=document.createElement('th');h.colSpan=4;h.textContent=name;h.style.cssText='text-align:left;background:rgba(240,166,77,.12);padding:13px 8px;color:#f0b678';group.append(h);tbody.append(group);
+   for(const [,key,label] of items){
+    const saved=settings.get(key)||{push_enabled:true,center_enabled:true};
+    const tr=document.createElement('tr');tr.style.borderBottom='1px solid rgba(180,180,180,.18)';
+    const nameCell=document.createElement('td');nameCell.textContent=label;nameCell.style.padding='12px 8px';tr.append(nameCell);
+    const checks=[];
+    for(const [field,word] of [['push_enabled','Push'],['center_enabled','Cloche']]){
+     const cell=document.createElement('td');cell.style.cssText='text-align:center;padding:12px 8px';
+     const check=document.createElement('input');check.type='checkbox';check.checked=available?Boolean(saved[field]):false;check.disabled=!available;check.style.cssText='width:21px;height:21px;accent-color:#e99c43;cursor:pointer;margin:0';
+     check.setAttribute('aria-label',word+' : '+label);
+     cell.append(check);tr.append(cell);checks.push(check);
+    }
+    const stateCell=document.createElement('td');stateCell.style.cssText='padding:12px 8px;font-size:13px';stateCell.textContent=available?'Actif':'À venir';tr.append(stateCell);
+    if(available){
+     for(const check of checks)check.onchange=async()=>{
+      checks.forEach(x=>x.disabled=true);stateCell.textContent='Enregistrement…';note.textContent='Sauvegarde des préférences en cours…';
+      try{
+       const v=await api({action:'save-preference',event_type:key,push_enabled:checks[0].checked,center_enabled:checks[1].checked});
+       settings.set(key,v.saved);stateCell.textContent='Enregistré ✓';note.textContent='Préférence « '+label+' » enregistrée.';
+       if(!checks[1].checked){const bell=document.querySelector('#meca-push-bell');if(bell)fetchCenter(bell.closest('.meca-push-bell-wrap').querySelector('.meca-push-center'),bell).catch(()=>{});}
+      }catch(e){
+       checks[0].checked=Boolean(settings.get(key)?.push_enabled??true);checks[1].checked=Boolean(settings.get(key)?.center_enabled??true);
+       stateCell.textContent='Erreur';note.textContent='Sauvegarde impossible : '+e.message;
+      }finally{checks.forEach(x=>x.disabled=false)}
+     };
+    }
+    tbody.append(tr);
+   }
+  };
+  for(const name of [...new Set(catalog.map(x=>x[0]))])renderGroup(name,catalog.filter(x=>x[0]===name),true);
+  const titlePlanned=document.createElement('tr'),cellPlanned=document.createElement('th');cellPlanned.colSpan=4;cellPlanned.textContent='ÉVÉNEMENTS À RACCORDER — non configurables actuellement';cellPlanned.style.cssText='padding:14px 8px;text-align:left';titlePlanned.append(cellPlanned);tbody.append(titlePlanned);
+  for(const name of [...new Set(planned.map(x=>x[0]))])renderGroup(name,planned.filter(x=>x[0]===name),false);
+  note.textContent='Préférences chargées. Les notifications ne seront envoyées que pour les situations cochées et déjà raccordées.';
+ }
  async function setup(main,path){
   addCenter();
   const params=new URLSearchParams(location.hash.split('?')[1]||'');
@@ -133,6 +213,7 @@
   };
   const target=main.querySelector('.pagehead')||main.firstElementChild;
   if(target)target.after(area);else main.prepend(area);
+  preferencesTable(area).catch(e=>{const p=document.createElement('p');p.textContent='Préférences indisponibles : '+e.message;area.after(p)});
   if(!isSupported()){state('Non compatible — Chrome Android récent requis',status,enabled,disabled);test.disabled=true;return}
   if(Notification.permission==='denied'){state('Autorisation refusée — réactivez-la dans les paramètres du navigateur',status,enabled,disabled);test.disabled=true;return}
   try{
