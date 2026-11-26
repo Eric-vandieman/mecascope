@@ -69,11 +69,34 @@ async function dispatch(id){
   p_expired:result.expired}).catch(()=>{});
  return {sent:result.success,errors:result.errors.length,expired:result.expired.length};
 }
+async function dispatchClient(id){
+ const claimed=await rpc('meca_client_push_claim',{p_secret:secret(),p_id:id});
+ if(!claimed?.claimed)return {ignored:true};
+ const quote=claimed.event_type==='devis_disponible';
+ const payload={
+  id:claimed.id,
+  title:quote?'📋 Mécascope — Votre devis est disponible':'✅ Mécascope — Une pièce a été trouvée',
+  body:quote?'Votre proposition de recherche est prête. Connectez-vous pour consulter votre devis et répondre.':'Une source de pièce a été identifiée pour votre dossier. Consultez le résultat dans votre espace Mécascope.',
+  url:'/mon-espace.html#demandes',
+  tag:'meca-client-'+claimed.id
+ };
+ const result=await deliver(claimed.subscribers,payload);
+ const ok=result.success>0&&result.errors.length===0;
+ await rpc('meca_client_push_finish',{p_secret:secret(),p_id:id,p_success:ok,
+  p_error:result.success===0?'Aucun appareil atteint : '+result.errors.join(', '):result.errors.join(', '),
+  p_expired:result.expired}).catch(()=>{});
+ return {sent:result.success,errors:result.errors.length,expired:result.expired.length};
+}
 export default async function handler(req,res){
  res.setHeader('Cache-Control','private,no-store');
  if(req.method!=='POST')return json(res,405,{message:'Méthode non autorisée'});
  const b=req.body||{};
  try{
+  if(b.action==='dispatch-client'){
+   if(!same(req.headers['x-meca-push-secret'],secret()))return json(res,403,{message:'Accès refusé'});
+   if(!/^[a-f0-9-]{36}$/i.test(String(b.id||'')))return json(res,400,{message:'Événement invalide'});
+   return json(res,200,await dispatchClient(b.id));
+  }
   if(b.action==='dispatch'){
    if(!same(req.headers['x-meca-push-secret'],secret()))return json(res,403,{message:'Accès refusé'});
    if(!/^[a-f0-9-]{36}$/i.test(String(b.id||'')))return json(res,400,{message:'Événement invalide'});
