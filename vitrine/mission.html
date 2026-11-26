@@ -52,8 +52,8 @@
   const data=await r.json().catch(()=>({}));if(!r.ok)throw Error(data.message||'Dossier inaccessible');
   current=data;quote.hidden=true;payer.hidden=true;erreur.textContent='';
   const accountPanel=$('meca-account-after-payment');
-  accountPanel.hidden=!data.paid;
-  if(data.paid){
+  accountPanel.hidden=!data.paid||data.accountReady;
+  if(data.paid&&!data.accountReady){
    // L'authentification et le rattachement se font uniquement par l'adresse e-mail confirmée.
    fetch('/api/particulier-auth',{credentials:'same-origin',cache:'no-store'}).then(async r=>{
     if(r.ok){accountPanel.querySelector('#meca-account-create').textContent='Accéder à mon espace';accountPanel.querySelector('#meca-account-create').href='/mon-espace.html#demandes';
@@ -83,9 +83,9 @@
    conditions.textContent='Vous pouvez contacter Mécascope si vous souhaitez déposer une nouvelle demande.';
   }else if(data.statut==='reussite'){
    etat.textContent='Une source a été identifiée. Solde restant : '+euro(data.solde)+'.';
-   conditions.textContent='Aucune option déjà payée n’est facturée une seconde fois.';
-   payer.dataset.stage='solde';payer.textContent='Régler le solde de '+euro(data.solde);payer.hidden=false;
-  }else if(data.statut==='acompte_paye')etat.textContent='Paiement confirmé : recherche en cours. Aucun solde n’est dû pour le moment.';
+   conditions.textContent=data.accountReady?'Aucune option déjà payée n’est facturée une seconde fois.':'Pour régler le solde, connectez-vous à votre compte particulier Mécascope confirmé.';
+   payer.dataset.stage='solde';payer.textContent='Régler le solde de '+euro(data.solde);payer.hidden=!data.accountReady;
+  }else if(data.statut==='acompte_paye')etat.textContent=data.accountReady?'Paiement confirmé : votre recherche est en cours. Suivez-la depuis votre espace particulier.':'Paiement confirmé : créez votre compte ou connectez-vous pour suivre votre recherche.';
   else if(data.statut==='solde_paye')etat.textContent='Solde confirmé. Mécascope finalise votre dossier.';
   else if(data.statut==='echec')etat.textContent='Recherche infructueuse. Aucun solde de réussite à payer.';
   else etat.textContent='Demande reçue, étude en cours.';
@@ -127,6 +127,20 @@
   }catch(e){erreur.textContent=e.message;payer.disabled=false}
  };
  try{await refresh()}catch(e){etat.textContent=e.message}
- if(qs.get('paiement')==='retour'&&!current?.paid){erreur.textContent='Retour de Stripe reçu. Vérification de la confirmation bancaire…';setTimeout(()=>refresh().catch(e=>erreur.textContent=e.message),3000);setTimeout(()=>{if(!current?.paid)refresh().catch(()=>{})},9000)}
+ if(qs.get('paiement')==='retour'&&!current?.paid){
+  erreur.textContent='Retour de Stripe reçu. Vérification bancaire en cours. Ne payez pas une seconde fois.';
+  let checks=0;
+  const poll=async()=>{
+   if(current?.paid||checks>=16)return;
+   checks++;
+   try{
+    await refresh();
+    if(current?.paid){erreur.textContent='Paiement confirmé par Mécascope.';return}
+    erreur.textContent='Confirmation bancaire en cours. Ne renouvelez pas le paiement. Vous pouvez actualiser cette page ultérieurement.';
+   }catch(e){erreur.textContent=e.message}
+   if(!current?.paid&&checks<16)setTimeout(poll,5000);
+  };
+  setTimeout(poll,3000);
+ }
 })();
 </script><script src="/mission-chat.js?v=20261125-r2" defer></script></body></html>
