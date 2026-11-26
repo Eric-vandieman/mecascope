@@ -25,6 +25,7 @@ export default async function handler(req,res){
  if(entry.count>4)return res.status(429).json({message:'Trop de demandes successives. Réessayez dans une minute.'});
  const email=limited(b.email,254).toLowerCase(),contact=limited(b.contact,120);
  const phone=limited(b.phone,22);
+ const urgent=b.urgent===true;
  if(!validEmail(email)||contact.length<2||!allowTypes.has(b.vehicleType)||!limited(b.brand)||!limited(b.model)||!limited(b.part)||!/^((19|20)\d{2})$/.test(String(b.year||'')))
   return res.status(400).json({message:'Complétez votre nom, e-mail, type de véhicule, marque, modèle, année et pièce recherchée.'});
  if(b.vin && !/^[A-HJ-NPR-Z0-9]{4,17}$/i.test(limited(b.vin,30)))return res.status(400).json({message:'Le VIN indiqué semble incorrect. Corrigez-le ou laissez ce champ vide.'});
@@ -63,17 +64,17 @@ export default async function handler(req,res){
  const saved=await fetch(dbUrl+'/rest/v1/meca_demandes_unitaires',{
   method:'POST',headers:{apikey:admin,...(admin.startsWith('eyJ')?{Authorization:'Bearer '+admin}:{}),
    'Content-Type':'application/json',Prefer:'return=representation'},
-  body:JSON.stringify({reference,contact,email,telephone:phone,details,statut:'deposee',particulier_id:particulierId}),
+  body:JSON.stringify({reference,contact,email,telephone:phone,details,urgent,statut:'deposee',particulier_id:particulierId}),
   signal:AbortSignal.timeout(12000)
  }).catch(()=>null);
  if(!saved?.ok)return res.status(503).json({message:'Le dossier n’a pas pu être enregistré. Réessayez.',sent:false});
 
  const lines=names.map(name=>descriptions[name]+' : '+limited(b[name],800)).join('\n');
- const body='Nouvelle demande Mécascope — '+reference+'\n\n'+lines+'\n\nClient : '+contact+'\nE-mail : '+email+'\nTéléphone : '+phone+'\nPhotos : '+attachments.length;
+ const body=(urgent?'🚨 URGENT — à examiner en priorité (option Express non souscrite)':'Nouvelle demande Mécascope')+' — '+reference+'\n\n'+lines+'\n\nClient : '+contact+'\nE-mail : '+email+'\nTéléphone : '+phone+'\nPhotos : '+attachments.length;
  try{
   const response=await fetch('https://api.resend.com/emails',{
    method:'POST',headers:{Authorization:'Bearer '+key,'Content-Type':'application/json'},
-   body:JSON.stringify({from,to:['contact@xn--mcascope-b1a.fr'],reply_to:email,subject:'Mécascope · Nouvelle demande '+reference,text:body,attachments}),
+   body:JSON.stringify({from,to:['contact@xn--mcascope-b1a.fr'],reply_to:email,subject:(urgent?'🚨 URGENT · Nouvelle demande Mécascope ':'Mécascope · Nouvelle demande ')+reference,text:body,attachments}),
    signal:AbortSignal.timeout(14000)
   });
   if(!response.ok)return res.status(200).json({sent:true,emailSent:false,reference,message:'Votre demande est enregistrée, mais la notification à Mécascope n’a pas pu être envoyée. Conservez votre référence.'});
