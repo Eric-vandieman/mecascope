@@ -1,14 +1,15 @@
-const CACHE_VERSION='meca-admin-push-v3-ms-officiel';
+const CACHE_VERSION='meca-admin-push-v4-urgence';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',event=>event.waitUntil(self.clients.claim()));
 self.addEventListener('push',event=>{
  let data={};try{data=event.data?.json()||{}}catch{}
  const id=String(data.id||'notification').slice(0,80);
+ const urgent=data.urgent===true;
  const url=typeof data.url==='string'&&/^\/#\/admin(?:\/[a-z-]+)?(?:\?dossier=[a-f0-9-]+)?$/.test(data.url)?data.url:'/#/admin';
  event.waitUntil(self.registration.showNotification(String(data.title||'Mécascope — Notification').slice(0,100),{
   body:String(data.body||'Un événement vous attend dans votre administration.').slice(0,160),
   icon:'/logo-ms-officiel.webp',badge:'/badge-96.png',color:'#ff951f',tag:String(data.tag||id).slice(0,95),
-  renotify:false,data:{url},silent:false
+  renotify:urgent,requireInteraction:urgent,vibrate:urgent?[220,110,220,110,380]:undefined,data:{url,urgent},silent:false
  }));
 });
 self.addEventListener('notificationclick',event=>{
