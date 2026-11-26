@@ -1,6 +1,6 @@
 'use strict';
 window.mecaSuppliers=async function(main,path){
- if(!['/admin/fournisseurs','/admin/demandes','/admin/messages'].includes(path))return;
+ if(!['/admin/fournisseurs','/admin/demandes'].includes(path))return;
  const isDirectory=path==='/admin/fournisseurs',selection=main.querySelector('#meca-live-dossier');
  if(!isDirectory&&!selection)return;
  const api=async payload=>{
