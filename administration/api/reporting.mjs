@@ -16,10 +16,10 @@ if(quoteAction){
   return res.status(r.status).json(answer);
  }catch{return res.status(503).json({message:'La proposition n’a pas pu être transmise.'})}
 }
-const b=req.body||{},names={reporting:'meca_admin_reporting',messages:'meca_admin_messages',reply:'meca_admin_repondre',chat:'meca_admin_message_qualification'},action=b.action;
+const b=req.body||{},names={reporting:'meca_admin_reporting',messages:'meca_admin_messages',conversations:'meca_admin_liste_conversations',mark_read:'meca_admin_marquer_messages_lus',reply:'meca_admin_repondre',chat:'meca_admin_message_qualification'},action=b.action;
 if(!names[action])return res.status(400).end();
-if(action!=='reporting'&&!/^[0-9a-f-]{36}$/i.test(String(b.id||'')))return res.status(400).end();
-const args=action==='messages'?{p_dossier:b.id}:action==='chat'?{p_dossier:b.id,p_contenu:String(b.message||'').trim().slice(0,3000)}:action==='reply'?{p_dossier:b.id,p_contenu:String(b.message||'').trim().slice(0,3000),p_pays:b.found?String(b.country||'').trim():null,p_prix_centimes:b.found?Math.round(Number(b.price)*100):null,p_delai:b.found?String(b.delay||'').trim():null,p_etat:b.found?String(b.condition||'').trim():null,p_compatibilite:b.found?String(b.fit||'').trim():null,p_fournisseur:b.found?String(b.supplier||'').trim():null,p_precisions:String(b.details||'').trim().slice(0,3000)}:{};
+if(!['reporting','conversations'].includes(action)&&!/^[0-9a-f-]{36}$/i.test(String(b.id||'')))return res.status(400).end();
+const args=['messages','mark_read'].includes(action)?{p_dossier:b.id}:action==='chat'?{p_dossier:b.id,p_contenu:String(b.message||'').trim().slice(0,3000)}:action==='reply'?{p_dossier:b.id,p_contenu:String(b.message||'').trim().slice(0,3000),p_pays:b.found?String(b.country||'').trim():null,p_prix_centimes:b.found?Math.round(Number(b.price)*100):null,p_delai:b.found?String(b.delay||'').trim():null,p_etat:b.found?String(b.condition||'').trim():null,p_compatibilite:b.found?String(b.fit||'').trim():null,p_fournisseur:b.found?String(b.supplier||'').trim():null,p_precisions:String(b.details||'').trim().slice(0,3000)}:{};
 if(action==='chat'&&!args.p_contenu)return res.status(400).json({message:'Message vide'});
 if(action==='reply'&&(!args.p_contenu||(b.found&&(!args.p_pays||!args.p_delai||!args.p_fournisseur||!Number.isSafeInteger(args.p_prix_centimes)||args.p_prix_centimes<0))))return res.status(400).json({message:'Champs incomplets'});
 if(action==='reply'&&b.found){
