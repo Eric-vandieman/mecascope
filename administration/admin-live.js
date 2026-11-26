@@ -42,6 +42,30 @@ window.mecaAdminLive=async function(main,path){
    }
   }
   const dossiers=Array.isArray(d.dossiers)?d.dossiers:[];
+  const conversations=await call({action:'conversations'}).catch(()=>[]);
+  const inbox=Array.isArray(conversations)?conversations:[];
+  const unreadTotal=inbox.reduce((n,c)=>n+Number(c.non_lus||0),0);
+  for(const nav of document.querySelectorAll('.side a[href*="/admin/messages"],.side a[data-go="/admin/messages"]')){
+    const mark=nav.querySelector('.meca-inbox-unread-badge')||document.createElement('span');
+    mark.className='meca-inbox-unread-badge';mark.textContent=unreadTotal?String(unreadTotal):'';
+    mark.style.cssText='display:inline-block;margin-left:8px;padding:2px 8px;border-radius:20px;background:'+(unreadTotal?'#e9812a':'transparent')+';color:#161b22;font-weight:800';
+    if(!mark.parentNode)nav.append(mark);
+  }
+  if(path==='/admin'){
+    const metrics=main.querySelector('.metrics.six');
+    if(metrics){
+      const tile=document.createElement('div');tile.className='metric';tile.id='meca-inbox-tile';tile.style.cssText='cursor:pointer;border:2px solid '+(unreadTotal?'#ff9933':'#586471')+';background:'+(unreadTotal?'#38291e':'#1a222b');
+      tile.tabIndex=0;tile.setAttribute('role','button');
+      const box=document.createElement('div'),caption=document.createElement('div'),count=document.createElement('div'),sub=document.createElement('small');
+      caption.className='label';caption.textContent='Messages clients à traiter';
+      count.className='value';count.textContent=String(unreadTotal);
+      sub.textContent=inbox.filter(x=>Number(x.non_lus)>0).length+' conversation(s) non lue(s)';
+      box.append(caption,count,sub);tile.append(box);
+      const go=()=>{location.hash='#/admin/messages'};tile.onclick=go;tile.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}};
+      metrics.append(tile);
+    }
+  }
+
   if(path==='/admin/demandes'){
    const requested=new URLSearchParams(location.hash.split('?')[1]||'');
    const id=requested.get('dossier');
@@ -140,7 +164,7 @@ window.mecaAdminLive=async function(main,path){
    personalLabel.append(personal);quotePanel.append(personalLabel);
    const priceInfo=document.createElement('p');priceInfo.className='muted';quotePanel.append(priceInfo);
    const optionPreview=document.createElement('section');optionPreview.style.cssText='padding:12px 15px;border:1px solid #555;border-radius:9px;margin:12px 0';
-   optionPreview.innerHTML='<h4>Formulaire que le client verra SOUS votre signature</h4><p>Choix obligatoire du délai : ◯ Sans Express (0 €) &nbsp; ◯ 48 h (+20 €) &nbsp; ◯ 24 h (+50 €)</p><p>Réservation fournisseur 24 h : ◯ Oui (+10 €) &nbsp; ◯ Non (0 €)</p><p>☐ Conditions générales acceptées</p><p><b>Boutons :</b> Confirmer mon devis et payer / Refuser le devis</p><p class="muted">Aucune option n’est précochée. Le client choisit, confirme et paie. Cette partie n’est pas à rédiger dans votre message.</p>';
+   optionPreview.innerHTML='<h4>Formulaire que le client verra SOUS votre signature</h4><p>Choix obligatoire du délai : ◯ Sans Express (0 €) &nbsp; ◯ 48 h (+20 €) &nbsp; ◯ 24 h (+50 €)</p><p>Réservation fournisseur 24 h : ◯ Oui (10 € au solde uniquement si réservation confirmée) &nbsp; ◯ Non (0 €)</p><p>☐ Conditions générales acceptées</p><p><b>Boutons :</b> Confirmer mon devis et payer / Refuser le devis</p><p class="muted">Aucune option n’est précochée. Seul le supplément Express est payé avec l’acompte ; la réservation est facturée uniquement au solde si elle est confirmée. Cette partie n’est pas à rédiger dans votre message.</p>';
    quotePanel.append(optionPreview);
    const quoteButton=document.createElement('button');quoteButton.type='button';quoteButton.className='btn orange';quoteButton.textContent='Envoyer ma proposition au client';quotePanel.append(quoteButton);
    const proposalStatus=document.createElement('p');proposalStatus.setAttribute('role','status');quotePanel.append(proposalStatus);
@@ -177,7 +201,7 @@ window.mecaAdminLive=async function(main,path){
       ...(String(d.budget??'').trim()?[]:['Vous n’avez pas fixé de budget maximal pour l’achat de la pièce. Je pourrai donc examiner les offres fournisseurs sans plafond de prix. Si je trouve une pièce compatible, réellement disponible, avec un prix fournisseur vérifié, ma mission de recherche sera considérée comme réussie, quel que soit ce prix, et le solde de la prestation sera dû selon le devis. Vous resterez libre d’acheter ou non la pièce : aucun achat ne sera effectué sans votre accord.','']),
       'Compte tenu de ces vérifications, je vous propose la formule '+p.name+' à '+p.price+' €, avec un délai de '+p.days+' jours ouvrés après acceptation, paiement initial et réception des informations nécessaires.',
       '',
-      'Vous pourrez choisir sous ce message une recherche Express en 48 h (+20 €) ou en 24 h (+50 €). Cette option se règle à l’avance avec l’acompte : si le délai convenu n’est pas tenu, son supplément sera remboursé. Vous pourrez également demander une réservation de la pièce pendant 24 h auprès du fournisseur (+10 €), indépendamment du délai de recherche choisi ; elle reste sous réserve de confirmation du fournisseur.',
+      'Vous pourrez choisir sous ce message une recherche Express en 48 h (+20 €) ou en 24 h (+50 €). Cette option se règle à l’avance avec l’acompte : si le délai convenu n’est pas tenu, son supplément sera remboursé. Vous pourrez demander une réservation de la pièce pendant 24 h auprès du fournisseur (+10 €), sans la payer avec l’acompte : elle ne sera ajoutée au solde que si une réservation est effectivement confirmée par le fournisseur.',
       '',
       'Vous restez libre de votre choix.',
       '',
@@ -190,7 +214,7 @@ window.mecaAdminLive=async function(main,path){
      if(row?.statut==='devis_envoye'&&row.proposition_texte)return row.proposition_texte;
      return 'Dossier '+(row?.reference||'à sélectionner')+'\n\n'+personal.value.trim();
    }
-   function setPriceInfo(){const p=plans[planSelect.value]||plans.ciblee;priceInfo.textContent='Formule '+p.price+' € : acompte '+p.initial+' € + solde '+p.solde+' € si recherche aboutie. Options du client : 48 h +20 €, 24 h +50 €, réservation +10 € (payées avec l’acompte).'}
+   function setPriceInfo(){const p=plans[planSelect.value]||plans.ciblee;priceInfo.textContent='Formule '+p.price+' € : acompte '+p.initial+' € + solde '+p.solde+' € si recherche aboutie. Options : Express 48 h (+20 €) ou 24 h (+50 €) payé avec l’acompte ; réservation 24 h (+10 €) ajoutée au solde seulement si elle est confirmée.'}
    function renderAssessment(q){
      if(!q||!plans[q.formule]){assessmentBody.textContent='Analyse en attente. Aucun prix provisoire ne peut être transmis au client.';quoteButton.disabled=true;return}
      const p=plans[q.formule];planSelect.value=q.formule;planSelect.disabled=true;
@@ -291,7 +315,29 @@ window.mecaAdminLive=async function(main,path){
     failButton.disabled=true;try{await call({action:'fail',id:d.id});await call({action:'reply',id:d.id,found:false,message:'Nous vous informons que notre recherche n’a pas permis d’identifier une pièce conforme. Aucun solde de réussite n’est dû. Nous restons à votre disposition pour tout complément.'});alert('Recherche clôturée et client informé.');location.reload()}catch(e){alert(e.message)}finally{failButton.disabled=false}
    };
 
-   async function refreshHistory(){history.textContent='';if(!select.value)return;try{const r=await call({action:'messages',id:select.value});for(const m of r.messages||[]){const p=document.createElement('p');p.textContent=(m.auteur==='client'?'Client':'Mécascope')+' · '+new Date(m.cree_le).toLocaleString('fr-FR')+' : '+m.contenu;history.append(p)}}catch(e){history.textContent=e.message}}
+
+   history.style.cssText='display:flex;flex-direction:column;gap:14px;min-height:130px;max-height:560px;overflow:auto;padding:18px;background:#111923;border:1px solid #65798b;border-radius:13px;white-space:normal;line-height:1.55';
+   async function refreshHistory(){
+    history.replaceChildren();
+    if(!select.value){history.textContent='Sélectionnez une conversation.';return}
+    try{
+     const r=await call({action:'messages',id:select.value});
+     const messages=Array.isArray(r.messages)?r.messages:[];
+     if(!messages.length){history.textContent='Aucun message échangé pour le moment.';return}
+     for(const m of messages){
+      const client=m.auteur==='client';
+      const line=document.createElement('div');line.style.cssText='display:flex;justify-content:'+(client?'flex-start':'flex-end');
+      const bubble=document.createElement('article');bubble.style.cssText='max-width:86%;min-width:150px;padding:13px 16px;border-radius:'+(client?'5px 15px 15px 15px':'15px 5px 15px 15px')+';border:1px solid '+(client?'#f5a84d':'#81b5eb')+';background:'+(client?'#493121':'#203e5b')+';color:#fff;box-shadow:0 2px 8px #0004';
+      const head=document.createElement('strong');head.textContent=client?'👤 Client':'🔧 Mécascope (vous)';head.style.cssText='display:block;margin-bottom:5px;color:'+(client?'#ffd6a2':'#bfe0ff');
+      const body=document.createElement('div');body.textContent=m.contenu;body.style.cssText='white-space:pre-wrap;overflow-wrap:anywhere';
+      const date=document.createElement('small');date.textContent=m.cree_le?new Date(m.cree_le).toLocaleString('fr-FR'):'';
+      date.style.cssText='display:block;margin-top:7px;opacity:.8;text-align:right';
+      bubble.append(head,body,date);line.append(bubble);history.append(line);
+     }
+     history.scrollTop=history.scrollHeight;
+    }catch(e){history.textContent='Impossible de charger la conversation : '+e.message}
+   }
+
    window.mecaPieceHistory?.(main,select,dossiers);
    function openTreatment(id){
     if(!dossiers.some(x=>x.id===id))return;
