@@ -3,6 +3,22 @@
  const endpoint='/api/push',vapidID='meca-push-vapid';
  const isSupported=()=>('serviceWorker'in navigator)&&('PushManager'in window)&&('Notification'in window);
  let registration=null,config=null,interval=null;
+ let urgentSoundEnabled=false,urgentAudio=null,urgentBaseline=false;
+ const urgentSeen=new Set();
+ const playUrgentTone=()=>{
+  if(!urgentSoundEnabled||!urgentAudio)return;
+  try{
+   if(urgentAudio.state==='suspended')urgentAudio.resume().catch(()=>{});
+   const start=urgentAudio.currentTime+.05;
+   for(const [i,freq] of [740,1047,740,1175].entries()){
+    const osc=urgentAudio.createOscillator(),gain=urgentAudio.createGain(),t=start+i*.18;
+    osc.type='square';osc.frequency.setValueAtTime(freq,t);
+    gain.gain.setValueAtTime(.0001,t);gain.gain.exponentialRampToValueAtTime(.12,t+.018);
+    gain.gain.exponentialRampToValueAtTime(.0001,t+.145);
+    osc.connect(gain);gain.connect(urgentAudio.destination);osc.start(t);osc.stop(t+.15);
+   }
+  }catch{}
+ };
  const api=async payload=>{
   const session=await fetch('/api/admin',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'session'}),cache:'no-store'});
   if(!session.ok)throw Error('Connexion administrateur requise');
@@ -30,12 +46,19 @@
    button.textContent='🔔 '+Number(data.unread||0);
    details.replaceChildren();
    const items=data.notifications||[];
+   for(const n of items){
+    if(n.event_type!=='demande_urgente'||n.lu_le)continue;
+    if(urgentBaseline&&!urgentSeen.has(n.id))playUrgentTone();
+    urgentSeen.add(n.id);
+   }
+   urgentBaseline=true;
    if(!items.length){const p=document.createElement('p');p.textContent='Aucune notification pour le moment.';details.append(p);return}
    for(const n of items){
     const entry=document.createElement('button');entry.type='button';
     entry.className='meca-push-item'+(!n.lu_le?' unread':'');
     const date=new Date(n.cree_le).toLocaleString('fr-FR');
-    entry.textContent=(n.lu_le?'':'● ')+n.titre+' — '+n.message+' · '+n.reference+' · '+date;
+    entry.textContent=(n.event_type==='demande_urgente'?'🚨 URGENT · ':'')+(n.lu_le?'':'● ')+n.titre+' — '+n.message+' · '+n.reference+' · '+date;
+    if(n.event_type==='demande_urgente'){entry.style.border='2px solid #e88c3b';entry.style.background='rgba(152,64,29,.19)';}
     entry.onclick=async()=>{
      await api({action:'center',mark:n.id}).catch(()=>{});
      host.hidden=true;
@@ -92,7 +115,21 @@
   const enabled=document.createElement('button');enabled.className='btn orange';enabled.type='button';enabled.textContent='🔔 Activer les notifications sur ce téléphone';
   const disabled=document.createElement('button');disabled.className='btn dark';disabled.type='button';disabled.textContent='Désactiver sur ce téléphone';
   const test=document.createElement('button');test.className='btn dark';test.type='button';test.textContent='Envoyer une notification de test';
-  area.append(enabled,disabled,test);
+  const sound=document.createElement('button');sound.className='btn dark';sound.type='button';sound.textContent='🔊 Activer le signal sonore Urgence (administration ouverte)';
+  const soundHint=document.createElement('p');soundHint.className='muted';soundHint.textContent='Le signal distinctif fonctionne uniquement quand cette page est ouverte et que vous l’avez activé. En arrière-plan sur Android, le son dépend du système et ne peut pas être personnalisé par le site.';
+  area.append(enabled,disabled,test,sound,soundHint);
+  sound.onclick=()=>{
+   if(urgentSoundEnabled){urgentSoundEnabled=false;sound.textContent='🔊 Activer le signal sonore Urgence (administration ouverte)';return}
+   try{
+    const Ctx=window.AudioContext||window.webkitAudioContext;
+    if(!Ctx){soundHint.textContent='Signal sonore non pris en charge par ce navigateur.';return}
+    urgentAudio=urgentAudio||new Ctx();urgentAudio.resume().catch(()=>{});
+    urgentSoundEnabled=true;
+    sound.textContent='🔕 Désactiver le signal sonore Urgence';
+    soundHint.textContent='Son Urgence activé pour cet onglet. Écoutez le signal de test ; les prochaines demandes urgentes déclencheront ce son tant que la page reste ouverte.';
+    playUrgentTone();
+   }catch(e){soundHint.textContent='Son indisponible : '+e.message}
+  };
   const target=main.querySelector('.pagehead')||main.firstElementChild;
   if(target)target.after(area);else main.prepend(area);
   if(!isSupported()){state('Non compatible — Chrome Android récent requis',status,enabled,disabled);test.disabled=true;return}
