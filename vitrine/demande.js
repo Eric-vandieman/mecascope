@@ -47,9 +47,33 @@ function readPhoto(file){return new Promise((resolve,reject)=>{
  };
  image.src=url;
 })}
+function confirmerAlerteEmails(){
+ return new Promise(resolve=>{
+  const dialog=document.createElement('dialog');
+  dialog.setAttribute('aria-labelledby','meca-spam-title');
+  dialog.setAttribute('aria-describedby','meca-spam-message');
+  dialog.style.cssText='width:min(94vw,540px);max-height:90vh;overflow:auto;background:#17202a;color:#f5f7f9;border:2px solid #f2a43f;border-radius:16px;padding:26px;box-shadow:0 25px 80px #000a';
+  dialog.innerHTML='<h2 id="meca-spam-title" style="margin:0 0 16px;color:#ffb75d;font-size:24px">⚠️ Important : surveillez votre messagerie</h2>'+
+   '<div id="meca-spam-message" style="line-height:1.65;font-size:16px"><p><strong>Mécascope répond à chaque demande.</strong> Nous vous adressons une réponse ou une proposition dans les 24 heures suivant sa prise en charge, pendant nos jours d’ouverture.</p>'+
+   '<p><strong>Attention :</strong> nos e-mails peuvent parfois arriver dans vos <strong>courriers indésirables (spams)</strong> plutôt que dans votre boîte de réception.</p>'+
+   '<p>Si vous ne voyez aucune réponse dans les 24 heures suivant votre demande, <strong>vérifiez vos spams</strong> et recherchez « Mécascope » dans votre messagerie.</p>'+
+   '<p>Vous n’avez pas besoin de créer un compte pour recevoir et consulter votre proposition initiale. Le lien personnel reçu par e-mail vous permet d’y répondre.</p>'+
+   '<p style="font-size:14px;color:#cfdae5">Pensez à ajouter contact@mécascope.fr à vos contacts ou expéditeurs autorisés.</p></div>';
+  const actions=document.createElement('div');actions.style.cssText='display:flex;gap:12px;flex-wrap:wrap;margin-top:22px';
+  const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Retour au formulaire';cancel.style.cssText='padding:12px 16px;border:1px solid #667582;border-radius:9px;background:#283441;color:#fff;cursor:pointer';
+  const confirm=document.createElement('button');confirm.type='button';confirm.textContent='J’ai compris, envoyer ma demande';confirm.style.cssText='padding:12px 16px;border:0;border-radius:9px;background:#f4a13e;color:#1a1a1a;font-weight:700;cursor:pointer';
+  actions.append(cancel,confirm);dialog.append(actions);document.body.append(dialog);
+  let settled=false;
+  const finish=answer=>{if(settled)return;settled=true;dialog.close();dialog.remove();resolve(answer)};
+  cancel.onclick=()=>finish(false);confirm.onclick=()=>finish(true);
+  dialog.addEventListener('cancel',event=>{event.preventDefault();finish(false)});
+  if(typeof dialog.showModal==='function'){dialog.showModal();confirm.focus()}else{dialog.setAttribute('open','');dialog.style.position='fixed';dialog.style.zIndex='99999';dialog.style.top='12vh';dialog.style.left='50%';dialog.style.transform='translateX(-50%)';confirm.focus()}
+ });
+}
 form.addEventListener('submit',async event=>{
  event.preventDefault();
  if(!form.reportValidity()||!checkFiles()){form.reportValidity();return}
+ if(!(await confirmerAlerteEmails()))return;
  const button=form.querySelector('[type="submit"]');
  if(button)button.disabled=true;
  setStatus('Transmission sécurisée en cours…');
@@ -67,6 +91,7 @@ form.addEventListener('submit',async event=>{
   if(!response.ok||!result.sent)throw Error(result.message||'La transmission a échoué.');
   setStatus((payload.urgent?'🚨 Votre demande urgente est enregistrée. Elle sera examinée pendant nos horaires de traitement.':'Demande transmise à Mécascope !')+' Référence : '+result.reference,true);
   form.reset();checkFiles();
+  setStatus((payload.urgent?'🚨 Votre demande urgente est enregistrée.':'Votre demande est enregistrée.')+' Référence : '+result.reference+' IMPORTANT : surveillez votre boîte mail et vos spams. Si vous ne voyez pas de réponse sous 24 heures, vérifiez les courriers indésirables.',true);
  }catch(e){
   setStatus(((e&&e.message)||'Erreur d’envoi.')+' Aucun envoi n’a été confirmé.');
   // Secours explicite, jamais présenté comme une demande envoyée.
