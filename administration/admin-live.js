@@ -388,7 +388,7 @@ window.mecaAdminLive=async function(main,path){
           await call({action:'mark_read',id:row.id});
           const active=inbox.find(x=>x.dossier_id===row.id);if(active)active.non_lus=0;
           const card=list.querySelector('[data-dossier="'+row.id+'"]');
-          if(card){card.style.borderColor='#4b6279';card.style.background='#1d2b38';card.querySelector('strong')?.textContent=row.reference+' — '+row.contact;const unread=card.querySelector('strong:last-child');if(unread&&unread.textContent.includes('nouveau(x)'))unread.remove()}
+          if(card){card.style.borderColor='#4b6279';card.style.background='#1d2b38';const title=card.querySelector('strong');if(title)title.textContent=row.reference+' — '+row.contact;const unread=card.querySelector('strong:last-child');if(unread&&unread.textContent.includes('nouveau(x)'))unread.remove()}
           const unread=inbox.reduce((n,c)=>n+Number(c.non_lus||0),0);
           for(const badge of document.querySelectorAll('.meca-inbox-unread-badge'))badge.textContent=unread?String(unread):'';
         }catch(e){history.textContent='Lecture non confirmée : '+e.message}
