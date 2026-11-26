@@ -105,7 +105,7 @@ export default async function handler(req,res){
    if(!/^[a-f0-9]{64}$/i.test(token)||(message!==null&&(!message||message.length>3000)))return res.status(400).json({message:'Lien ou message incorrect'});
    const entry=await dossier(token);
    if(!entry)return res.status(404).json({message:'Lien de mission invalide'});
-   if(entry.initial_paid_at&&!(await clientAccount(req,entry)))return res.status(403).json({message:'Après paiement, connectez-vous à votre compte Mécascope confirmé avec la même adresse e-mail pour accéder à la conversation et au suivi.'});
+   if(entry.initial_paid_at&&!(await clientAccount(req,entry)))return res.status(403).json({message:'Après paiement, connectez-vous à votre espace Mécascope confirmé (particulier ou professionnel selon la demande) pour consulter la conversation et suivre le dossier.'});
    const result=await query('rpc/meca_client_conversation',{method:'POST',body:JSON.stringify({p_jeton:token,p_message:message})});
    if(extra==='send-message'){
      try{await email('contact@xn--mcascope-b1a.fr','Mécascope — réponse client '+safe(result.reference||''),
@@ -211,7 +211,7 @@ export default async function handler(req,res){
   if(action!=='checkout')return res.status(400).json({message:'Action inconnue'});
   const stage=b.stage,offer=offers[d.offre];
   if(!offer||!['initial','solde'].includes(stage))return res.status(400).json({message:'Paiement invalide'});
-  if(stage==='solde'&&!(await clientAccount(req,d)))return res.status(403).json({message:'Connectez-vous à votre compte particulier Mécascope avec votre adresse e-mail confirmée avant de régler le solde.'});
+  if(stage==='solde'&&!(await clientAccount(req,d)))return res.status(403).json({message:'Connectez-vous à votre espace Mécascope confirmé, particulier ou professionnel selon le dossier, avant de régler le solde.'});
   if(stage==='initial'&&(d.statut!=='devis_envoye'||(d.options_paiement_avance&&d.devis_decision!=='accepte'))||stage==='solde'&&d.statut!=='reussite')
    return res.status(409).json({message:'Ce paiement n’est pas disponible pour le dossier'});
   const price=process.env[stage==='initial'?offer.initial:offer.balance];
