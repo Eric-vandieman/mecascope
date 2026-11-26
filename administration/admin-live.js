@@ -62,6 +62,7 @@ window.mecaAdminLive=async function(main,path){
    function showDossier(row){
      if(!row){detail.textContent='Sélectionnez un dossier.';return}
      const lines=['DOSSIER '+(row.reference||row.id),'Statut : '+(row.statut==='refuse'?'Devis refusé — dossier clôturé':row.statut||'—')+(row.statut==='devis_envoye'&&row.devis_decision==='accepte'?' (devis accepté, paiement initial attendu)':''),'Client : '+(row.contact||'—'),'E-mail : '+(row.email||'—'),'Créé le : '+(row.cree_le?new Date(row.cree_le).toLocaleString('fr-FR'):'—'),'Type : '+(row.type_dossier==='professionnel'?'Professionnel':'Particulier')];
+     lines.push('Priorité déclarée : '+(row.urgent?'🚨 URGENTE — examiner dès que possible (Express à proposer seulement dans le devis)':'Normale'));
      lines.push('Téléphone : '+(String(row.telephone||'').trim()||'NON COMMUNIQUÉ — à demander au client'));
      const budget=String(row.details?.budget??'').trim();
      if(!budget)lines.push('Règle de réussite : une offre fournisseur compatible, disponible et au prix vérifié peut valider la recherche quel que soit le prix de la pièce, sans obligation d’achat.');
@@ -71,7 +72,8 @@ window.mecaAdminLive=async function(main,path){
    }
    for(const row of dossiers){
      const button=document.createElement('button');button.type='button';button.className='btn dark small';button.style.cssText='text-align:left;white-space:normal;line-height:1.5;padding:12px';
-     button.textContent=(row.reference||'Dossier')+' · '+(row.contact||'Client')+' · '+(row.details?.brand||'')+' '+(row.details?.model||'')+' · '+(row.statut||'—');
+     if(row.urgent){button.style.border='2px solid #f19b41';button.style.background='linear-gradient(100deg,#42251b,#29221c)';}
+     button.textContent=(row.urgent?'🚨 URGENT · ':'')+(row.reference||'Dossier')+' · '+(row.contact||'Client')+' · '+(row.details?.brand||'')+' '+(row.details?.model||'')+' · '+(row.statut||'—');
      button.onclick=()=>{select.value=row.id;select.dispatchEvent(new Event('change'));detail.scrollIntoView?.({block:'nearest',behavior:'smooth'})};
      list.append(button);
    }
@@ -268,7 +270,7 @@ window.mecaAdminLive=async function(main,path){
        for(const row of dossiers){
          const tr=document.createElement('tr');
          const vehicle=[row.details?.brand,row.details?.model,row.details?.year].filter(Boolean).join(' ')||'—';
-         for(const value of [row.reference||row.id,row.contact||'—',vehicle,row.statut||'—',row.cree_le?new Date(row.cree_le).toLocaleString('fr-FR'):'—']){
+         for(const value of [(row.urgent?'🚨 URGENT · ':'')+(row.reference||row.id),row.contact||'—',vehicle,row.statut||'—',row.cree_le?new Date(row.cree_le).toLocaleString('fr-FR'):'—']){
            const td=document.createElement('td');td.textContent=value;tr.append(td);
          }
          const action=document.createElement('td');
