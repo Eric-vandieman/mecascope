@@ -150,7 +150,7 @@ export default async function handler(req,res){
       const prenom=norm(req.body.prenom,80),nom=norm(req.body.nom,80),telephone=norm(req.body.telephone,22);
       if(!prenom||!nom||!telephone||!/^[+0-9 ()-]{8,22}$/.test(telephone)||telephone.replace(/\D/g,'').length<9||req.body.legalAccepted!==true||req.body.legalVersion!=='2026-11-24')
         return res.status(400).json({message:'Complétez vos informations et acceptez les conditions applicables.'});
-      const payload={email,password,data:{prenom,nom,telephone,profil:'particulier',mecascope_legal_version:'2026-11-24',mecascope_legal_accepted_at:new Date().toISOString(),mecascope_marketing_opt_in:req.body.marketingOptIn===true}};
+      const payload={email,password,data:{prenom,nom,telephone,profil:'particulier',mecascope_legal_version:'2026-11-24',mecascope_legal_accepted_at:new Date().toISOString(),mecascope_marketing_opt_in:req.body.marketingOptIn===true,mecascope_push_opt_in:req.body.pushOptIn===true}};
       const response=await fetch(base+'signup?redirect_to='+encodeURIComponent('https://xn--mcascope-b1a.fr/confirmation.html?espace=particulier'),{method:'POST',headers,body:JSON.stringify(payload),signal:AbortSignal.timeout(12000)});
       if(!response.ok){
         const error=await response.json().catch(()=>({}));
