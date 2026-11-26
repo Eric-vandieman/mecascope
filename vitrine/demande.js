@@ -59,12 +59,13 @@ form.addEventListener('submit',async event=>{
   if(brandSelect&&!brandSelect.hidden&&brandSelect.value)fields.set('brand',brandSelect.selectedOptions[0]?.textContent||'');
   const names=['vehicleType','brand','model','year','engine','trim','vin','fuel','gearbox','ref','part','budget','colourType','notes','contact','email','phone','website'];
   const payload=Object.fromEntries(names.map(name=>[name,String(fields.get(name)||'').trim()]));
+  payload.urgent=fields.get('urgent')==='oui';
   payload.vin=payload.vin.replace(/\s+/g,'').toUpperCase();
   payload.photos=await Promise.all([...(files?.files||[])].map(readPhoto));
   const response=await fetch('/api/demande-piece',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
   const result=await response.json().catch(()=>({}));
   if(!response.ok||!result.sent)throw Error(result.message||'La transmission a échoué.');
-  setStatus('Demande transmise à Mécascope ! Référence : '+result.reference,true);
+  setStatus((payload.urgent?'🚨 Votre demande urgente est enregistrée. Elle sera examinée pendant nos horaires de traitement.':'Demande transmise à Mécascope !')+' Référence : '+result.reference,true);
   form.reset();checkFiles();
  }catch(e){
   setStatus(((e&&e.message)||'Erreur d’envoi.')+' Aucun envoi n’a été confirmé.');
