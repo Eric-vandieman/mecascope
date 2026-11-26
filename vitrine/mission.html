@@ -1,4 +1,11 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Mission — Mécascope</title><link rel="icon" type="image/webp" sizes="192x192" href="/logo-ms-officiel.webp?v=ms-20261125"><link rel="shortcut icon" href="/logo-ms-officiel.webp?v=ms-20261125"><link rel="stylesheet" href="/site.css"><style>body{background:#131b24;color:#f4f1ec;font:16px Arial}.mission{max-width:690px;margin:45px auto;padding:30px;border:1px solid #725431;border-radius:18px;background:#202b37}h1{color:#efac64}button{border:0;padding:16px 24px;background:#ed932d;border-radius:8px;font-weight:bold;cursor:pointer}button:disabled{opacity:.5}.muted{color:#bac5d1}#etat{line-height:1.6}#erreur{color:#edc48c}</style></head><body><main class="mission"><a href="/" style="color:#edb16b">← Mécascope</a><h1>Votre mission de recherche</h1><p id="etat" role="status">Chargement du dossier…</p><div id="message-personnel" hidden style="white-space:pre-wrap;line-height:1.7;padding:16px;background:#16212c;border-left:3px solid #ed932d;border-radius:8px;margin:18px 0"></div>
+<section id="meca-account-after-payment" hidden style="margin:22px 0;padding:20px;border:2px solid #e9a457;border-radius:13px;background:#17222e;line-height:1.65" aria-label="Création du compte après paiement">
+<h2 style="color:#f2b86e;margin:0 0 10px">🔔 Étape obligatoire après paiement : votre compte Mécascope</h2>
+<p id="meca-account-text">Votre acompte est confirmé. Pour retrouver votre dossier, échanger avec notre équipe et suivre la recherche de votre pièce, créez votre compte particulier avec <strong>la même adresse e-mail que celle de votre demande</strong>.</p>
+<p><strong>Important :</strong> une fois connecté, activez les notifications sur votre téléphone et autorisez-les dans votre navigateur. Vous pourrez ainsi être prévenu rapidement lorsqu'une proposition ou une pièce trouvée est disponible, en complément des e-mails. L'autorisation de notifications reste facultative.</p>
+<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:16px"><a id="meca-account-create" href="/inscription.html" style="padding:13px 17px;background:#ed932d;color:#151a20;border-radius:8px;font-weight:bold;text-decoration:none">Créer mon compte</a><a id="meca-account-login" href="/connexion.html" style="padding:13px 17px;border:1px solid #d6a06c;color:#f5dfc3;border-radius:8px;text-decoration:none">J'ai déjà un compte</a></div>
+<p class="muted" style="font-size:13px">Si vous avez déjà un compte avec l'adresse e-mail utilisée pour ce dossier, connectez-vous : la mission payée sera automatiquement associée après vérification de votre adresse.</p>
+</section>
 <div id="devis-formulaire" hidden style="padding:16px 0">
 <h2 style="color:#efac64">Votre devis et vos options</h2><div id="tableau-tarif" style="line-height:1.9;margin-bottom:15px"></div>
 <fieldset style="border:1px solid #725431;border-radius:9px;padding:16px;margin:16px 0">
@@ -44,6 +51,17 @@
   const r=await fetch('/api/unitaire?action=status&t='+encodeURIComponent(token),{cache:'no-store'});
   const data=await r.json().catch(()=>({}));if(!r.ok)throw Error(data.message||'Dossier inaccessible');
   current=data;quote.hidden=true;payer.hidden=true;erreur.textContent='';
+  const accountPanel=$('meca-account-after-payment');
+  accountPanel.hidden=!data.paid;
+  if(data.paid){
+   // L'authentification et le rattachement se font uniquement par l'adresse e-mail confirmée.
+   fetch('/api/particulier-auth',{credentials:'same-origin',cache:'no-store'}).then(async r=>{
+    if(r.ok){accountPanel.querySelector('#meca-account-create').textContent='Accéder à mon espace';accountPanel.querySelector('#meca-account-create').href='/mon-espace.html#demandes';
+     accountPanel.querySelector('#meca-account-login').hidden=true;
+     $('meca-account-text').textContent='Votre paiement est confirmé. Accédez à votre compte Mécascope pour suivre votre mission. Si vous utilisez la même adresse e-mail confirmée que celle de votre demande, votre dossier payé y sera automatiquement rattaché.';
+    }
+   }).catch(()=>{});
+  }
   $('confirmation-sans-plafond').hidden=!data.budgetNonRenseigne;
   intro.hidden=!data.proposition;intro.textContent=data.proposition||'';
   offre.textContent='Référence : '+data.reference+(data.offre?' — '+data.offre:'');
@@ -109,6 +127,6 @@
   }catch(e){erreur.textContent=e.message;payer.disabled=false}
  };
  try{await refresh()}catch(e){etat.textContent=e.message}
- if(qs.get('paiement')==='retour'){erreur.textContent='Retour de Stripe reçu. Confirmation bancaire en cours.';setTimeout(()=>refresh().catch(e=>erreur.textContent=e.message),3000)}
+ if(qs.get('paiement')==='retour'&&!current?.paid){erreur.textContent='Retour de Stripe reçu. Vérification de la confirmation bancaire…';setTimeout(()=>refresh().catch(e=>erreur.textContent=e.message),3000);setTimeout(()=>{if(!current?.paid)refresh().catch(()=>{})},9000)}
 })();
 </script><script src="/mission-chat.js?v=20261125-r2" defer></script></body></html>
