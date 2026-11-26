@@ -55,7 +55,15 @@
   current=data;quote.hidden=true;payer.hidden=true;erreur.textContent='';
   const accountPanel=$('meca-account-after-payment');
   accountPanel.hidden=!data.paid||data.accountReady;
-  if(data.paid&&!data.accountReady){
+  if(data.professional){
+    $('meca-account-text').textContent='Votre paiement est confirmé. Connectez-vous à votre espace professionnel Mécascope : votre recherche à l’unité est rattachée à votre établissement et ne consomme aucun crédit.';
+    $('meca-account-create').textContent='Accéder à mon espace Pro';
+    $('meca-account-create').href='/espace-pro.html';
+    $('meca-account-login').textContent='Connexion professionnelle';
+    $('meca-account-login').href='/compte.html#professionnel';
+    $('meca-account-login').hidden=false;
+  }
+  if(data.paid&&!data.accountReady&&!data.professional){
    // L'authentification et le rattachement se font uniquement par l'adresse e-mail confirmée.
    fetch('/api/particulier-auth',{credentials:'same-origin',cache:'no-store'}).then(async r=>{
     if(r.ok){accountPanel.querySelector('#meca-account-create').textContent='Accéder à mon espace';accountPanel.querySelector('#meca-account-create').href='/mon-espace.html#demandes';
@@ -85,9 +93,9 @@
    conditions.textContent='Vous pouvez contacter Mécascope si vous souhaitez déposer une nouvelle demande.';
   }else if(data.statut==='reussite'){
    etat.textContent='Une source a été identifiée. Solde restant : '+euro(data.solde)+'.';
-   conditions.textContent=data.accountReady?'Aucune option déjà payée n’est facturée une seconde fois.':'Pour régler le solde, connectez-vous à votre compte particulier Mécascope confirmé.';
+   conditions.textContent=data.accountReady?'Aucune option déjà payée n’est facturée une seconde fois.':data.professional?'Pour régler le solde, connectez-vous à l’espace Pro de votre garage.':'Pour régler le solde, connectez-vous à votre compte particulier Mécascope confirmé.';
    payer.dataset.stage='solde';payer.textContent='Régler le solde de '+euro(data.solde);payer.hidden=!data.accountReady;
-  }else if(data.statut==='acompte_paye')etat.textContent=data.accountReady?'Paiement confirmé : votre recherche est en cours. Suivez-la depuis votre espace particulier.':'Paiement confirmé : créez votre compte ou connectez-vous pour suivre votre recherche.';
+  }else if(data.statut==='acompte_paye')etat.textContent=data.accountReady?'Paiement confirmé : votre recherche est en cours. Suivez-la depuis votre espace Mécascope.':data.professional?'Paiement confirmé : connectez-vous à votre espace Pro pour suivre votre dossier.':'Paiement confirmé : créez votre compte ou connectez-vous pour suivre votre recherche.';
   else if(data.statut==='solde_paye')etat.textContent='Solde confirmé. Mécascope finalise votre dossier.';
   else if(data.statut==='echec')etat.textContent='Recherche infructueuse. Aucun solde de réussite à payer.';
   else etat.textContent='Demande reçue, étude en cours.';
