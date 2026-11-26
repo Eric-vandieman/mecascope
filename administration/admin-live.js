@@ -300,10 +300,28 @@ window.mecaAdminLive=async function(main,path){
      const table=main.querySelector('#list-content tbody');
      if(table){
        table.replaceChildren();
-       for(const row of dossiers){
+       const params=new URLSearchParams(location.hash.split('?')[1]||'');
+       const waitingOnly=params.get('filtre')==='devis_en_attente';
+       const visibleDossiers=waitingOnly?dossiers.filter(x=>x.statut==='devis_envoye'&&x.devis_decision==='en_attente'):dossiers;
+       const tableHost=main.querySelector('#list-content');
+       if(waitingOnly&&tableHost){
+         const note=document.createElement('div');note.className='panel';
+         note.style.cssText='margin-bottom:12px;border:1px solid #b78849';
+         const title=document.createElement('strong');title.textContent='Propositions envoyées : '+visibleDossiers.length+' en attente de réponse';
+         const explain=document.createElement('p');explain.textContent='La relance reste manuelle. Ouvrez un dossier et utilisez « Renvoyer le même devis » si nécessaire, après 24 à 48 heures.';
+         const all=document.createElement('button');all.type='button';all.className='btn dark small';all.textContent='Afficher toutes les demandes';all.onclick=()=>{location.hash='#/admin/demandes'};
+         note.append(title,explain,all);tableHost.prepend(note);
+       }
+       for(const row of visibleDossiers){
          const tr=document.createElement('tr');
          const vehicle=[row.details?.brand,row.details?.model,row.details?.year].filter(Boolean).join(' ')||'—';
-         for(const value of [(row.urgent?'🚨 URGENT · ':'')+(row.reference||row.id),row.contact||'—',vehicle,row.statut||'—',row.cree_le?new Date(row.cree_le).toLocaleString('fr-FR'):'—']){
+         let statut=row.statut||'—';
+         if(row.statut==='devis_envoye'&&row.devis_decision==='en_attente'){
+          const sent=row.devis_envoye_le?new Date(row.devis_envoye_le):null;
+          const hours=sent&&Number.isFinite(sent.getTime())?Math.max(0,(Date.now()-sent.getTime())/3600000):0;
+          statut=hours>=48?'Devis envoyé · relance 48 h possible':hours>=24?'Devis envoyé · relance 24 h possible':'Devis envoyé · en attente';
+         }
+         for(const value of [(row.urgent?'🚨 URGENT · ':'')+(row.reference||row.id),row.contact||'—',vehicle,statut,row.statut==='devis_envoye'&&row.devis_envoye_le?'Envoyé le '+new Date(row.devis_envoye_le).toLocaleString('fr-FR'):row.cree_le?new Date(row.cree_le).toLocaleString('fr-FR'):'—']){
            const td=document.createElement('td');td.textContent=value;tr.append(td);
          }
          const action=document.createElement('td');
@@ -312,7 +330,7 @@ window.mecaAdminLive=async function(main,path){
          action.append(open);tr.append(action);table.append(tr);
        }
        main.querySelector('#list-content .empty')?.remove();
-       if(!dossiers.length){const message=document.createElement('p');message.className='empty';message.textContent='Aucun dossier client enregistré.';main.querySelector('#list-content .tablewrap')?.append(message)}
+       if(!visibleDossiers.length){const message=document.createElement('p');message.className='empty';message.textContent=waitingOnly?'Aucun devis actuellement en attente de réponse.':'Aucun dossier client enregistré.';main.querySelector('#list-content .tablewrap')?.append(message)}
      }
    }
    const send=document.createElement('button');send.type='button';send.className='btn orange';send.textContent='Envoyer la réponse dans la conversation';
