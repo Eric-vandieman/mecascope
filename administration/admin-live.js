@@ -69,7 +69,19 @@ window.mecaAdminLive=async function(main,path){
    const wrap=document.createElement('div');wrap.className='panel';wrap.append(select);
    const history=document.createElement('div');history.id='meca-live-history';history.style.cssText='white-space:pre-wrap;padding:12px;line-height:1.7';wrap.append(history);
    form.before(wrap);
-   if(compactDemandes){wrap.hidden=true;wrap.style.display='none';if(composerPanel){composerPanel.hidden=true;composerPanel.style.display='none'}}
+   if(compactDemandes){
+    wrap.hidden=true;wrap.style.display='none';
+    if(composerPanel){composerPanel.hidden=true;composerPanel.style.display='none'}
+    const close=document.createElement('button');close.type='button';close.className='btn dark small';close.textContent='← Fermer le dossier et revenir aux demandes';
+    close.style.cssText='margin-bottom:12px';
+    close.onclick=()=>{
+      select.value='';select.dispatchEvent(new Event('change'));
+      wrap.hidden=true;wrap.style.display='none';
+      if(composerPanel){composerPanel.hidden=true;composerPanel.style.display='none'}
+      main.querySelector('#list-content')?.scrollIntoView?.({block:'start',behavior:'smooth'});
+    };
+    wrap.prepend(close);
+   }
    // Registre des dossiers réels : visible immédiatement, même sans sélection.
    const registry=document.createElement('section');
    registry.className='panel meca-dossiers-registry';
