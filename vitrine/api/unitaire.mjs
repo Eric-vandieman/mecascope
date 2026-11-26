@@ -31,16 +31,34 @@ async function getAdmin(req){
 function minimal(d){const offer=offers[d.offre];const expressFee=d.express_option==='24h'?50:d.express_option==='48h'?20:0;const reservationFee=d.reservation_option?10:0;
  const prepaid=d.options_paiement_avance===true;const later=prepaid?0:((d.express_validee?expressFee:0)+(d.reservation_validee?reservationFee:0));
  const initial=offer?offer.deposit+(prepaid?expressFee+reservationFee:0):null;
- return {reference:d.reference,statut:d.statut,decision:d.devis_decision||'en_attente',offre:offer?.label||null,initial,total:offer?.total||null,solde:offer?offer.total-offer.deposit+(d.statut==='reussite'||d.statut==='solde_paye'?later:0):null,expressOption:d.express_option||null,reservationOption:!!d.reservation_option,optionsPayeesAvance:prepaid,conditionalMax:prepaid?0:expressFee+reservationFee,paid:!!d.initial_paid_at,balancePaid:!!d.solde_paid_at,proposition:d.proposition_texte||null,budgetNonRenseigne:!String(d.details?.budget??'').trim(),sansPlafondConfirme:!!d.sans_plafond_confirme};}
+ return {reference:d.reference,statut:d.statut,decision:d.devis_decision||'en_attente',offre:offer?.label||null,initial,total:offer?.total||null,solde:offer?offer.total-offer.deposit+(d.statut==='reussite'||d.statut==='solde_paye'?later:0):null,expressOption:d.express_option||null,reservationOption:!!d.reservation_option,optionsPayeesAvance:prepaid,conditionalMax:prepaid?0:expressFee+reservationFee,paid:!!d.initial_paid_at,professional:!!d.garage_id,balancePaid:!!d.solde_paid_at,proposition:d.proposition_texte||null,budgetNonRenseigne:!String(d.details?.budget??'').trim(),sansPlafondConfirme:!!d.sans_plafond_confirme};}
 // Après paiement initial, le suivi privé exige un compte particulier confirmé.
 async function clientAccount(req,d){
  if(!d?.initial_paid_at)return false;
- const raw=String(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('__Host-mecascope-particulier='))?.slice('__Host-mecascope-particulier='.length);
- if(!raw)return false;
- let token='';try{token=decodeURIComponent(raw)}catch{return false}
- if(!token||!process.env.SUPABASE_PUBLISHABLE_KEY)return false;
+ const fromCookie=name=>{
+  const raw=String(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith(name+'='))?.slice(name.length+1);
+  if(!raw)return '';try{return decodeURIComponent(raw)}catch{return ''}
+ };
+ const pub=process.env.SUPABASE_PUBLISHABLE_KEY,root=db().base;
+ if(!pub)return false;
+ if(d.garage_id){
+  const pro=fromCookie('__Host-mecascope-professional');
+  if(!pro)return false;
+  try{
+   const ur=await fetch(root+'/auth/v1/user',{headers:{apikey:pub,Authorization:'Bearer '+pro},signal:AbortSignal.timeout(8000)});
+   if(!ur.ok)return false;
+   const user=await obj(ur);
+   if(!user?.id||!user.email_confirmed_at||user.user_metadata?.profil!=='professionnel')return false;
+   const access=await fetch(root+'/rest/v1/rpc/meca_tableau_bord',{method:'POST',
+    headers:{apikey:pub,Authorization:'Bearer '+pro,'Content-Type':'application/json'},body:'{}',signal:AbortSignal.timeout(8500)});
+   if(!access.ok)return false;
+   const board=await obj(access);
+   return board?.garage?.id===d.garage_id&&board.permissions?.view===true;
+  }catch{return false}
+ }
+ const token=fromCookie('__Host-mecascope-particulier');if(!token)return false;
  try{
-  const response=await fetch(db().base+'/auth/v1/user',{headers:{apikey:process.env.SUPABASE_PUBLISHABLE_KEY,Authorization:'Bearer '+token},signal:AbortSignal.timeout(9000)});
+  const response=await fetch(root+'/auth/v1/user',{headers:{apikey:pub,Authorization:'Bearer '+token},signal:AbortSignal.timeout(9000)});
   if(!response.ok)return false;
   const u=await obj(response);
   return !!(u?.id&&u.email_confirmed_at&&u.user_metadata?.profil==='particulier'&&
