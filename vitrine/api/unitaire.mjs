@@ -218,8 +218,8 @@ export default async function handler(req,res){
   params.set('metadata[service]','mecascope_unitaire');params.set('metadata[dossier_id]',d.id);
   params.set('metadata[stage]',stage);params.set('metadata[price_id]',price);
   params.set('payment_intent_data[metadata][dossier_id]',d.id);
-  params.set('success_url','https://xn--mcascope-b1a.fr/mission.html?t='+encodeURIComponent(token)+'&paiement=retour');
-  params.set('cancel_url','https://xn--mcascope-b1a.fr/mission.html?t='+encodeURIComponent(token)+'&paiement=annule');
+  params.set('success_url','https://xn--mcascope-b1a.fr/mission.html?t='+encodeURIComponent(token)+'&paiement=retour&etape='+stage);
+  params.set('cancel_url','https://xn--mcascope-b1a.fr/mission.html?t='+encodeURIComponent(token)+'&paiement=annule&etape='+stage);
   const sr=await fetch('https://api.stripe.com/v1/checkout/sessions',{
    method:'POST',headers:{Authorization:'Bearer '+process.env.STRIPE_SECRET_KEY,'Content-Type':'application/x-www-form-urlencoded',
     'Idempotency-Key':'meca-unitaire-'+stage+'-'+d.id},
