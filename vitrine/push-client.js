@@ -5,8 +5,8 @@
  const state=box.querySelector('[data-push-status]'),enable=box.querySelector('[data-push-enable]'),disable=box.querySelector('[data-push-disable]');
  const supported=()=>('serviceWorker'in navigator)&&('PushManager'in window)&&('Notification'in window);
  const api=async payload=>{
-  const response=await fetch('/api/notifications-particulier',payload?{
-   method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),cache:'no-store'
+  const response=await fetch('/api/particulier-auth'+(payload?'':'?action=push-config'),payload?{
+   method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({...payload,action:payload.action==='subscribe'?'push-subscribe':'push-unsubscribe'}),cache:'no-store'
   }:{credentials:'same-origin',cache:'no-store'});
   const data=await response.json().catch(()=>({}));
   if(!response.ok)throw Error(data.message||'Notifications indisponibles');
