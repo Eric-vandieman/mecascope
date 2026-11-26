@@ -32,6 +32,22 @@ function minimal(d){const offer=offers[d.offre];const expressFee=d.express_optio
  const prepaid=d.options_paiement_avance===true;const later=prepaid?0:((d.express_validee?expressFee:0)+(d.reservation_validee?reservationFee:0));
  const initial=offer?offer.deposit+(prepaid?expressFee+reservationFee:0):null;
  return {reference:d.reference,statut:d.statut,decision:d.devis_decision||'en_attente',offre:offer?.label||null,initial,total:offer?.total||null,solde:offer?offer.total-offer.deposit+(d.statut==='reussite'||d.statut==='solde_paye'?later:0):null,expressOption:d.express_option||null,reservationOption:!!d.reservation_option,optionsPayeesAvance:prepaid,conditionalMax:prepaid?0:expressFee+reservationFee,paid:!!d.initial_paid_at,balancePaid:!!d.solde_paid_at,proposition:d.proposition_texte||null,budgetNonRenseigne:!String(d.details?.budget??'').trim(),sansPlafondConfirme:!!d.sans_plafond_confirme};}
+// Après paiement initial, le suivi privé exige un compte particulier confirmé.
+async function clientAccount(req,d){
+ if(!d?.initial_paid_at)return false;
+ const raw=String(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('__Host-mecascope-particulier='))?.slice('__Host-mecascope-particulier='.length);
+ if(!raw)return false;
+ let token='';try{token=decodeURIComponent(raw)}catch{return false}
+ if(!token||!process.env.SUPABASE_PUBLISHABLE_KEY)return false;
+ try{
+  const response=await fetch(db().base+'/auth/v1/user',{headers:{apikey:process.env.SUPABASE_PUBLISHABLE_KEY,Authorization:'Bearer '+token},signal:AbortSignal.timeout(9000)});
+  if(!response.ok)return false;
+  const u=await obj(response);
+  return !!(u?.id&&u.email_confirmed_at&&u.user_metadata?.profil==='particulier'&&
+   String(u.email||'').toLowerCase()===String(d.email||'').toLowerCase()&&
+   (!d.particulier_id||d.particulier_id===u.id));
+ }catch{return false}
+}
 async function dossier(t){
  if(typeof t!=='string'||!(/^[a-f0-9]{64}$/i.test(t))&&!(t.length>=36&&t.length<=80))return null;
  const rows=await query('meca_demandes_unitaires?jeton_hash=eq.'+hash(t)+'&select=*&limit=1');
@@ -69,6 +85,9 @@ export default async function handler(req,res){
    const token=String(extra==='conversation'?req.query?.t||'':req.body?.token||'');
    const message=extra==='send-message'?String(req.body?.message||'').trim():null;
    if(!/^[a-f0-9]{64}$/i.test(token)||(message!==null&&(!message||message.length>3000)))return res.status(400).json({message:'Lien ou message incorrect'});
+   const entry=await dossier(token);
+   if(!entry)return res.status(404).json({message:'Lien de mission invalide'});
+   if(entry.initial_paid_at&&!(await clientAccount(req,entry)))return res.status(403).json({message:'Après paiement, connectez-vous à votre compte Mécascope confirmé avec la même adresse e-mail pour accéder à la conversation et au suivi.'});
    const result=await query('rpc/meca_client_conversation',{method:'POST',body:JSON.stringify({p_jeton:token,p_message:message})});
    if(extra==='send-message'){
      try{await email('contact@xn--mcascope-b1a.fr','Mécascope — réponse client '+safe(result.reference||''),
@@ -151,7 +170,7 @@ export default async function handler(req,res){
   const token=req.method==='GET'?req.query?.t:b.token;
   const d=await dossier(token);
   if(!d)return res.status(404).json({message:'Lien invalide ou expiré'});
-  if(action==='status')return res.status(200).json(minimal(d));
+  if(action==='status')return res.status(200).json({...minimal(d),accountReady:d.initial_paid_at?await clientAccount(req,d):false});
   if(action==='decision'){
    if(req.method!=='POST'||!d.options_paiement_avance)return res.status(409).json({message:'Décision indisponible pour cette proposition'});
    if(d.statut!=='devis_envoye')return res.status(409).json({message:'Ce devis n’est plus en attente de réponse'});
@@ -174,6 +193,7 @@ export default async function handler(req,res){
   if(action!=='checkout')return res.status(400).json({message:'Action inconnue'});
   const stage=b.stage,offer=offers[d.offre];
   if(!offer||!['initial','solde'].includes(stage))return res.status(400).json({message:'Paiement invalide'});
+  if(stage==='solde'&&!(await clientAccount(req,d)))return res.status(403).json({message:'Connectez-vous à votre compte particulier Mécascope avec votre adresse e-mail confirmée avant de régler le solde.'});
   if(stage==='initial'&&(d.statut!=='devis_envoye'||(d.options_paiement_avance&&d.devis_decision!=='accepte'))||stage==='solde'&&d.statut!=='reussite')
    return res.status(409).json({message:'Ce paiement n’est pas disponible pour le dossier'});
   const price=process.env[stage==='initial'?offer.initial:offer.balance];
