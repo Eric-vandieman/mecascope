@@ -45,21 +45,22 @@ window.mecaAdminLive=async function(main,path){
   const conversations=await call({action:'conversations'}).catch(()=>[]);
   const inbox=Array.isArray(conversations)?conversations:[];
   const unreadTotal=inbox.reduce((n,c)=>n+Number(c.non_lus||0),0);
+  const pendingCount=inbox.filter(c=>c.dernier_auteur==='client').length;
   for(const nav of document.querySelectorAll('.side a[href*="/admin/messages"],.side a[data-go="/admin/messages"]')){
     const mark=nav.querySelector('.meca-inbox-unread-badge')||document.createElement('span');
-    mark.className='meca-inbox-unread-badge';mark.textContent=unreadTotal?String(unreadTotal):'';
-    mark.style.cssText='display:inline-block;margin-left:8px;padding:2px 8px;border-radius:20px;background:'+(unreadTotal?'#e9812a':'transparent')+';color:#161b22;font-weight:800';
+    mark.className='meca-inbox-unread-badge';mark.textContent=pendingCount?String(pendingCount):'';
+    mark.style.cssText='display:inline-block;margin-left:8px;padding:2px 8px;border-radius:20px;background:'+(pendingCount?'#e9812a':'transparent')+';color:#161b22;font-weight:800';
     if(!mark.parentNode)nav.append(mark);
   }
   if(path==='/admin'){
     const metrics=main.querySelector('.metrics.six');
     if(metrics){
-      const tile=document.createElement('div');tile.className='metric';tile.id='meca-inbox-tile';tile.style.cssText='cursor:pointer;border:2px solid '+(unreadTotal?'#ff9933':'#586471')+';background:'+(unreadTotal?'#38291e':'#1a222b');
+      const tile=document.createElement('div');tile.className='metric';tile.id='meca-inbox-tile';tile.style.cssText='cursor:pointer;border:2px solid '+(pendingCount?'#ff9933':'#586471')+';background:'+(pendingCount?'#38291e':'#1a222b');
       tile.tabIndex=0;tile.setAttribute('role','button');
       const box=document.createElement('div'),caption=document.createElement('div'),count=document.createElement('div'),sub=document.createElement('small');
       caption.className='label';caption.textContent='Messages clients à traiter';
-      count.className='value';count.textContent=String(unreadTotal);
-      sub.textContent=inbox.filter(x=>Number(x.non_lus)>0).length+' conversation(s) non lue(s)';
+      count.className='value';count.textContent=String(pendingCount);
+      sub.textContent=unreadTotal+' message(s) non lu(s) · '+inbox.length+' conversation(s) au total';
       box.append(caption,count,sub);tile.append(box);
       const go=()=>{location.hash='#/admin/messages'};tile.onclick=go;tile.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}};
       metrics.append(tile);
@@ -137,17 +138,19 @@ window.mecaAdminLive=async function(main,path){
    wrap.before(registry);
    if(path==='/admin/messages'){
     registry.querySelector('h2').textContent='Boîte de réception · '+inbox.length+' conversation(s)';
-    helper.textContent='Les conversations avec des messages non lus sont surlignées en orange. Cliquez sur un dossier pour lire et traiter le message.';
+    helper.textContent='En orange : le dernier message provient du client et attend votre réponse. Un message reste à traiter même après lecture, jusqu’à ce que vous répondiez.';
     list.replaceChildren();
+    select.replaceChildren(new Option('Choisir une conversation client',''));
     for(const c of inbox){
+      select.add(new Option(c.reference+' — '+c.contact,c.dossier_id));
       if(!dossiers.some(x=>x.id===c.dossier_id)){
         dossiers.push({id:c.dossier_id,reference:c.reference,contact:c.contact,email:c.email,statut:c.statut,details:{}});
-        select.add(new Option(c.reference+' — '+c.contact,c.dossier_id));
       }
+      const needsReply=c.dernier_auteur==='client';
       const card=document.createElement('button');card.type='button';card.className='btn dark small meca-inbox-conversation';card.dataset.dossier=c.dossier_id;
-      card.style.cssText='text-align:left;display:flex;gap:14px;align-items:center;width:100%;padding:16px;border-radius:12px;white-space:normal;border:2px solid '+(c.non_lus?'#ffa23c':'#4b6279')+';background:'+(c.non_lus?'#4a2c1b':'#1d2b38')+';color:white';
+      card.style.cssText='text-align:left;display:flex;gap:14px;align-items:center;width:100%;padding:16px;border-radius:12px;white-space:normal;border:2px solid '+(needsReply?'#ffa23c':'#4b6279')+';background:'+(needsReply?'#4a2c1b':'#1d2b38')+';color:white';
       const body=document.createElement('div');body.style.cssText='flex:1;min-width:0';
-      const title=document.createElement('strong');title.textContent=(c.non_lus?'● NON LU · ':'')+c.reference+' — '+c.contact;
+      const title=document.createElement('strong');title.textContent=(c.non_lus?'● NON LU · ':needsReply?'● À TRAITER · ':'')+c.reference+' — '+c.contact;
       const excerpt=document.createElement('div');excerpt.textContent=c.extrait||'Message disponible';excerpt.style.cssText='font-weight:normal;opacity:.92;margin:7px 0;overflow-wrap:anywhere';
       const time=document.createElement('small');time.textContent=c.dernier_message?new Date(c.dernier_message).toLocaleString('fr-FR'):'';
       body.append(title,excerpt,time);card.append(body);
@@ -302,7 +305,7 @@ window.mecaAdminLive=async function(main,path){
      if(!row||!message){chatStatus.textContent='Choisissez un dossier et écrivez votre message.';return}
      if(!confirm('Envoyer ce message au client dans son espace de suivi ?'))return;
      chatButton.disabled=true;
-     try{const response=await call({action:'chat',id:row.id,message});chatInput.value='';chatStatus.textContent=response.message||'Message enregistré.';await refreshHistory()}
+     try{const response=await call({action:'chat',id:row.id,message});chatInput.value='';chatStatus.textContent=response.message||'Message enregistré.';await refreshHistory();if(path==='/admin/messages'){sessionStorage.setItem('meca-dossier-selected',row.id);location.reload()}}
      catch(e){chatStatus.textContent=e.message}finally{chatButton.disabled=false}
    };
    form.insertAdjacentHTML('beforeend','<label class="wide"><input type="checkbox" name="expressEligible"> Délai Express tenu et éligible au supplément prévu</label><label class="wide"><input type="checkbox" name="reservationConfirmed"> Réservation fournisseur effectivement confirmée</label>');
@@ -388,9 +391,9 @@ window.mecaAdminLive=async function(main,path){
           await call({action:'mark_read',id:row.id});
           const active=inbox.find(x=>x.dossier_id===row.id);if(active)active.non_lus=0;
           const card=list.querySelector('[data-dossier="'+row.id+'"]');
-          if(card){card.style.borderColor='#4b6279';card.style.background='#1d2b38';const title=card.querySelector('strong');if(title)title.textContent=row.reference+' — '+row.contact;const unread=card.querySelector('strong:last-child');if(unread&&unread.textContent.includes('nouveau(x)'))unread.remove()}
-          const unread=inbox.reduce((n,c)=>n+Number(c.non_lus||0),0);
-          for(const badge of document.querySelectorAll('.meca-inbox-unread-badge'))badge.textContent=unread?String(unread):'';
+          if(card){const awaiting=active?.dernier_auteur==='client';card.style.borderColor=awaiting?'#ffa23c':'#4b6279';card.style.background=awaiting?'#4a2c1b':'#1d2b38';const title=card.querySelector('strong');if(title)title.textContent=(awaiting?'● À TRAITER · ':'')+row.reference+' — '+row.contact;const unreadBadge=card.querySelector('strong:last-child');if(unreadBadge&&unreadBadge.textContent.includes('nouveau(x)'))unreadBadge.remove()}
+          const waiting=inbox.filter(c=>c.dernier_auteur==='client').length;
+          for(const badge of document.querySelectorAll('.meca-inbox-unread-badge'))badge.textContent=waiting?String(waiting):'';
         }catch(e){history.textContent='Lecture non confirmée : '+e.message}
       }
     }
