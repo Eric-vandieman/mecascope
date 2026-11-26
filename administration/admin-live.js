@@ -82,6 +82,120 @@ window.mecaAdminLive=async function(main,path){
    const tbody=main.querySelector('.tablewrap tbody');
    if(tbody){tbody.replaceChildren();for(const item of dossiers.slice(0,15)){const tr=document.createElement('tr');for(const v of [item.reference,item.contact,item.details?.brand+' '+item.details?.model,item.statut,item.cree_le?.slice(0,10)]){const td=document.createElement('td');td.textContent=v||'—';tr.append(td)}const td=document.createElement('td');const btn=document.createElement('button');btn.className='btn dark small';btn.textContent='Ouvrir';btn.onclick=()=>{location.hash='#/admin/demandes';sessionStorage.setItem('meca-dossier-selected',item.id)};td.append(btn);tr.append(td);tbody.append(tr)}main.querySelector('.tablewrap .empty')?.remove()}
   }
+
+  // Messagerie autonome : la page /admin/messages n'a pas le formulaire de devis.
+  if(path==='/admin/messages'){
+    const old=main.querySelector('.meca-inbox');
+    if(old)old.remove();
+    const head=main.querySelector('.pagehead');
+    const inboxStatus=document.createElement('p');
+    inboxStatus.setAttribute('role','status');inboxStatus.className='muted';
+    inboxStatus.textContent='Sélectionnez une conversation à gauche pour consulter le dossier et répondre au client.';
+    head?.after(inboxStatus);
+    const layout=document.createElement('section');
+    layout.className='meca-messages-layout';
+    layout.style.cssText='display:grid;grid-template-columns:minmax(260px,345px) minmax(0,1fr);gap:18px;margin-top:18px;align-items:start';
+    const left=document.createElement('section');left.className='panel';
+    left.style.cssText='padding:15px;border:1px solid #465866;border-radius:12px;background:#16202a';
+    const listTitle=document.createElement('h2');listTitle.textContent='Conversations clients';
+    listTitle.style.cssText='margin:0 0 8px;font-size:20px';
+    const listSummary=document.createElement('p');listSummary.style.cssText='margin:0 0 14px;color:#bfcad6;font-size:14px';
+    const list=document.createElement('div');list.style.cssText='display:grid;gap:10px';
+    left.append(listTitle,listSummary,list);
+    const right=document.createElement('section');right.className='panel';
+    right.style.cssText='padding:20px;border:1px solid #536b81;border-radius:12px;background:#15212e;min-height:330px';
+    const title=document.createElement('h2');title.textContent='Conversation avec le client';title.style.cssText='margin:0 0 10px';
+    const dossier=document.createElement('div');dossier.style.cssText='white-space:pre-wrap;color:#d9e1ea;font-size:14px;line-height:1.6;margin:0 0 15px';
+    const messages=document.createElement('div');messages.style.cssText='display:flex;flex-direction:column;gap:14px;max-height:550px;min-height:150px;overflow:auto;padding:17px;background:#0d1620;border:1px solid #425466;border-radius:12px';
+    const reply=document.createElement('form');reply.style.cssText='display:none;margin-top:17px;padding:16px;background:#20364a;border:1px solid #769bbb;border-radius:10px';
+    const replyLabel=document.createElement('label');replyLabel.textContent='Votre réponse au client';replyLabel.style.cssText='display:block;font-weight:700;margin-bottom:8px';
+    const input=document.createElement('textarea');input.rows=4;input.maxLength=3000;input.required=true;input.placeholder='Écrivez votre message au client…';input.style.cssText='width:100%;padding:12px;box-sizing:border-box;border-radius:8px;color:#162333;background:#fff;border:1px solid #a6bed4;line-height:1.5';
+    const send=document.createElement('button');send.type='submit';send.className='btn orange';send.textContent='Envoyer ma réponse';send.style.marginTop='10px';
+    const sendStatus=document.createElement('p');sendStatus.setAttribute('role','status');
+    reply.append(replyLabel,input,send,sendStatus);
+    right.append(title,dossier,messages,reply);
+    layout.append(left,right);main.append(layout);
+    const responsive=document.createElement('style');responsive.textContent='@media(max-width:800px){.meca-messages-layout{grid-template-columns:1fr!important}}';main.append(responsive);
+    let currentId=null;
+    let inboxItems=Array.isArray(inbox)?inbox:[];
+    const awaiting=c=>c?.dernier_auteur==='client';
+    const renderList=()=>{
+      list.replaceChildren();
+      const waiting=inboxItems.filter(awaiting).length;
+      listTitle.textContent='Conversations clients ('+inboxItems.length+')';
+      listSummary.textContent=waiting+' dossier(s) à traiter · En vert : réponse attendue · En gris : déjà traité';
+      if(!inboxItems.length){const empty=document.createElement('p');empty.textContent='Aucune conversation client enregistrée.';list.append(empty)}
+      for(const c of inboxItems){
+        const pending=awaiting(c);
+        const button=document.createElement('button');button.type='button';
+        button.dataset.dossier=c.dossier_id;button.setAttribute('aria-pressed',String(currentId===c.dossier_id));
+        button.style.cssText='width:100%;text-align:left;padding:14px;border-radius:10px;white-space:normal;line-height:1.5;cursor:pointer;border:2px solid '+(pending?'#4cca87':'#617386')+';background:'+(pending?'#174431':'#26313c')+';color:#fff;box-shadow:'+(currentId===c.dossier_id?'0 0 0 2px #f5aa52':'none');
+        const name=document.createElement('strong');name.style.cssText='display:block;font-size:15px';
+        name.textContent=(pending?'● À TRAITER · ':'✓ TRAITÉ · ')+(c.reference||'Dossier')+' — '+(c.contact||'Client');
+        const snippet=document.createElement('div');snippet.style.cssText='margin:7px 0;color:#e1e9f0;font-size:14px;overflow-wrap:anywhere';
+        snippet.textContent=String(c.extrait||'Message disponible').slice(0,175);
+        const meta=document.createElement('small');meta.textContent=(c.non_lus?c.non_lus+' nouveau(x) · ':'')+(c.dernier_message?new Date(c.dernier_message).toLocaleString('fr-FR'):'');
+        button.append(name,snippet,meta);
+        button.onclick=()=>openConversation(c.dossier_id);
+        list.append(button);
+      }
+    };
+    const refreshInbox=async()=>{
+      const data=await call({action:'conversations'});
+      if(!Array.isArray(data))throw Error('Liste des conversations indisponible');
+      inboxItems=data;renderList();
+      const waiting=data.filter(awaiting).length;
+      for(const mark of document.querySelectorAll('.meca-inbox-unread-badge'))mark.textContent=waiting?String(waiting):'';
+    };
+    const renderMessages=items=>{
+      messages.replaceChildren();
+      if(!items.length){const empty=document.createElement('p');empty.textContent='Aucun échange enregistré dans ce dossier.';messages.append(empty);return}
+      for(const m of items){
+        const client=m.auteur==='client';
+        const line=document.createElement('div');line.style.cssText='display:flex;justify-content:'+(client?'flex-start':'flex-end');
+        const bubble=document.createElement('article');bubble.style.cssText='max-width:87%;padding:13px 17px;background:'+(client?'#274a35':'#284b70')+';border:1px solid '+(client?'#65c991':'#81b2f0')+';color:#fff;border-radius:'+(client?'5px 15px 15px 15px':'15px 5px 15px 15px');
+        const who=document.createElement('strong');who.style.cssText='display:block;margin-bottom:7px';who.textContent=client?'👤 Message du client':'🔧 Réponse Mécascope';
+        const body=document.createElement('div');body.style.cssText='white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6';body.textContent=m.contenu||'';
+        const date=document.createElement('small');date.style.cssText='display:block;margin-top:8px;opacity:.8;text-align:right';date.textContent=m.cree_le?new Date(m.cree_le).toLocaleString('fr-FR'):'';
+        bubble.append(who,body,date);line.append(bubble);messages.append(line);
+      }
+      messages.scrollTop=messages.scrollHeight;
+    };
+    const openConversation=async id=>{
+      currentId=id;renderList();
+      const c=inboxItems.find(x=>x.dossier_id===id);
+      title.textContent='Conversation — '+(c?.reference||'Dossier client');
+      dossier.textContent=(c?.contact||'Client')+' · '+(c?.email||'')+' · '+(c?.statut||'');
+      messages.textContent='Chargement de la conversation…';reply.style.display='block';sendStatus.textContent='';
+      if(window.innerWidth<801)right.scrollIntoView?.({block:'start',behavior:'smooth'});
+      try{
+        const result=await call({action:'messages',id});
+        if(currentId!==id)return;
+        renderMessages(Array.isArray(result.messages)?result.messages:[]);
+        await call({action:'mark_read',id});
+        if(currentId===id){const item=inboxItems.find(x=>x.dossier_id===id);if(item)item.non_lus=0;renderList()}
+      }catch(error){if(currentId===id)messages.textContent='Erreur de chargement : '+error.message}
+    };
+    reply.addEventListener('submit',async event=>{
+      event.preventDefault();const content=input.value.trim();
+      if(!currentId||!content)return;
+      send.disabled=true;sendStatus.textContent='Envoi de la réponse en cours…';
+      try{
+        const id=currentId;
+        const result=await call({action:'chat',id,message:content});
+        input.value='';
+        sendStatus.textContent=result.message||'Réponse enregistrée.';
+        await refreshInbox();
+        await openConversation(id);
+      }catch(error){sendStatus.textContent='Envoi impossible : '+error.message}
+      finally{send.disabled=false}
+    });
+    renderList();
+    const requested=new URLSearchParams(location.hash.split('?')[1]||'').get('dossier');
+    if(requested&&inboxItems.some(x=>x.dossier_id===requested))openConversation(requested);
+    else if(inboxItems.length){messages.textContent='Cliquez sur un dossier dans la liste verte ou grise à gauche pour afficher toute la conversation.';}
+    return;
+  }
   if(['/admin/demandes','/admin/messages'].includes(path)){
    const query=new URLSearchParams(location.hash.split('?')[1]||'');
    if(query.get('source')==='professionnel'&&/^[a-f0-9-]{36}$/i.test(query.get('dossier')||'')&&!dossiers.some(x=>x.id===query.get('dossier')))dossiers.unshift({id:query.get('dossier'),reference:'Dossier professionnel',contact:'Client professionnel',type_dossier:'professionnel',statut:'recherche'});
