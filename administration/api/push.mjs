@@ -57,13 +57,28 @@ async function dispatch(id){
  const data=claimed;
  const url='/#/'+'admin/demandes?dossier='+encodeURIComponent(data.dossier_id);
  const isUrgent=data.event_type==='demande_urgente';
- const result=await deliver(data.subscribers,{id:data.id,title:isUrgent?'🚨🚨 MÉCASCOPE — DEMANDE URGENTE':'🔧 Mécascope — Nouvelle alerte',urgent:isUrgent,
-  body:isUrgent?'Nouveau client en urgence : ouvrir la demande en priorité. Aucun délai Express n’est encore souscrit.':data.event_type==='paiement_initial'?'Paiement confirmé : dossier à démarrer':
-   data.event_type==='solde_regle'?'Solde confirmé sur un dossier':
-   data.event_type==='message_client'?'Nouveau message client':
-   'Une nouvelle activité nécessite votre attention',
-  url,tag:'meca-'+data.id});
- const ok=result.success>0&&result.errors.length===0;
+ const eventLabels={
+  devis_accepte:['✅ Mécascope — Devis accepté','Le client a accepté votre proposition ; paiement initial attendu.'],
+  devis_refuse:['❌ Mécascope — Devis refusé','Le client a refusé votre proposition ; dossier clôturé.'],
+  devis_emis:['📤 Mécascope — Devis envoyé','Votre proposition a été envoyée au client.'],
+  paiement_initial:['💳 Mécascope — Acompte confirmé','Paiement initial reçu : la recherche peut démarrer.'],
+  solde_regle:['💶 Mécascope — Solde réglé','Le client a réglé le solde du dossier.'],
+  piece_trouvee:['✅ Mécascope — Pièce trouvée','Un résultat fournisseur a été enregistré.'],
+  recherche_infructueuse:['📁 Mécascope — Recherche clôturée','Recherche terminée sans résultat.'],
+  dossier_urgent:['⚡ Mécascope — Option Express','Un client a sélectionné une option Express.'],
+  demande_pro_validee:['🏢 Mécascope — Demande Pro validée','La demande professionnelle est validée.'],
+  nouvelle_demande_pro:['🏢 Mécascope — Nouvelle demande Pro','Un professionnel a déposé une recherche.'],
+  nouvelle_demande:['🔧 Mécascope — Nouvelle demande','Un particulier a déposé une recherche.'],
+  message_client:['💬 Mécascope — Message client','Un nouveau message client est arrivé.']
+ };
+ const notification=eventLabels[data.event_type];
+ const result=data.subscribers?.length===0?{success:0,expired:[],errors:[]}:await deliver(data.subscribers,{
+  id:data.id,title:isUrgent?'🚨🚨 MÉCASCOPE — DEMANDE URGENTE':(notification?.[0]||'🔧 Mécascope — Nouvelle alerte'),
+  urgent:isUrgent,
+  body:isUrgent?'Nouveau client en urgence : à examiner en priorité (Express non souscrit).':(notification?.[1]||data.reference+' : nouvelle activité à consulter.'),
+  url,tag:'meca-'+data.id
+ });
+ const ok=(data.subscribers?.length===0)||result.success>0&&result.errors.length===0;
  await rpc('meca_push_finish',{p_secret:secret(),p_id:id,p_success:ok,
   p_error:result.success===0?'Aucun appareil livré : '+result.errors.join(', '):result.errors.join(', '),
   p_expired:result.expired}).catch(()=>{});
@@ -106,6 +121,14 @@ export default async function handler(req,res){
   if(!base()||!pub())return json(res,503,{message:'Configuration Supabase manquante'});
   const token=await authorized(req);
   if(!token)return json(res,401,{message:'Authentification administrateur requise'});
+  if(b.action==='preferences')return json(res,200,{preferences:await rpc('meca_push_preferences_lire',{},token)});
+  if(b.action==='save-preference'){
+   if(typeof b.event_type!=='string'||typeof b.push_enabled!=='boolean'||typeof b.center_enabled!=='boolean')
+    return json(res,400,{message:'Choix de notification invalide'});
+   return json(res,200,{saved:await rpc('meca_push_preferences_modifier',{
+    p_type:b.event_type,p_push:b.push_enabled,p_center:b.center_enabled
+   },token)});
+  }
   if(b.action==='config')return json(res,200,{publicKey:process.env.MECA_VAPID_PUBLIC||null,ready:!!process.env.MECA_VAPID_PRIVATE});
   if(b.action==='center')return json(res,200,await rpc('meca_push_center',{p_mark_read:b.mark||null},token));
   if(b.action==='pro-detail'){if(!/^[a-f0-9-]{36}$/i.test(String(b.id||'')))return json(res,400,{message:'Dossier invalide'});return json(res,200,{dossier:await rpc('meca_push_pro_dossier',{p_id:b.id},token)})}
