@@ -108,7 +108,8 @@
   }
   const old=main.querySelector('#meca-push-install');
   if(old)return;
-  if(path!=='/admin'&&path!=='/admin/demandes')return;
+  // Les réglages de notifications restent dans l’onglet Notifications, jamais sur l’accueil ni les dossiers.
+  if(path!=='/admin/notifications')return;
   const area=document.createElement('section');area.className='panel meca-push-settings';area.id='meca-push-install';
   area.innerHTML='<h2>🔔 Alertes Android</h2><p>Recevez les nouvelles demandes, les paiements et les messages sur votre téléphone, même lorsque Chrome n’est pas au premier plan.</p>';
   const status=document.createElement('p');status.className='meca-push-status';status.setAttribute('role','status');area.append(status);
