@@ -14,10 +14,10 @@
 <label style="display:block;margin:10px 0"><input type="radio" name="express" value="48h"> Express 48 heures — +20 €</label>
 <label style="display:block;margin:10px 0"><input type="radio" name="express" value="24h"> Express 24 heures — +50 €</label></fieldset>
 <fieldset style="border:1px solid #725431;border-radius:9px;padding:16px;margin:16px 0"><legend><strong>2. Souhaitez-vous une demande de réservation 24 h auprès du fournisseur ?</strong></legend>
-<label style="display:block;margin:10px 0"><input type="radio" name="reservation" value="oui"> Oui — +10 €</label>
+<label style="display:block;margin:10px 0"><input type="radio" name="reservation" value="oui"> Oui — 10 € uniquement si la réservation fournisseur est confirmée (au solde)</label>
 <label style="display:block;margin:10px 0"><input type="radio" name="reservation" value="non"> Non — 0 €</label>
 </fieldset>
-<p class="muted">Les options choisies sont payées à l’avance avec l’acompte. Le supplément Express 24 h ou 48 h n’est remboursable qu’après expiration du délai convenu si aucune offre conforme n’a été identifiée dans ce délai ; aucun remboursement Express n’est déclenché avant l’échéance. La réservation fournisseur de 24 h (+10 €) est possible avec ou sans Express, même pour une recherche normale ; elle est remboursée si le fournisseur ne confirme aucune réservation. Le prix et la livraison de la pièce sont distincts.</p>
+<p class="muted">Seul le supplément Express éventuel est réglé avec l’acompte. Les 10 € de réservation ne seront facturés qu’au solde, en cas de recherche réussie ET de réservation effectivement confirmée par le fournisseur. Le supplément Express 24 h ou 48 h n’est remboursable qu’après expiration du délai convenu si aucune offre conforme n’a été identifiée dans ce délai ; aucun remboursement Express n’est déclenché avant l’échéance. La réservation fournisseur de 24 h (+10 €) est possible avec ou sans Express, même pour une recherche normale ; elle est remboursée si le fournisseur ne confirme aucune réservation. Le prix et la livraison de la pièce sont distincts.</p>
 <label id="confirmation-sans-plafond" hidden style="display:block;padding:15px;margin:18px 0;border:1px solid #efac64;border-radius:10px;line-height:1.7"><input type="checkbox" id="accord-sans-plafond"> <strong>Budget de la pièce non renseigné — confirmation obligatoire.</strong> Je reconnais que Mécascope peut présenter une offre fournisseur compatible, disponible et à prix vérifié, sans plafond de prix fixé par moi. Une telle offre peut valider la mission de recherche et rendre le solde prévu au devis exigible, même si je décide de ne pas acheter cette pièce. Aucun achat ne sera effectué sans mon accord.</label>
 <div id="resume-paiement" style="font-size:18px;font-weight:700;padding:14px;background:#12202a;border-radius:8px"></div><label style="display:block;margin-top:14px"><input type="checkbox" id="accord-conditions"> Je reconnais avoir consulté les <a href="/legal.html#cgv" target="_blank" rel="noopener noreferrer" style="color:#ffbd74">conditions générales de vente</a> et compris les montants payables immédiatement, les conditions de réalisation et les remboursements des options.</label>
 <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:18px"><button id="accepter" type="button">Valider mes options et accepter le devis</button><button id="refuser" type="button" style="background:#343e49;color:white;border:1px solid #9d8875">Refuser le devis</button></div>
@@ -36,14 +36,14 @@
   const reservationValue=document.querySelector('input[name="reservation"]:checked')?.value;
   const complete=express!==undefined&&reservationValue!==undefined;
   const reservation=reservationValue==='oui';
-  return {express,reservation,complete,extra:(express==='24h'?50:express==='48h'?20:0)+(reservation?10:0)};
+  return {express,reservation,complete,extra:(express==='24h'?50:express==='48h'?20:0)};
  }
  function showAmount(){
   if(!current)return;
   const x=selected();
   accept.disabled=!x.complete||!$('accord-conditions').checked||(current.budgetNonRenseigne&&!$('accord-sans-plafond').checked);
   accept.textContent=x.complete?'Accepter le devis de '+euro(current.total)+' € et payer '+euro((current.initial||0)+x.extra):'Choisissez toutes les options pour accepter le devis';
-  summary.textContent=(x.complete?'Vos deux choix sont validés. ':'Veuillez choisir explicitement le délai ET la réservation (oui/non) avant de valider. ')+'À régler maintenant : '+euro((current.initial||0)+x.extra)+' (acompte '+euro(current.initial||0)+' + options '+euro(x.extra)+'). Total de la prestation si réussite : '+euro((current.total||0)+x.extra)+'. Solde en cas de réussite : '+euro(current.solde||0)+'.';
+  summary.textContent=(x.complete?'Vos deux choix sont validés. ':'Veuillez choisir explicitement le délai ET la réservation (oui/non) avant de valider. ')+'À régler maintenant : '+euro((current.initial||0)+x.extra)+' (acompte '+euro(current.initial||0)+' + Express '+euro(x.extra)+'). Solde en cas de réussite : '+euro(current.solde||0)+(x.reservation?' + 10 € uniquement si la réservation fournisseur est confirmée':'')+'. Montant total de la prestation en cas de réussite : '+euro((current.total||0)+x.extra+(x.reservation?10:0))+' maximum.';
  }
  async function api(payload){
   const r=await fetch('/api/unitaire',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,...payload}),cache:'no-store'});
@@ -82,7 +82,7 @@
    showAmount();
   }else if(data.statut==='devis_envoye'&&data.decision==='accepte'){
    etat.textContent='Vous avez accepté le devis. Réglez le montant initial et les options sélectionnées pour lancer la recherche.';
-   conditions.textContent='Option : '+(data.expressOption||'aucun Express')+' ; réservation : '+(data.reservationOption?'oui':'non')+'. Les options choisies sont incluses dans le montant à régler.';
+   conditions.textContent='Option : '+(data.expressOption||'aucun Express')+' ; réservation : '+(data.reservationOption?'oui':'non')+'. L’option Express est incluse dans le montant initial. Les 10 € de réservation sont ajoutés seulement au solde si le fournisseur confirme effectivement la réservation.';
    payer.dataset.stage='initial';payer.textContent='Payer '+euro(data.initial)+' avec Stripe';payer.hidden=false;
   }else if(data.statut==='devis_envoye'&&!data.optionsPayeesAvance){
    etat.textContent='Proposition : '+euro(data.total)+' au total, dont '+euro(data.initial)+' initialement. Offre antérieure à la nouvelle présentation.';
