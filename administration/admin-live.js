@@ -138,6 +138,8 @@ window.mecaAdminLive=async function(main,path){
    wrap.before(registry);
    if(path==='/admin/messages'){
     registry.querySelector('h2').textContent='Boîte de réception · '+inbox.length+' conversation(s)';
+    detail.hidden=true;
+    if(composerPanel){composerPanel.hidden=true;composerPanel.style.display='none'}
     helper.textContent='En orange : le dernier message provient du client et attend votre réponse. Un message reste à traiter même après lecture, jusqu’à ce que vous répondiez.';
     list.replaceChildren();
     select.replaceChildren(new Option('Choisir une conversation client',''));
@@ -166,6 +168,7 @@ window.mecaAdminLive=async function(main,path){
 
    // Conversation = historique + une proposition prête à envoyer, sans plusieurs formulaires redondants.
    const assessmentPanel=document.createElement('section');assessmentPanel.className='panel';assessmentPanel.style.cssText='border:1px solid #be945a;padding:17px;margin:10px 0 14px';
+   if(path==='/admin/messages')assessmentPanel.hidden=true;
    const assessmentTitle=document.createElement('h3');assessmentTitle.textContent='Bilan IA — formule définitive du dossier';
    const assessmentBody=document.createElement('div');assessmentBody.style.cssText='white-space:pre-wrap;line-height:1.65';
    assessmentPanel.append(assessmentTitle,assessmentBody);wrap.insertBefore(assessmentPanel,history);
@@ -198,6 +201,7 @@ window.mecaAdminLive=async function(main,path){
    const proposalStatus=document.createElement('p');proposalStatus.setAttribute('role','status');quotePanel.append(proposalStatus);
    const failButton=document.createElement('button');failButton.type='button';failButton.className='btn danger';failButton.textContent='Clôturer la recherche sans résultat';failButton.hidden=true;quotePanel.append(failButton);
    wrap.append(quotePanel);
+   if(path==='/admin/messages')quotePanel.hidden=true;
    const chatPanel=document.createElement('div');chatPanel.style.cssText='margin-top:18px;padding:18px;background:#182e40;border:1px solid #6a9cc7;border-radius:12px';
    const chatHeading=document.createElement('h3');chatHeading.textContent='✉ Répondre au client (sans devis)';chatPanel.append(chatHeading);
    const chatInput=document.createElement('textarea');chatInput.rows=3;chatInput.maxLength=3000;chatInput.placeholder='Une question ou un complément pour le client…';chatInput.style.cssText='width:100%;padding:12px;min-height:95px;border-radius:9px;background:#f7fafc;color:#1d2833;border:1px solid #adc3d8';
@@ -312,7 +316,7 @@ window.mecaAdminLive=async function(main,path){
 
    function showOptions(){
      const row=dossiers.find(x=>x.id===select.value),existing=row?.statut==='devis_envoye';
-     quotePanel.hidden=!row||!['deposee','devis_envoye','acompte_paye'].includes(row.statut);
+     quotePanel.hidden=path==='/admin/messages'||!row||!['deposee','devis_envoye','acompte_paye'].includes(row.statut);
      quoteButton.hidden=!row||!['deposee','devis_envoye'].includes(row.statut)||(existing&&row.devis_decision!=='en_attente');
      failButton.hidden=!row||row.statut!=='acompte_paye';
      personal.disabled=existing;planSelect.disabled=true;
@@ -366,7 +370,7 @@ window.mecaAdminLive=async function(main,path){
     }catch(e){history.textContent='Impossible de charger la conversation : '+e.message}
    }
 
-   window.mecaPieceHistory?.(main,select,dossiers);
+   if(path==='/admin/demandes')window.mecaPieceHistory?.(main,select,dossiers);
    function openTreatment(id){
     if(!dossiers.some(x=>x.id===id))return;
     select.value=id;
@@ -441,7 +445,7 @@ window.mecaAdminLive=async function(main,path){
    const status=document.createElement('p');status.setAttribute('role','status');
    form.after(status);form.after(send);
    sendButton=send;
-   if(compactDemandes){send.hidden=true;status.hidden=true}
+   if(compactDemandes||path==='/admin/messages'){send.hidden=true;status.hidden=true}
    send.onclick=async()=>{
     const row=dossiers.find(x=>x.id===select.value);
     if(!row){status.textContent='Sélectionnez un dossier.';return}
