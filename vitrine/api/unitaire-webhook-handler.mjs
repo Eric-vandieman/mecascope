@@ -33,13 +33,9 @@ export default async function handleUnitaire(event,res,{key,url,admin}){
     if(!option||!process.env[option])throw Error('Option Express invalide');
     expected.push(process.env[option]);total+=row.express_option==='24h'?5000:2000;
    }
-   if(row.reservation_option){
-    if(!process.env.STRIPE_PRICE_RESERVATION)throw Error('Prix réservation indisponible');
-    expected.push(process.env.STRIPE_PRICE_RESERVATION);total+=1000;
-   }
   }
-  if(stage==='solde'&&!row.options_paiement_avance){
-   if(row.express_validee){
+  if(stage==='solde'){
+   if(!row.options_paiement_avance&&row.express_validee){
     const option=row.express_option==='24h'?'STRIPE_PRICE_EXPRESS_24':row.express_option==='48h'?'STRIPE_PRICE_EXPRESS_48':null;
     if(!option||!process.env[option])throw Error('Express non accepté');
     expected.push(process.env[option]);total+=row.express_option==='24h'?5000:2000;
