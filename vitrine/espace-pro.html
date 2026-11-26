@@ -26,4 +26,38 @@
 </section>
 <section data-workspace-panel="factures" hidden><h2>Factures et paiements</h2><p>Vous retrouverez ici les factures et règlements de votre établissement lorsque la facturation sera connectée au tableau de bord. Aucune facture n'est actuellement disponible dans cette interface.</p><a class="btn orange" href="/tarifs.html">Consulter les offres professionnelles</a></section>
 <section data-workspace-panel="vehicules" hidden><h2>Mes véhicules</h2><p>La gestion des véhicules et leur association aux demandes sera disponible après le raccordement de ce module. Aucun véhicule n'est enregistré dans cette interface pour le moment.</p></section>
-<section data-workspace-panel="export" hidden><h2>Exporter les données</h2><p>Le titulaire peut récupérer les informations de son établissement et les demandes accessibles depuis ce tableau de bord.</p><button class="btn orange" id="workspace-export-data" type="button">Exporter les données disponibles (JSON)</button><p id="workspace-export-status" class="meca-team-feedback" role="status"></p></section><section data-workspace-panel="recherches" hidden><h2>Recherches du garage</h2><p>Retrouvez les demandes enregistrées et, selon votre rôle, attribuez-les aux membres de l'équipe.</p><div id="team-searches" class="meca-team-list"></div><p id="team-searches-feedback" role="status"></p></section><section data-workspace-panel="statistiques" hidden><h2>Statistiques Pro</h2><p>Indicateurs des recherches enregistrées pour votre établissement.</p><div id="workspace-stats" class="meca-pro-stats"></div><p class="meca-pro-workspace-note">Ces chiffres portent uniquement sur les dossiers enregistrés dans votre tableau de bord professionnel.</p></section></div></div></main><main class="meca-pro-workspace" id="workspace-loading"><div class="meca-pro-auth-card"><h1>Accès à votre espace professionnel</h1><p>Vérification de votre session sécurisée…</p></div></main><footer style="max-width:1100px;margin:40px auto 20px;padding:20px;text-align:center;border-top:1px solid #64472c;font-size:13px;line-height:2"><a href="/legal.html#mentions">Mentions légales</a> · <a href="/legal.html#cgu">CGU</a> · <a href="/legal.html#cgv">CGV</a> · <a href="/legal.html#confidentialite">Confidentialité</a> · <a href="/legal.html#cookies">Cookies</a> · <a href="/legal.html#retractation">Rétractation</a> · <a href="/legal.html#mediation">Médiation</a></footer><script src="/espace-pro.js" defer></script><script src="/navigation-session.js?v=navfix-20261125b" defer></script><script src="/qr-local.min.js" defer></script><script src="/messagerie-client.js" defer></script></body></html>
+<section data-workspace-panel="export" hidden><h2>Exporter les données</h2><p>Le titulaire peut récupérer les informations de son établissement et les demandes accessibles depuis ce tableau de bord.</p><button class="btn orange" id="workspace-export-data" type="button">Exporter les données disponibles (JSON)</button><p id="workspace-export-status" class="meca-team-feedback" role="status"></p></section><section data-workspace-panel="recherches" hidden>
+<h2>Recherches du garage</h2>
+<p>Choisissez le mode de recherche adapté : à l’unité, sans abonnement, ou avec les crédits de votre formule Pro. Tous les dossiers restent distincts.</p>
+<div class="panel" style="padding:18px;border:1px solid #ad7b45;margin:16px 0">
+<h3>🔍 Recherche à l’unité — sans abonnement</h3>
+<p>Vous pouvez utiliser les <strong>mêmes formules que les particuliers</strong> : Recherche ciblée 39 € (acompte 19 €), Recherche approfondie 79 € (acompte 39 €) ou Investigation Expert 149 € (acompte 69 €). La formule adaptée est proposée après analyse gratuite de votre demande. Vous acceptez ou refusez le devis avant tout paiement.</p>
+<p class="meca-pro-workspace-note">Une recherche à l’unité n’utilise pas les crédits du garage. Options Express et réservation proposées lors de l’acceptation du devis.</p>
+<form id="pro-oneoff-form" class="meca-compose-grid">
+<label>Catégorie de véhicule<select name="vehicleType" required><option value="Automobile">Automobile</option><option value="Moto">Moto</option><option value="Scooter">Scooter</option><option value="Quad">Quad</option><option value="Véhicule de collection">Véhicule de collection</option><option value="Véhicule agricole">Véhicule agricole</option></select></label>
+<label>Marque *<input name="brand" maxlength="100" required></label>
+<label>Modèle *<input name="model" maxlength="120" required></label>
+<label>Année<input name="year" maxlength="4" inputmode="numeric"></label>
+<label>Pièce recherchée *<input name="part" maxlength="220" required></label>
+<label>Référence constructeur / OEM<input name="ref" maxlength="140"></label>
+<label>Motorisation<input name="engine" maxlength="140"></label>
+<label>VIN (facultatif)<input name="vin" maxlength="60"></label>
+<label>Budget maximum pour la pièce (€)<input name="budget" maxlength="40" inputmode="decimal" placeholder="À renseigner si vous avez un plafond"></label>
+<label class="wide">Précisions<textarea name="notes" rows="3" maxlength="700"></textarea></label>
+<label class="wide"><input type="checkbox" name="urgent"> Signaler une recherche urgente (sans engagement de délai Express avant devis)</label>
+<div class="wide"><button type="submit" class="btn orange">Envoyer ma demande gratuite à l’unité</button></div>
+</form>
+<p id="pro-oneoff-feedback" role="status"></p>
+</div>
+<section class="panel" style="padding:18px;margin:16px 0">
+<h3>Mes recherches à l’unité</h3>
+<p>Les propositions reçues, acomptes et résultats sont visibles ici. Cliquez sur le dossier pour consulter le devis, le refuser ou le payer.</p>
+<div id="pro-oneoff-list" class="meca-team-list"><p>Chargement des recherches ponctuelles…</p></div>
+<p id="pro-oneoff-list-feedback" role="status"></p>
+</section>
+<section class="panel" style="padding:18px;margin:16px 0">
+<h3>Recherches avec crédits Pro</h3>
+<p>Ces recherches utilisent le fonctionnement de votre formule d’abonnement et ses droits d’équipe, indépendamment des recherches ponctuelles ci-dessus.</p>
+<div id="team-searches" class="meca-team-list"></div><p id="team-searches-feedback" role="status"></p>
+</section>
+</section><section data-workspace-panel="statistiques" hidden><h2>Statistiques Pro</h2><p>Indicateurs des recherches enregistrées pour votre établissement.</p><div id="workspace-stats" class="meca-pro-stats"></div><p class="meca-pro-workspace-note">Ces chiffres portent uniquement sur les dossiers enregistrés dans votre tableau de bord professionnel.</p></section></div></div></main><main class="meca-pro-workspace" id="workspace-loading"><div class="meca-pro-auth-card"><h1>Accès à votre espace professionnel</h1><p>Vérification de votre session sécurisée…</p></div></main><footer style="max-width:1100px;margin:40px auto 20px;padding:20px;text-align:center;border-top:1px solid #64472c;font-size:13px;line-height:2"><a href="/legal.html#mentions">Mentions légales</a> · <a href="/legal.html#cgu">CGU</a> · <a href="/legal.html#cgv">CGV</a> · <a href="/legal.html#confidentialite">Confidentialité</a> · <a href="/legal.html#cookies">Cookies</a> · <a href="/legal.html#retractation">Rétractation</a> · <a href="/legal.html#mediation">Médiation</a></footer><script src="/espace-pro.js?v=unitaire-pro-v1" defer></script><script src="/navigation-session.js?v=navfix-20261125b" defer></script><script src="/qr-local.min.js" defer></script><script src="/messagerie-client.js" defer></script></body></html>
