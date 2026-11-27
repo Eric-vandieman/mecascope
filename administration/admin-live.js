@@ -348,60 +348,152 @@ window.mecaAdminLive=async function(main,path){
    const reviseButton=document.createElement('button');reviseButton.type='button';reviseButton.className='btn dark';reviseButton.textContent='✎ Modifier le devis';reviseButton.style.marginLeft='10px';reviseButton.hidden=true;quoteButton.after(reviseButton);
    const revisionPanel=document.createElement('section');revisionPanel.hidden=true;revisionPanel.style.cssText='margin-top:14px;padding:17px;border:2px solid #eda04b;border-radius:12px;background:#2d261d';
    const revisionTitle=document.createElement('h3');revisionTitle.textContent='Nouvelle proposition commerciale';
-   const revisionHelp=document.createElement('p');revisionHelp.textContent='Ce devis remplacera le précédent. Aucune modification n’est autorisée après acceptation du devis ou paiement de l’acompte. Saisissez le total et la part à payer au départ, puis adaptez le message au-dessus.';
-   revisionHelp.className='muted';
-   const revisionFields=document.createElement('div');revisionFields.style.cssText='display:flex;gap:15px;flex-wrap:wrap';
-   const revisionTotalLabel=document.createElement('label');revisionTotalLabel.textContent='Nouveau total (€)';
-   const revisionTotal=document.createElement('input');revisionTotal.type='number';revisionTotal.step='0.01';revisionTotal.min='2';revisionTotal.max='2000';revisionTotal.required=true;revisionTotal.style.cssText='display:block;min-width:120px;margin-top:5px';
+
+   const revisionHelp=document.createElement('p');revisionHelp.className='muted';
+   revisionHelp.textContent='Choisissez une autre formule Mécascope ou créez un tarif commercial personnalisé. L’intitulé de la formule actuelle est conservé pour une remise personnalisée. Les options Express et réservation restent au choix du client.';
+   const revisionModeLabel=document.createElement('label');revisionModeLabel.textContent='Type de nouvelle proposition';
+   const revisionChoice=document.createElement('select');revisionChoice.style.cssText='display:block;width:100%;max-width:580px;margin-top:7px;padding:10px;border-radius:7px';
+   for(const [v,label] of [['formule','Choisir une formule Mécascope existante'],['personnalise','Nouvelle offre commerciale personnalisée (conserver la formule actuelle)']]){
+     const opt=document.createElement('option');opt.value=v;opt.textContent=label;revisionChoice.append(opt)
+   }
+   revisionModeLabel.append(revisionChoice);
+   const revisionOfferLabel=document.createElement('label');revisionOfferLabel.textContent='Formule Mécascope';
+   const revisionOffer=document.createElement('select');revisionOffer.style.cssText='display:block;width:100%;max-width:580px;margin-top:7px;padding:10px;border-radius:7px';
+   for(const [v,label] of [['ciblee','Recherche ciblée — 39 € (acompte 19 €)'],['approfondie','Recherche approfondie — 79 € (acompte 39 €)'],['expert','Investigation Expert — 149 € (acompte 69 €)']]){
+     const opt=document.createElement('option');opt.value=v;opt.textContent=label;revisionOffer.append(opt)
+   }
+   revisionOfferLabel.append(revisionOffer);
+   const revisionFields=document.createElement('div');revisionFields.style.cssText='display:flex;gap:15px;flex-wrap:wrap;margin-top:10px';
+   const revisionTotalLabel=document.createElement('label');revisionTotalLabel.textContent='Nouveau prix de base (€)';
+   const revisionTotal=document.createElement('input');revisionTotal.type='number';revisionTotal.step='0.01';revisionTotal.min='2';revisionTotal.max='2000';revisionTotal.style.cssText='display:block;min-width:120px;padding:9px;margin-top:5px';
    revisionTotalLabel.append(revisionTotal);
-   const revisionDepositLabel=document.createElement('label');revisionDepositLabel.textContent='Nouvel acompte (€)';
-   const revisionDeposit=document.createElement('input');revisionDeposit.type='number';revisionDeposit.step='0.01';revisionDeposit.min='1';revisionDeposit.required=true;revisionDeposit.style.cssText='display:block;min-width:120px;margin-top:5px';
+   const revisionDepositLabel=document.createElement('label');revisionDepositLabel.textContent='Acompte (€)';
+   const revisionDeposit=document.createElement('input');revisionDeposit.type='number';revisionDeposit.step='0.01';revisionDeposit.min='1';revisionDeposit.style.cssText='display:block;min-width:120px;padding:9px;margin-top:5px';
    revisionDepositLabel.append(revisionDeposit);
    revisionFields.append(revisionTotalLabel,revisionDepositLabel);
-   const revisionBalance=document.createElement('p');revisionBalance.style.cssText='font-weight:700;color:#ffcb86';
-   const sendRevision=document.createElement('button');sendRevision.type='button';sendRevision.className='btn orange';sendRevision.textContent='Envoyer le devis modifié';
-   const cancelRevision=document.createElement('button');cancelRevision.type='button';cancelRevision.className='btn dark';cancelRevision.textContent='Annuler la modification';cancelRevision.style.marginLeft='10px';
+   const revisionBalance=document.createElement('p');revisionBalance.style.cssText='font-weight:700;color:#ffcb86;margin:13px 0';
+   const revisionOptions=document.createElement('p');revisionOptions.className='muted';
+   revisionOptions.textContent='Options facultatives inchangées : Express 48 h (+20 €) ou Express 24 h (+50 €), à ajouter à l’acompte uniquement si le client le choisit ; réservation fournisseur 24 h (+10 €), facturée au solde uniquement si effectivement confirmée.';
+   const revisionMessageLabel=document.createElement('label');revisionMessageLabel.textContent='Message complet envoyé au client — modifiable avant envoi';
+   revisionMessageLabel.style.cssText='display:block;font-weight:bold;margin:16px 0 6px';
+   const revisionMessage=document.createElement('textarea');revisionMessage.rows=19;revisionMessage.maxLength=2800;
+   revisionMessage.style.cssText='width:100%;box-sizing:border-box;min-height:370px;padding:15px;color:#17232e;background:#fff;border:1px solid #e9a455;border-radius:9px;line-height:1.65;font:inherit;white-space:pre-wrap';
+   const revisionCount=document.createElement('small');revisionCount.className='muted';
+   const previewHeading=document.createElement('h4');previewHeading.textContent='Aperçu exact du texte de la proposition';
+   const revisionPreview=document.createElement('div');revisionPreview.style.cssText='background:#fff;color:#222;padding:18px;border-radius:10px;border-left:4px solid #eda04b;white-space:pre-wrap;line-height:1.65;overflow-wrap:anywhere;margin-bottom:12px';
+   const formPreview=document.createElement('div');formPreview.style.cssText='background:#202a32;color:#e9edf0;padding:14px;border-radius:9px;line-height:1.8';
+   formPreview.textContent='Sous ce message, le client choisit : délai normal (0 €), Express 48 h (+20 €), Express 24 h (+50 €) ; réservation fournisseur 24 h : oui (+10 € si confirmée) / non. Puis il accepte ou refuse le devis. Ces options ne sont pas précochées.';
+   const regenerate=document.createElement('button');regenerate.type='button';regenerate.className='btn dark';regenerate.textContent='↻ Recréer le message type';regenerate.style.marginBottom='14px';
+   const sendRevision=document.createElement('button');sendRevision.type='button';sendRevision.className='btn orange';sendRevision.textContent='Envoyer cette nouvelle proposition';
+   const cancelRevision=document.createElement('button');cancelRevision.type='button';cancelRevision.className='btn dark';cancelRevision.textContent='Annuler';cancelRevision.style.marginLeft='10px';
    const revisionStatus=document.createElement('p');revisionStatus.setAttribute('role','status');
-   revisionPanel.append(revisionTitle,revisionHelp,revisionFields,revisionBalance,sendRevision,cancelRevision,revisionStatus);
+   revisionPanel.append(revisionTitle,revisionHelp,revisionModeLabel,revisionOfferLabel,revisionFields,revisionBalance,revisionOptions,revisionMessageLabel,revisionMessage,revisionCount,previewHeading,revisionPreview,formPreview,regenerate,document.createElement('hr'),sendRevision,cancelRevision,revisionStatus);
    quotePanel.append(revisionPanel);
    let revisionMode=false;
    const euroCents=v=>{const n=Number(v);return Number.isFinite(n)?Math.round(n*100):NaN};
+   const fmtEuro=n=>(n/100).toLocaleString('fr-FR',{maximumFractionDigits:2})+' €';
+   const selectedRevisionPlan=()=>plans[revisionOffer.value]||plans.approfondie;
    function revisionAmounts(){
+     if(revisionChoice.value==='formule'){
+       const p=selectedRevisionPlan();
+       revisionTotal.value=String(p.price);revisionDeposit.value=String(p.initial);
+       revisionTotal.disabled=true;revisionDeposit.disabled=true;
+     }else{revisionTotal.disabled=false;revisionDeposit.disabled=false}
      const total=euroCents(revisionTotal.value),deposit=euroCents(revisionDeposit.value);
-     revisionBalance.textContent=Number.isFinite(total)&&Number.isFinite(deposit)&&total>deposit?'Acompte : '+(deposit/100).toLocaleString('fr-FR')+' € · Solde de réussite : '+((total-deposit)/100).toLocaleString('fr-FR')+' €':'Vérifiez le total et l’acompte (inférieur au total).';
+     revisionBalance.textContent=Number.isSafeInteger(total)&&Number.isSafeInteger(deposit)&&total>deposit&&deposit>0?
+       'Prix de base : '+fmtEuro(total)+' · Acompte : '+fmtEuro(deposit)+' · Solde si réussite : '+fmtEuro(total-deposit):
+       'Vérifiez le total et l’acompte (inférieur au prix de base).';
    }
-   revisionTotal.oninput=revisionAmounts;revisionDeposit.oninput=revisionAmounts;
+   function revisionDraft(){
+     const row=dossiers.find(x=>x.id===select.value);if(!row)return '';
+     const p=revisionChoice.value==='formule'?selectedRevisionPlan():(plans[row.offre]||plans.approfondie);
+     const total=euroCents(revisionTotal.value),deposit=euroCents(revisionDeposit.value);
+     if(!Number.isSafeInteger(total)||!Number.isSafeInteger(deposit)||deposit>=total)return '';
+     const dt=row.details||{};
+     const vehicle=[dt.brand,dt.model,dt.year].filter(Boolean).join(' ');
+     const part=String(dt.part||'la pièce demandée');
+     const ref=dt.ref?' (référence '+dt.ref+')':'';
+     return [
+       greeting(row),
+       '',
+       'Suite à nos échanges, nous avons révisé notre devis concernant votre dossier '+row.reference+'. Nous souhaitons vous proposer une nouvelle proposition commerciale mieux adaptée à votre demande.',
+       '',
+       'Votre recherche concerne '+part+ref+(vehicle?' pour votre '+vehicle:'')+'.',
+       '',
+       'Notre prestation comprend toujours la vérification des références exactes et de la compatibilité de la pièce, ainsi que la recherche et la confirmation de sa disponibilité auprès de fournisseurs adaptés, en France ou à l’étranger lorsque cela est nécessaire.',
+       '',
+       'Voici le nouveau devis proposé :',
+       'Formule : '+p.name,
+       'Nouveau prix de base : '+fmtEuro(total),
+       'Acompte à régler pour lancer la recherche : '+fmtEuro(deposit),
+       'Solde à régler uniquement en cas de recherche réussie : '+fmtEuro(total-deposit),
+       'Délai de recherche normal : '+p.days+' jours ouvrés après paiement initial et réception des informations nécessaires.',
+       '',
+       'Les options facultatives restent inchangées et sont à votre choix :',
+       '• Express 48 h : +20 € avec l’acompte ;',
+       '• Express 24 h : +50 € avec l’acompte ;',
+       '• Réservation de la pièce 24 h auprès du fournisseur : +10 €, uniquement au solde si une réservation est réellement confirmée.',
+       '',
+       'Ces options ne sont pas précochées : vous choisissez vous-même celles que vous souhaitez avant d’accepter le devis. Aucun supplément de réservation ne sera encaissé à l’avance.',
+       ...(!String(dt.budget??'').trim()?['','Sans budget maximal déclaré pour l’achat de la pièce, une offre compatible, disponible et à prix fournisseur vérifié pourra valider la mission de recherche ; l’achat de la pièce restera entièrement facultatif. Cette condition doit être expressément acceptée.']:[]),
+       '',
+       'Cette proposition révisée remplace notre devis précédent. Vous restez libre de l’accepter ou de la refuser sans engagement.',
+       '',
+       'Cordialement,',
+       'L’équipe Mécascope'
+     ].join('\n');
+   }
+   const updateRevisionPreview=()=>{
+     revisionPreview.textContent=revisionMessage.value||'Le message à envoyer s’affichera ici.';
+     revisionCount.textContent=revisionMessage.value.length+' / 2 800 caractères';
+   };
+   const regenerateRevision=()=>{revisionMessage.value=revisionDraft();updateRevisionPreview()};
+   revisionMessage.addEventListener('input',updateRevisionPreview);
+   regenerate.onclick=regenerateRevision;
+   revisionChoice.onchange=()=>{
+     const current=dossiers.find(x=>x.id===select.value);
+     revisionOffer.value=revisionChoice.value==='personnalise'?(current?.offre||'approfondie'):revisionOffer.value;
+     revisionOffer.disabled=revisionChoice.value==='personnalise';
+     revisionOfferLabel.style.opacity=revisionOffer.disabled?'.7':'1';
+     revisionAmounts();regenerateRevision();
+   };
+   revisionOffer.onchange=()=>{revisionAmounts();regenerateRevision()};
+   revisionTotal.oninput=()=>{revisionAmounts();regenerateRevision()};
+   revisionDeposit.oninput=()=>{revisionAmounts();regenerateRevision()};
    reviseButton.onclick=()=>{
      const d=dossiers.find(x=>x.id===select.value);
      if(!d||d.initial_paid_at||!['devis_envoye','refuse'].includes(d.statut)||d.devis_decision==='accepte')return;
-     revisionMode=true;revisionPanel.hidden=false;reviseButton.hidden=true;quoteButton.hidden=true;personal.disabled=false;
+     revisionMode=true;revisionPanel.hidden=false;reviseButton.hidden=true;quoteButton.hidden=true;
+     personal.disabled=true;
      const original=plans[d.offre]||plans.approfondie;
-     const oldTotal=d.devis_total_personnalise_centimes?d.devis_total_personnalise_centimes/100:original.price;
-     const oldDeposit=d.devis_acompte_personnalise_centimes?d.devis_acompte_personnalise_centimes/100:original.initial;
-     revisionTotal.value=String(oldTotal);revisionDeposit.value=String(oldDeposit);
-     revisionAmounts();
-     personal.value=d.proposition_texte||defaultDraft(d,d.offre);
-     revisionStatus.textContent='Indiquez un nouveau montant et adaptez librement la proposition au client.';
-     personal.focus();
+     revisionChoice.value=d.devis_total_personnalise_centimes?'personnalise':'formule';
+     revisionOffer.value=d.offre;
+     revisionOffer.disabled=revisionChoice.value==='personnalise';
+     revisionTotal.value=String(d.devis_total_personnalise_centimes?d.devis_total_personnalise_centimes/100:original.price);
+     revisionDeposit.value=String(d.devis_acompte_personnalise_centimes?d.devis_acompte_personnalise_centimes/100:original.initial);
+     revisionAmounts();regenerateRevision();
+     revisionStatus.textContent='Relisez le texte complet, modifiez-le si nécessaire puis envoyez le nouveau devis.';
+     revisionPanel.scrollIntoView?.({block:'start',behavior:'smooth'});
    };
    cancelRevision.onclick=()=>{revisionMode=false;revisionPanel.hidden=true;showOptions()};
    sendRevision.onclick=async()=>{
      const d=dossiers.find(x=>x.id===select.value);
      if(!d||d.initial_paid_at)return;
      const total=euroCents(revisionTotal.value),deposit=euroCents(revisionDeposit.value);
-     if(!Number.isSafeInteger(total)||!Number.isSafeInteger(deposit)||total<200||total>200000||deposit<100||deposit>=total){revisionStatus.textContent='Total entre 2 € et 2 000 €, et acompte positif inférieur au total.';return}
-     let message=personal.value.trim();
-     const amount=(total/100).toLocaleString('fr-FR',{maximumFractionDigits:2})+' €';
-     if(!message.includes(amount)){revisionStatus.textContent='Adaptez le texte : le nouveau tarif '+amount+' doit y apparaître. L’ancien tarif ne doit plus être présenté comme applicable.';return}
-     if(!message.includes(d.reference))message='Dossier '+d.reference+'\n\n'+message;
-     if(message.length<80||message.length>2800){revisionStatus.textContent='Le message doit faire entre 80 et 2 800 caractères et inclure la référence du dossier.';return}
-     if(!confirm('Remplacer définitivement le devis précédent par la nouvelle offre à '+amount+' (acompte '+(deposit/100).toLocaleString('fr-FR')+' €) et prévenir le client ?'))return;
-     sendRevision.disabled=true;revisionStatus.textContent='Envoi sécurisé du devis révisé…';
+     if(!Number.isSafeInteger(total)||!Number.isSafeInteger(deposit)||total<200||total>200000||deposit<100||deposit>=total){revisionStatus.textContent='Montants invalides : vérifiez le total et l’acompte.';return}
+     const message=revisionMessage.value.trim();
+     for(const required of [d.reference,fmtEuro(total),fmtEuro(deposit),fmtEuro(total-deposit),'48 h','24 h','10 €']){
+       if(!message.includes(required)){revisionStatus.textContent='Le message doit conserver les informations essentielles : '+required;return}
+     }
+     if(message.length<80||message.length>2800){revisionStatus.textContent='Le message doit faire entre 80 et 2 800 caractères.';return}
+     if(!confirm('Remplacer le précédent devis de '+d.reference+' par une nouvelle proposition de '+fmtEuro(total)+' (acompte '+fmtEuro(deposit)+') et l’envoyer au client ?'))return;
+     sendRevision.disabled=true;revisionStatus.textContent='Envoi de la nouvelle proposition…';
      try{
-       const result=await call({action:'revise_quote',id:d.id,offre:d.offre,proposal:message,totalCentimes:total,depositCentimes:deposit});
+       const result=await call({action:'revise_quote',id:d.id,pricingMode:revisionChoice.value,offre:revisionChoice.value==='formule'?revisionOffer.value:d.offre,proposal:message,totalCentimes:total,depositCentimes:deposit});
        revisionStatus.textContent=result.message||'Devis révisé transmis au client.';
        location.reload();
-     }catch(e){revisionStatus.textContent=e.message}finally{sendRevision.disabled=false}
+     }catch(e){revisionStatus.textContent=e.message}
+     finally{sendRevision.disabled=false}
    };
 
    const failButton=document.createElement('button');failButton.type='button';failButton.className='btn danger';failButton.textContent='Clôturer la recherche sans résultat';failButton.hidden=true;quotePanel.append(failButton);
