@@ -381,3 +381,35 @@ html,body{margin:0;padding:0;max-width:none;width:100%;display:block}.shell,.adm
 .meca-f-choice input{width:auto!important;margin:0;accent-color:#ff951f}
 .meca-f-dossier-chooser{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:14px 0;color:#f2c183}
 .meca-f-dossier-select{min-width:min(100%,440px);background:#151a20;color:white;border:1px solid #8f6430;padding:10px;border-radius:8px}
+
+/* Tableau de bord : dossiers prioritaires, uniquement sur l'accueil administrateur */
+.admin-mode .panel.meca-active-dossiers{
+ background:linear-gradient(145deg,#ffed9c 0%,#f9d463 53%,#eeb946 100%)!important;
+ border:2px solid #ffda65!important;
+ color:#28200d!important;
+ box-shadow:0 8px 30px #0007,0 0 0 1px #f1b93a55!important;
+ margin:14px 0 20px!important;
+}
+.admin-mode .meca-active-dossiers .paneltitle{
+ color:#30200a!important;
+ border-bottom:1px solid #a46c2473!important;
+ font-weight:850!important;
+}
+.admin-mode .meca-active-dossiers .tablewrap{
+ background:#fff9e8!important;
+ border:1px solid #d8ad4d!important;
+ border-radius:10px;
+ overflow-x:auto;
+}
+.admin-mode .meca-active-dossiers .table,
+.admin-mode .meca-active-dossiers .table th,
+.admin-mode .meca-active-dossiers .table td{
+ color:#292213!important;
+}
+.admin-mode .meca-active-dossiers .table th{background:#f6dc90!important;}
+.admin-mode .meca-active-dossiers .table td{background:#fff9eb!important;}
+.admin-mode .meca-active-dossiers .empty,
+.admin-mode .meca-active-dossiers .note{color:#57411b!important;}
+.admin-mode .meca-active-dossiers .bar select{
+ background:#fff9e8!important;color:#332615!important;border-color:#bb8b31!important;
+}
