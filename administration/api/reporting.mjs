@@ -1,4 +1,4 @@
-import {sendProposalSms} from './ovh-sms.mjs';
+import {sendProposalSms} from '../lib/ovh-sms.mjs';
 export default async function handler(req,res){
 res.setHeader('Cache-Control','no-store');
 if(req.method!=='POST')return res.status(405).end();
