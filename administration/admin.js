@@ -26,14 +26,18 @@ async function ouvrir(payload){
       main.querySelectorAll('.note').forEach(element=>{
         element.textContent=element.textContent.replace(/démonstration|démo|fictif|fictifs/gi,'non connecté');
       });
-      if(path!=='/admin/messages'){
+      if(path!=='/admin/messages'&&path!=='/admin/clients'){
         const summary=document.createElement('div');
         summary.className='meca-admin-live-status';
         summary.textContent='Suivi réel des comptes professionnels : '+Number(data.entreprises||0)+' entreprises · '+Number(data.etablissements||0)+' établissements · '+Number(data.aVerifier||0)+' entreprises à vérifier. Les autres indicateurs attendent une source vérifiée.';
         main.querySelector('.pagehead')?.after(summary);
         window.mecaAdminComposer?.(main);
       }
-      Promise.resolve(window.mecaAdminLive?.(main,path)).catch(()=>{}).finally(()=>window.mecaSuppliers?.(main,path));
+      if(path==='/admin/clients'){
+        Promise.resolve(window.mecaAdminClients?.(main)).catch(error=>{const p=document.createElement('p');p.textContent='Erreur du fichier clients : '+error.message;main.append(p)});
+      }else{
+        Promise.resolve(window.mecaAdminLive?.(main,path)).catch(()=>{}).finally(()=>window.mecaSuppliers?.(main,path));
+      }
       window.mecaPushSetup?.(main,path);
     };
     document.addEventListener('click',async e=>{
