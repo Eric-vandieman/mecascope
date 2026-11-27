@@ -493,7 +493,7 @@ window.mecaAdminLive=async function(main,path){
      try{
        const result=await call({action:'revise_quote',id:d.id,pricingMode:revisionChoice.value,offre:revisionChoice.value==='formule'?revisionOffer.value:d.offre,proposal:message,totalCentimes:total,depositCentimes:deposit});
        revisionStatus.textContent=result.message||'Devis révisé transmis au client.';
-       location.reload();
+       await syncDemandesAfterAction(d.id);
      }catch(e){revisionStatus.textContent=e.message}
      finally{sendRevision.disabled=false}
    };
@@ -645,11 +645,11 @@ window.mecaAdminLive=async function(main,path){
      if(message.length<80||message.length>2800){proposalStatus.textContent='Vérifiez votre message (80 à 2 800 caractères, référence comprise).';return}
      if(!confirm('Envoyer votre proposition de '+(negotiated||'—')+' € à '+(row.contact||'ce client')+' avec toutes les options facultatives à sélectionner sur son devis ?'))return;
      quoteButton.disabled=true;proposalStatus.textContent='Envoi de votre proposition…';
-     try{const result=await call({action:'quote',id:row.id,offre:planSelect.value,proposal:message});proposalStatus.textContent=result.message||'Devis transmis au client.';await refreshHistory();location.reload()}
+     try{const result=await call({action:'quote',id:row.id,offre:planSelect.value,proposal:message});proposalStatus.textContent=result.message||'Devis transmis au client.';await syncDemandesAfterAction(row.id)}
      catch(e){proposalStatus.textContent=e.message}finally{quoteButton.disabled=false}
    };
    failButton.onclick=async()=>{const d=dossiers.find(x=>x.id===select.value);if(!d||!confirm('Clôturer cette recherche comme infructueuse, sans solde à payer ?'))return;
-    failButton.disabled=true;try{await call({action:'fail',id:d.id});await call({action:'reply',id:d.id,found:false,message:'Nous vous informons que notre recherche n’a pas permis d’identifier une pièce conforme. Aucun solde de réussite n’est dû. Nous restons à votre disposition pour tout complément.'});alert('Recherche clôturée et client informé.');location.reload()}catch(e){alert(e.message)}finally{failButton.disabled=false}
+    failButton.disabled=true;try{await call({action:'fail',id:d.id});await call({action:'reply',id:d.id,found:false,message:'Nous vous informons que notre recherche n’a pas permis d’identifier une pièce conforme. Aucun solde de réussite n’est dû. Nous restons à votre disposition pour tout complément.'});status.textContent='Recherche clôturée et client informé.';await syncDemandesAfterAction(d.id)}catch(e){alert(e.message)}finally{failButton.disabled=false}
    };
 
 
@@ -709,16 +709,18 @@ window.mecaAdminLive=async function(main,path){
     await refreshHistory();
    };
    // Alimenter le tableau principal attendu dans Gestion des demandes.
+   function renderDemandesTable(){
    if(path==='/admin/demandes'){
      const table=main.querySelector('#list-content tbody');
      if(table){
        table.replaceChildren();
+       main.querySelectorAll('.meca-demandes-filter-note,.meca-demandes-counter,.meca-demandes-empty').forEach(n=>n.remove());
        const params=new URLSearchParams(location.hash.split('?')[1]||'');
        const waitingOnly=params.get('filtre')==='devis_en_attente';
        const visibleDossiers=waitingOnly?dossiers.filter(x=>x.statut==='devis_envoye'&&x.devis_decision==='en_attente'):dossiers;
        const tableHost=main.querySelector('#list-content');
        if(waitingOnly&&tableHost){
-         const note=document.createElement('div');note.className='panel';
+         const note=document.createElement('div');note.className='panel meca-demandes-filter-note';
          note.style.cssText='margin-bottom:12px;border:1px solid #b78849';
          const title=document.createElement('strong');title.textContent='Propositions envoyées : '+visibleDossiers.length+' en attente de réponse';
          const explain=document.createElement('p');explain.textContent='La relance reste manuelle. Ouvrez un dossier et utilisez « Renvoyer le même devis » si nécessaire, après 24 à 48 heures.';
@@ -726,7 +728,7 @@ window.mecaAdminLive=async function(main,path){
          note.append(title,explain,all);tableHost.prepend(note);
        }
        if(!waitingOnly){
-         const counter=document.createElement('div');counter.style.cssText='margin:12px 0 18px;padding:13px 16px;background:#23313b;border-radius:10px;border:1px solid #667888';
+         const counter=document.createElement('div');counter.className='meca-demandes-counter';counter.style.cssText='margin:12px 0 18px;padding:13px 16px;background:#23313b;border-radius:10px;border:1px solid #667888';
          const pending=dossiers.filter(x=>x.statut==='deposee').length;
          counter.textContent=pending+' nouvelle(s) demande(s) à traiter · En brun : non traitée · En gris : déjà prise en charge';
          tableHost?.prepend(counter);
@@ -751,7 +753,39 @@ window.mecaAdminLive=async function(main,path){
          action.append(open);tr.append(action);table.append(tr);
        }
        main.querySelector('#list-content .empty')?.remove();
-       if(!visibleDossiers.length){const message=document.createElement('p');message.className='empty';message.textContent=waitingOnly?'Aucun devis actuellement en attente de réponse.':'Aucun dossier client enregistré.';main.querySelector('#list-content .tablewrap')?.append(message)}
+       if(!visibleDossiers.length){const message=document.createElement('p');message.className='empty meca-demandes-empty';message.textContent=waitingOnly?'Aucun devis actuellement en attente de réponse.':'Aucun dossier client enregistré.';main.querySelector('#list-content .tablewrap')?.append(message)}
+     }
+   }
+   }
+   renderDemandesTable();
+
+   async function syncDemandesAfterAction(id){
+     // Synchronisation silencieuse : aucune navigation, aucun rafraîchissement document.
+     const current=select.value||id;
+     const latest=await call({action:'reporting'});
+     if(!main.isConnected)return;
+     const updated=Array.isArray(latest.dossiers)?latest.dossiers:[];
+     dossiers.splice(0,dossiers.length,...updated);
+     for(const row of dossiers){
+       let option=[...select.options].find(o=>o.value===row.id);
+       if(!option){option=document.createElement('option');option.value=row.id;select.append(option)}
+       option.textContent=(row.reference||row.id)+' — '+(row.contact||'Client')+' ('+(row.statut||'')+')';
+     }
+     for(const option of [...select.options]){
+       if(option.value&&!dossiers.some(row=>row.id===option.value))option.remove();
+     }
+     const badge=document.querySelector('.side a[href="#/admin/demandes"] .meca-demandes-unread');
+     if(badge){
+       const n=Number(latest.nouvelles_demandes)||0;
+       badge.textContent=n?String(n):'';
+       badge.hidden=n===0;
+     }
+     renderDemandesTable();
+     if(dossiers.some(row=>row.id===current)){
+       select.value=current;
+       showDossier(dossiers.find(row=>row.id===current));
+       showOptions();
+       await refreshHistory();
      }
    }
    const send=document.createElement('button');send.type='button';send.className='btn orange';send.textContent='Envoyer la réponse dans la conversation';
