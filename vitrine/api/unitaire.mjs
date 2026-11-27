@@ -133,19 +133,24 @@ export default async function handler(req,res){
   if(action==='admin-sms-claim'){
     if(!(await getAdmin(req)))return res.status(403).json({message:'Administration uniquement'});
     if(!/^[a-f0-9-]{36}$/i.test(String(b.id||'')))return res.status(400).json({message:'Dossier invalide'});
-    const rows=await query('meca_demandes_unitaires?id=eq.'+b.id+'&select=id,telephone,statut&limit=1');
+    const smsType=b.smsType??'proposition';
+    if(!['proposition','piece_trouvee'].includes(smsType))return res.status(400).json({message:'Type SMS inconnu'});
+    const rows=await query('meca_demandes_unitaires?id=eq.'+b.id+'&select=id,telephone,statut,initial_paid_at,solde_paid_at,solde_email_envoye_le&limit=1');
     const dossier=rows?.[0];
-    if(!dossier||dossier.statut!=='devis_envoye')return res.status(409).json({message:'Aucune proposition envoyée pour ce dossier'});
-    const existing=await query('meca_sms_notifications?dossier_id=eq.'+b.id+'&select=statut&limit=1');
+    const eligible=smsType==='proposition'?dossier?.statut==='devis_envoye':(
+      dossier?.statut==='reussite'&&!!dossier?.initial_paid_at&&!!dossier?.solde_email_envoye_le&&!dossier?.solde_paid_at);
+    if(!eligible)return res.status(409).json({message:smsType==='piece_trouvee'?'Acompte ou annonce de résultat non confirmés : SMS interdit.':'Aucune proposition envoyée pour ce dossier'});
+    const existing=await query('meca_sms_notifications?dossier_id=eq.'+b.id+'&type=eq.'+smsType+'&select=statut&limit=1');
     if(existing?.length)return res.status(200).json({claimed:false,status:existing[0].statut});
     const numero=String(dossier.telephone||'').trim();
-    const insert=await query('meca_sms_notifications?on_conflict=dossier_id',{method:'POST',headers:{Prefer:'resolution=ignore-duplicates,return=representation'},body:JSON.stringify({dossier_id:b.id,telephone:numero,statut:'en_attente'})});
+    const insert=await query('meca_sms_notifications?on_conflict=dossier_id,type',{method:'POST',headers:{Prefer:'resolution=ignore-duplicates,return=representation'},body:JSON.stringify({dossier_id:b.id,type:smsType,telephone:numero,statut:'en_attente'})});
     return res.status(200).json({claimed:Array.isArray(insert)&&insert.length===1,telephone:Array.isArray(insert)&&insert.length===1?numero:undefined});
    }
    if(action==='admin-sms-complete'){
     if(!(await getAdmin(req)))return res.status(403).json({message:'Administration uniquement'});
-    if(!/^[a-f0-9-]{36}$/i.test(String(b.id||''))||!['envoye','echec','non_envoye'].includes(b.status))return res.status(400).json({message:'Paramètres invalides'});
-    const result=await query('meca_sms_notifications?dossier_id=eq.'+b.id+'&statut=eq.en_attente',{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({statut:b.status,ovh_job_id:String(b.jobId||'').slice(0,100),erreur:String(b.error||'').slice(0,250),modifie_le:new Date().toISOString()})});
+    const smsType=b.smsType??'proposition';
+    if(!/^[a-f0-9-]{36}$/i.test(String(b.id||''))||!['proposition','piece_trouvee'].includes(smsType)||!['envoye','echec','non_envoye'].includes(b.status))return res.status(400).json({message:'Paramètres invalides'});
+    const result=await query('meca_sms_notifications?dossier_id=eq.'+b.id+'&type=eq.'+smsType+'&statut=eq.en_attente',{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({statut:b.status,ovh_job_id:String(b.jobId||'').slice(0,100),erreur:String(b.error||'').slice(0,250),modifie_le:new Date().toISOString()})});
     return res.status(200).json({ok:Array.isArray(result)&&result.length===1});
    }
    if(action==='admin-list'){
