@@ -12,25 +12,31 @@ window.mecaAdminLive=async function(main,path){
   for(const [id,key] of Object.entries({'meca-single-month':'paiements_uniques_mois','meca-single-previous':'paiements_uniques_precedent','meca-single-total':'paiements_uniques_total','meca-type-targeted':'unitaire_ciblee','meca-type-deep':'unitaire_approfondie','meca-type-expert':'unitaire_expert','meca-start-payments':'paiements_initiaux','meca-success-payments':'paiements_soldes','meca-pro-priority':'abonnements_priorite','meca-pro-five':'abonnements_pro5','meca-pro-ten':'abonnements_pro10'}))set(id,d[key]??0);
   set('meca-oneoff-revenue',eur(d.ca_unitaire_centimes));
   label('Nouvelles demandes',d.nouvelles_demandes||0);label('Recherches en cours',d.recherches_en_cours||0);label('Résultats à débloquer',d.resultats_a_debloquer||0);label('Demandes urgentes',d.urgences||0);
-  // Aucune estimation du CA des abonnements : seul Stripe (factures payées, mode réel) fait foi.
+  // La synchronisation Stripe se charge sans bloquer l'affichage des onglets.
   if(path==='/admin'||path==='/admin/statistiques'){
-   let finance=null;
-   try{finance=await call({action:'finance_stripe'});}catch(err){
-    const note=document.createElement('p');note.className='meca-stripe-audit-note';
-    note.textContent='CA abonnements non vérifié : '+(err?.message||'connexion Stripe indisponible')+'. Aucun chiffre estimé n’est affiché.';
-    main.querySelector('.pagehead')?.after(note);
-   }
-   const verified=finance?.ok===true&&finance?.source==='stripe_paid_invoices'&&finance.exact===true;
-   label('Chiffre d’affaires',verified?eur((d.ca_unitaire_centimes||0)+finance.abonnements_ca_centimes):'—');
-   label('Récurrence mensuelle',verified?eur(finance.abonnements_ca_mois_centimes):'—');
+   label('Chiffre d’affaires','—');
+   label('Récurrence mensuelle','—');
    const anchor=main.querySelector('.metrics.six')||main.querySelector('.meca-single-section')||main.querySelector('.panel');
-   if(anchor){
-     const tile=document.createElement('section');tile.className='panel meca-stripe-ca';tile.style.cssText='margin:14px 0;padding:15px;border:1px solid #6a8296;border-radius:10px';
-     const title=document.createElement('strong');title.textContent='CA des abonnements — factures Stripe réellement payées';
-     const amount=document.createElement('div');amount.style.cssText='font-size:23px;font-weight:750;margin:7px 0';amount.textContent=verified?eur(finance.abonnements_ca_centimes):'Non vérifié';
-     const sub=document.createElement('small');sub.textContent=verified?finance.factures_payees+' facture(s) payée(s) vérifiée(s), hors remboursements enregistrés en avoir, mode réel uniquement.':'Calcul en attente des données Stripe confirmées ; aucune estimation tirée des crédits.';
-     tile.append(title,amount,sub);anchor.after(tile);
-   }
+   const tile=document.createElement('section');tile.className='panel meca-stripe-ca';tile.style.cssText='margin:14px 0;padding:15px;border:1px solid #6a8296;border-radius:10px';
+   const title=document.createElement('strong');title.textContent='CA des abonnements — factures Stripe réellement payées';
+   const amount=document.createElement('div');amount.style.cssText='font-size:23px;font-weight:750;margin:7px 0';amount.textContent='Vérification Stripe…';
+   const sub=document.createElement('small');sub.textContent='Calcul indépendant du chargement du tableau de bord · aucun montant estimé depuis les crédits.';
+   tile.append(title,amount,sub);anchor?.after(tile);
+   (async()=>{
+     try{
+       const finance=await call({action:'finance_stripe'});
+       if(!main.isConnected)return;
+       if(finance?.ok!==true||finance?.source!=='stripe_paid_invoices'||finance.exact!==true)throw Error('Réponse Stripe non confirmée');
+       label('Chiffre d’affaires',eur((d.ca_unitaire_centimes||0)+finance.abonnements_ca_centimes));
+       label('Récurrence mensuelle',eur(finance.abonnements_ca_mois_centimes));
+       amount.textContent=eur(finance.abonnements_ca_centimes);
+       sub.textContent=finance.factures_payees+' facture(s) Stripe payée(s) confirmée(s), mode réel, net des avoirs enregistrés.';
+     }catch(err){
+       if(!main.isConnected)return;
+       amount.textContent='Non vérifié';
+       sub.textContent='Stripe indisponible : '+(err?.message||'vérification impossible')+'. Aucun CA estimé n’est affiché.';
+     }
+   })().catch(()=>{});
   }
   label('Priorité Pro',d.abonnements_priorite||0);label('Pro 5',d.abonnements_pro5||0);label('Pro 10',d.abonnements_pro10||0);
   if(path==='/admin/statistiques'){
