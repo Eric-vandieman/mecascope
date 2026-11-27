@@ -58,7 +58,7 @@ if(req.body?.action==='sms_templates'){
 if(req.body?.action==='finance_stripe'){
  try{
   const response=await fetch('https://xn--mcascope-b1a.fr/api/unitaire',{
-   method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
+   method:'POST',headers:{Authorization:'Bearer '+token,Origin:'https://xn--mcascope-b1a.fr','Content-Type':'application/json'},
    body:JSON.stringify({action:'admin-finances'}),signal:AbortSignal.timeout(25000)
   });
   return res.status(response.status).json(await response.json().catch(()=>({message:'Statistiques Stripe indisponibles'})));
