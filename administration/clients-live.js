@@ -126,7 +126,10 @@ window.mecaAdminClients=async function(main){
        const result=await response.json().catch(()=>({}));
        if(!response.ok||result.ok!==true)throw Error(result.message||'Suppression refusée');
        deleteStatus.textContent=result.message||'Opération confirmée.';
-       location.reload();
+       groups.delete(p.key);
+       const idx=all.findIndex(x=>x.key===p.key);
+       if(idx>=0)all.splice(idx,1);
+       selected=null;detail.hidden=true;render();
      }catch(error){deleteStatus.textContent=error.message;hide.disabled=false;purge.disabled=false}
    }
    hide.onclick=()=>deleteClient('fiche');
