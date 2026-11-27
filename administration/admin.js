@@ -12,7 +12,7 @@ async function ouvrir(payload){
     const layout=await layoutResponse.json();
     window.mecaEnhanceAdminLayout?.(layout);
     const css=document.createElement('link');
-    css.rel='stylesheet'; css.href='/console.css?v=20261125-1627';
+    css.rel='stylesheet'; css.href='/console.css?v=20261127-dossiers-jaunes-v1';
     document.querySelector('style').remove();
     document.head.append(css);
     // Un écran de chargement neutre remplace les anciennes maquettes pendant
