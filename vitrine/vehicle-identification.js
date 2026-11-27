@@ -64,7 +64,7 @@ altBrand.addEventListener('click',()=>{
 altModel.addEventListener('click',()=>switchMode('model',manualModel.hidden));
 let sequence=0;
 async function load(action,vehicleType,make){
- const query=new URLSearchParams({action,type:vehicleType});
+ const query=new URLSearchParams({action,type:vehicleType,catalogue:'europe-20261127-v2'});
  if(make)query.set('make',make);
  const response=await fetch('/api/vehicle-catalog?'+query.toString());
  if(!response.ok)throw Error('catalogue indisponible');
