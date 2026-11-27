@@ -1,4 +1,4 @@
-import {normalizeMobile} from './ovh-sms.mjs';
+import {normalizeMobile} from '../lib/ovh-sms.mjs';
 import {randomBytes,randomUUID,createHash,createHmac} from 'node:crypto';
 const COOKIE='__Host-mecascope-professional';
 const cookieToken=h=>{const s=String(h||'').split(';').map(x=>x.trim()).find(x=>x.startsWith(COOKIE+'='));return s?decodeURIComponent(s.slice(COOKIE.length+1)):null};
