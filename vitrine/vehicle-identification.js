@@ -41,6 +41,7 @@ function options(select,placeholder,items=[]){
  select.replaceChildren();
  const empty=new Option(placeholder,'');select.append(empty);
  for(const item of items)select.append(new Option(item.name,item.id));
+ if(items.length)select.append(new Option(select===model?'Mon modèle est absent — le saisir':'Ma marque est absente — la saisir','__manual__'));
  select.disabled=!items.length;
 }
 function switchMode(kind,manual){
@@ -92,6 +93,11 @@ for(const radio of section.querySelectorAll('[name="vehicleType"]')){
 }
 brand.addEventListener('change',async()=>{
  const n=++sequence;
+ if(brand.value==='__manual__'){
+  switchMode('brand',true);switchMode('model',true);
+  message.textContent='Indiquez librement la marque et le modèle, même pour un véhicule ancien ou rare.';
+  return;
+ }
  manualModel.value='';switchMode('model',false);
  options(model,'Chargement des modèles…');
  if(!brand.value)return;
@@ -100,7 +106,7 @@ brand.addEventListener('change',async()=>{
   const items=await load('models',type,brand.value);
   if(n!==sequence)return;
   options(model,'Choisissez un modèle',items.map(item=>({id:item.name,name:item.name})));
-  message.textContent=items.length?'Sélectionnez votre modèle. Si absent, cliquez sur « Mon modèle est absent ».':'Modèle non répertorié : saisissez-le manuellement.';
+  message.textContent=items.length?'Choisissez votre modèle, y compris les anciennes séries. Sinon sélectionnez « Mon modèle est absent — le saisir ».':'Modèle non répertorié : saisissez-le manuellement.';
   if(!items.length)switchMode('model',true);
  }catch{
   if(n!==sequence)return;
@@ -108,6 +114,7 @@ brand.addEventListener('change',async()=>{
   switchMode('model',true);
  }
 });
+model.addEventListener('change',()=>{if(model.value==='__manual__'){switchMode('model',true);message.textContent='Saisissez votre modèle exact, sans limitation de catalogue.'}});
 form.addEventListener('submit',event=>{
  if(!section.querySelector('[name="vehicleType"]:checked')){
   event.preventDefault();message.textContent='Veuillez choisir un type de véhicule.';
