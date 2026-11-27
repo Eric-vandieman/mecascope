@@ -218,11 +218,26 @@ export default async function handler(req,res){
    }else if(action==='admin-revise-quote'){
     if(!['devis_envoye','refuse'].includes(d.statut)||!['en_attente','refuse'].includes(d.devis_decision)||d.initial_paid_at||d.initial_session||d.solde_paid_at)return res.status(409).json({message:'Modification impossible : devis accepté, acompte versé ou paiement déjà engagé.'});
     if(!offers[d.offre])return res.status(409).json({message:'Formule d’origine inconnue'});
-    const total=Number(b.totalCentimes),deposit=Number(b.depositCentimes);
-    if(!Number.isSafeInteger(total)||!Number.isSafeInteger(deposit)||total<200||total>200000||deposit<100||deposit>=total)return res.status(400).json({message:'Montants invalides : total de 2 à 2 000 €, acompte positif inférieur au total.'});
-    if(!proposal.includes((total/100).toLocaleString('fr-FR',{maximumFractionDigits:2})+' €'))return res.status(400).json({message:'Le texte doit mentionner le nouveau montant exact du devis.'});
+    const pricingMode=String(b.pricingMode||'personnalise');
+    if(!['formule','personnalise'].includes(pricingMode))return res.status(400).json({message:'Choisissez une formule existante ou un prix personnalisé.'});
+    const chosenOffer=pricingMode==='formule'?String(b.offre||''):d.offre;
+    if(!offers[chosenOffer])return res.status(400).json({message:'Formule non reconnue'});
+    if(pricingMode==='formule'&&(!process.env[offers[plan]?.initial]||!process.env[offers[plan]?.balance])&&(!process.env[offers[chosenOffer].initial]||!process.env[offers[chosenOffer].balance]))return res.status(503).json({message:'Tarifs Stripe de cette formule indisponibles.'});
+    const total=pricingMode==='formule'?offers[chosenOffer].total*100:Number(b.totalCentimes);
+    const deposit=pricingMode==='formule'?offers[chosenOffer].deposit*100:Number(b.depositCentimes);
+    if(!Number.isSafeInteger(total)||!Number.isSafeInteger(deposit)||total<200||total>200000||deposit<100||deposit>=total)return res.status(400).json({message:'Montants invalides : le total doit être supérieur à l’acompte.'});
+    const euros=centimes=>(centimes/100).toLocaleString('fr-FR',{maximumFractionDigits:2})+' €';
+    if(!proposal.includes(euros(total))||!proposal.includes(euros(deposit))||!proposal.includes(euros(total-deposit))||!proposal.includes(d.reference))return res.status(400).json({message:'Le message doit contenir le numéro de dossier, le nouveau prix, l’acompte et le solde exacts.'});
+    if(!proposal.includes('48 h')||!proposal.includes('24 h')||!proposal.includes('10 €'))return res.status(400).json({message:'Les trois options facultatives (Express 48 h, Express 24 h, réservation 10 €) doivent rester expliquées au client.'});
     const version=(Number(d.devis_version)||1)+1;
-    revisionData={devis_total_personnalise_centimes:total,devis_acompte_personnalise_centimes:deposit,devis_version:version,initial_price:'custom:'+deposit,solde_price:'custom:'+(total-deposit),devis_accepte_le:null,devis_refuse_le:null,initial_session:null,solde_session:null,express_option:null,reservation_option:false,options_paiement_avance:true,devis_decision:'en_attente',proposition_texte:proposal,devis_envoye_le:new Date().toISOString()};
+    plan=chosenOffer;
+    revisionData={devis_total_personnalise_centimes:pricingMode==='personnalise'?total:null,devis_acompte_personnalise_centimes:pricingMode==='personnalise'?deposit:null,devis_version:version,
+      initial_price:pricingMode==='personnalise'?'custom:'+deposit:process.env[offers[plan].initial],
+      solde_price:pricingMode==='personnalise'?'custom:'+(total-deposit):process.env[offers[plan].balance],
+      devis_accepte_le:null,devis_refuse_le:null,initial_session:null,solde_session:null,
+      express_option:null,reservation_option:false,options_paiement_avance:true,devis_decision:'en_attente',
+      proposition_texte:proposal,devis_envoye_le:new Date().toISOString(),
+      qualification_ia:{...(d.qualification_ia||{}),formule:plan,revision_commerciale:true}};
     selectedExpress=null;selectedReservation=false;stage='devis_envoye';
    }else{
     if(action==='admin-success'&&d.statut==='reussite'&&d.initial_paid_at&&d.solde_email_envoye_le)return res.status(200).json({ok:true,already:true,message:'Résultat déjà notifié au client.'});
