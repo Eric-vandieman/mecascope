@@ -12,9 +12,27 @@ window.mecaAdminLive=async function(main,path){
   for(const [id,key] of Object.entries({'meca-single-month':'paiements_uniques_mois','meca-single-previous':'paiements_uniques_precedent','meca-single-total':'paiements_uniques_total','meca-type-targeted':'unitaire_ciblee','meca-type-deep':'unitaire_approfondie','meca-type-expert':'unitaire_expert','meca-start-payments':'paiements_initiaux','meca-success-payments':'paiements_soldes','meca-pro-priority':'abonnements_priorite','meca-pro-five':'abonnements_pro5','meca-pro-ten':'abonnements_pro10'}))set(id,d[key]??0);
   set('meca-oneoff-revenue',eur(d.ca_unitaire_centimes));
   label('Nouvelles demandes',d.nouvelles_demandes||0);label('Recherches en cours',d.recherches_en_cours||0);label('Résultats à débloquer',d.resultats_a_debloquer||0);label('Demandes urgentes',d.urgences||0);
-  label('Chiffre d’affaires',eur((d.ca_unitaire_centimes||0)+(d.abonnements_ca_centimes||0)));
+  // Aucune estimation du CA des abonnements : seul Stripe (factures payées, mode réel) fait foi.
+  if(path==='/admin'||path==='/admin/statistiques'){
+   let finance=null;
+   try{finance=await call({action:'finance_stripe'});}catch(err){
+    const note=document.createElement('p');note.className='meca-stripe-audit-note';
+    note.textContent='CA abonnements non vérifié : '+(err?.message||'connexion Stripe indisponible')+'. Aucun chiffre estimé n’est affiché.';
+    main.querySelector('.pagehead')?.after(note);
+   }
+   const verified=finance?.ok===true&&finance?.source==='stripe_paid_invoices'&&finance.exact===true;
+   label('Chiffre d’affaires',verified?eur((d.ca_unitaire_centimes||0)+finance.abonnements_ca_centimes):'—');
+   label('Récurrence mensuelle',verified?eur(finance.abonnements_ca_mois_centimes):'—');
+   const anchor=main.querySelector('.metrics.six')||main.querySelector('.meca-single-section')||main.querySelector('.panel');
+   if(anchor){
+     const tile=document.createElement('section');tile.className='panel meca-stripe-ca';tile.style.cssText='margin:14px 0;padding:15px;border:1px solid #6a8296;border-radius:10px';
+     const title=document.createElement('strong');title.textContent='CA des abonnements — factures Stripe réellement payées';
+     const amount=document.createElement('div');amount.style.cssText='font-size:23px;font-weight:750;margin:7px 0';amount.textContent=verified?eur(finance.abonnements_ca_centimes):'Non vérifié';
+     const sub=document.createElement('small');sub.textContent=verified?finance.factures_payees+' facture(s) payée(s) vérifiée(s), hors remboursements enregistrés en avoir, mode réel uniquement.':'Calcul en attente des données Stripe confirmées ; aucune estimation tirée des crédits.';
+     tile.append(title,amount,sub);anchor.after(tile);
+   }
+  }
   label('Priorité Pro',d.abonnements_priorite||0);label('Pro 5',d.abonnements_pro5||0);label('Pro 10',d.abonnements_pro10||0);
-  label('Récurrence mensuelle',eur(d.abonnements_ca_centimes||0));
   if(path==='/admin/statistiques'){
    const tbody=main.querySelector('#meca-pages-report-rows'),status=main.querySelector('#meca-pages-report-status');
    if(tbody){
@@ -69,6 +87,7 @@ window.mecaAdminLive=async function(main,path){
   const inbox=Array.isArray(conversations)?conversations:[];
   const unreadTotal=inbox.reduce((n,c)=>n+Number(c.non_lus||0),0);
   const pendingCount=inbox.filter(c=>c.dernier_auteur==='client').length;
+  const unreadConversationCount=inbox.filter(c=>Number(c.non_lus||0)>0).length;
   for(const nav of document.querySelectorAll('.side a[href*="/admin/messages"],.side a[data-go="/admin/messages"]')){
     const mark=nav.querySelector('.meca-inbox-unread-badge')||document.createElement('span');
     mark.className='meca-inbox-unread-badge';mark.textContent=unreadTotal?String(unreadTotal):'';
@@ -83,7 +102,7 @@ window.mecaAdminLive=async function(main,path){
       const box=document.createElement('div'),caption=document.createElement('div'),count=document.createElement('div'),sub=document.createElement('small');
       caption.className='label';caption.textContent='Messages clients à traiter';
       count.className='value';count.textContent=String(pendingCount);
-      sub.textContent=unreadTotal+' message(s) non lu(s) · '+inbox.length+' conversation(s) au total';
+      sub.textContent=unreadConversationCount+' conversation(s) non lue(s) · '+unreadTotal+' message(s) non lu(s) · '+inbox.length+' conversation(s) au total';
       box.append(caption,count,sub);tile.append(box);
       const go=()=>{location.hash='#/admin/messages'};tile.onclick=go;tile.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}};
       metrics.append(tile);
