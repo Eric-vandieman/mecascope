@@ -84,7 +84,7 @@ window.mecaAdminLive=async function(main,path){
     const div=document.createElement('div');div.className='metric';div.id='meca-visitors-tile';
     div.innerHTML='<div><div class="label">Visiteurs aujourd’hui</div><div class="value"></div><div class="meca-single-card-desc"></div></div>';
     div.querySelector('.value').textContent=String(d.visiteurs_jour||0);
-    div.querySelector('.meca-single-card-desc').textContent=(d.visites_total||0)+' visites depuis le démarrage du suivi';
+    div.querySelector('.meca-single-card-desc').textContent=(d.visites_total||0)+' visites depuis le 25 novembre 2026';
     block.append(div);
    }
   }
