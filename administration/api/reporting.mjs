@@ -38,10 +38,11 @@ if(quoteAction){
   return res.status(r.status).json(answer);
  }catch{return res.status(503).json({message:'La proposition n’a pas pu être transmise.'})}
 }
-const b=req.body||{},names={clients:'meca_admin_fichier_clients',reporting:'meca_admin_reporting',messages:'meca_admin_messages',conversations:'meca_admin_liste_conversations',mark_read:'meca_admin_marquer_messages_lus',reply:'meca_admin_repondre',chat:'meca_admin_message_qualification'},action=b.action;
+const b=req.body||{},names={client_delete:'meca_admin_supprimer_fiche_client',clients:'meca_admin_fichier_clients',reporting:'meca_admin_reporting',messages:'meca_admin_messages',conversations:'meca_admin_liste_conversations',mark_read:'meca_admin_marquer_messages_lus',reply:'meca_admin_repondre',chat:'meca_admin_message_qualification'},action=b.action;
 if(!names[action])return res.status(400).end();
-if(!['clients','reporting','conversations'].includes(action)&&!/^[0-9a-f-]{36}$/i.test(String(b.id||'')))return res.status(400).end();
-const args=['messages','mark_read'].includes(action)?{p_dossier:b.id}:action==='chat'?{p_dossier:b.id,p_contenu:String(b.message||'').trim().slice(0,3000)}:action==='reply'?{p_dossier:b.id,p_contenu:String(b.message||'').trim().slice(0,3000),p_pays:b.found?String(b.country||'').trim():null,p_prix_centimes:b.found?Math.round(Number(b.price)*100):null,p_delai:b.found?String(b.delay||'').trim():null,p_etat:b.found?String(b.condition||'').trim():null,p_compatibilite:b.found?String(b.fit||'').trim():null,p_fournisseur:b.found?String(b.supplier||'').trim():null,p_precisions:String(b.details||'').trim().slice(0,3000)}:{};
+if(!['client_delete','clients','reporting','conversations'].includes(action)&&!/^[0-9a-f-]{36}$/i.test(String(b.id||'')))return res.status(400).end();
+const args=action==='client_delete'?{p_type:String(b.clientType||''),p_cle:String(b.clientKey||''),p_portee:String(b.scope||''),p_confirmation:String(b.confirmation||'')}:['messages','mark_read'].includes(action)?{p_dossier:b.id}:action==='chat'?{p_dossier:b.id,p_contenu:String(b.message||'').trim().slice(0,3000)}:action==='reply'?{p_dossier:b.id,p_contenu:String(b.message||'').trim().slice(0,3000),p_pays:b.found?String(b.country||'').trim():null,p_prix_centimes:b.found?Math.round(Number(b.price)*100):null,p_delai:b.found?String(b.delay||'').trim():null,p_etat:b.found?String(b.condition||'').trim():null,p_compatibilite:b.found?String(b.fit||'').trim():null,p_fournisseur:b.found?String(b.supplier||'').trim():null,p_precisions:String(b.details||'').trim().slice(0,3000)}:{};
+if(action==='client_delete'&&(!['particulier','professionnel'].includes(args.p_type)||!['fiche','complete'].includes(args.p_portee)||args.p_cle.length>320||args.p_cle.length<5||args.p_confirmation!==(args.p_portee==='fiche'?'SUPPRIMER':'EFFACER')))return res.status(400).json({message:'Suppression non confirmée ou paramètres invalides'});
 if(action==='chat'&&!args.p_contenu)return res.status(400).json({message:'Message vide'});
 if(action==='reply'&&(!args.p_contenu||(b.found&&(!args.p_pays||!args.p_delai||!args.p_fournisseur||!Number.isSafeInteger(args.p_prix_centimes)||args.p_prix_centimes<0))))return res.status(400).json({message:'Champs incomplets'});
 if(action==='reply'&&b.found){
@@ -59,7 +60,7 @@ if(action==='reply'&&b.found){
   if(!confirmation.ok)return res.status(409).json({message:'Impossible de confirmer la source et de proposer le solde. Vérifiez les options souscrites.'});
  }catch{return res.status(503).json({message:'Le solde n’a pas pu être proposé, recommencez.'})}
 }
-try{const r=await fetch(process.env.SUPABASE_URL+'/rest/v1/rpc/'+names[action],{method:'POST',headers:{apikey:process.env.SUPABASE_PUBLISHABLE_KEY,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(args),signal:AbortSignal.timeout(12000)});if(!r.ok)return res.status(403).json({message:'Accès ou opération refusé (autorisation/paiement initial).'});const data=await r.json();
+try{const r=await fetch(process.env.SUPABASE_URL+'/rest/v1/rpc/'+names[action],{method:'POST',headers:{apikey:process.env.SUPABASE_PUBLISHABLE_KEY,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(args),signal:AbortSignal.timeout(12000)});if(!r.ok){const reason=await r.json().catch(()=>({}));return res.status(r.status===400?400:403).json({message:action==='client_delete'?(reason.message||'Suppression refusée pour protéger les données financières.'):'Accès ou opération refusé (autorisation/paiement initial).'})}const data=await r.json();
 if(action==='chat'){
  let emailed=false;
  try{
