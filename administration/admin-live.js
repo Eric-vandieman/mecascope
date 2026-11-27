@@ -534,6 +534,7 @@ window.mecaAdminLive=async function(main,path){
      planSelect.value=key&&plans[key]?key:'';
      personal.value=(existing||row?.statut==='refuse')?(row.proposition_texte||''):(row&&key&&plans[key]?defaultDraft(row,key):'');
      proposalStatus.textContent='';aiDetails.textContent='';aiStatus.textContent='';currentAiDossier=null;
+     if(row?.devis_total_personnalise_centimes){priceInfo.textContent='DEVIS RÉVISÉ : total '+(row.devis_total_personnalise_centimes/100).toLocaleString('fr-FR')+' € · acompte '+(row.devis_acompte_personnalise_centimes/100).toLocaleString('fr-FR')+' € · solde '+((row.devis_total_personnalise_centimes-row.devis_acompte_personnalise_centimes)/100).toLocaleString('fr-FR')+' €. Les options Express éventuelles restent facultatives.'}
      if(row?.qualification_ia?.formule)renderAssessment(row.qualification_ia);
      else if(row?.statut==='deposee'){renderAssessment(null);analyzeCurrent()}
      else{assessmentBody.textContent='Aucune qualification disponible pour ce dossier.';quoteButton.disabled=true}
@@ -543,10 +544,11 @@ window.mecaAdminLive=async function(main,path){
      const fixed=row.qualification_ia?.formule;
      if(!fixed||fixed!==planSelect.value){proposalStatus.textContent='Le tarif n’est pas cohérent avec le bilan IA enregistré. Envoi bloqué.';return}
      const message=buildProposal();
-     const requiredPrice=String(plans[fixed].price)+' €';
+     const negotiated=Number.isInteger(row.devis_total_personnalise_centimes)?row.devis_total_personnalise_centimes/100:plans[fixed].price;
+     const requiredPrice=negotiated.toLocaleString('fr-FR',{maximumFractionDigits:2})+' €';
      if(!message.includes(requiredPrice)){proposalStatus.textContent='Le message doit contenir le tarif exact enregistré : '+requiredPrice+'. Corrigez la proposition avant envoi.';return}
      if(message.length<80||message.length>2800){proposalStatus.textContent='Vérifiez votre message (80 à 2 800 caractères, référence comprise).';return}
-     if(!confirm('Envoyer votre proposition de '+(plans[planSelect.value]?.price||'—')+' € à '+(row.contact||'ce client')+' avec toutes les options facultatives à sélectionner sur son devis ?'))return;
+     if(!confirm('Envoyer votre proposition de '+(negotiated||'—')+' € à '+(row.contact||'ce client')+' avec toutes les options facultatives à sélectionner sur son devis ?'))return;
      quoteButton.disabled=true;proposalStatus.textContent='Envoi de votre proposition…';
      try{const result=await call({action:'quote',id:row.id,offre:planSelect.value,proposal:message});proposalStatus.textContent=result.message||'Devis transmis au client.';await refreshHistory();location.reload()}
      catch(e){proposalStatus.textContent=e.message}finally{quoteButton.disabled=false}
