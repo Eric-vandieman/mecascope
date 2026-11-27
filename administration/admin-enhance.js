@@ -23,6 +23,21 @@ window.mecaEnhanceAdminLayout=layout=>{
  p=p.replace(/Aucun dossier\./g,'Aucun dossier synchronisé dans ce tableau de bord.')
  .replace(/Aucun dossier</g,'Dossiers non synchronisés<')
  .replace(/Indicateurs calculés sur les abonnements configurés dans les fiches clients\. Montant théorique, sans encaissement automatique\./g,'Les abonnements ne sont comptabilisés qu’après confirmation et rapprochement du paiement.');
+ // Mise en avant des dossiers actifs : directement sous les indicateurs du haut.
+ // On déplace le bloc existant afin de préserver son contenu et ses actions.
+ const dossiersTitle='Demandes / Dossiers en cours (0)';
+ const dossiersTitleAt=p.indexOf(dossiersTitle);
+ if(dossiersTitleAt!==-1){
+  const blockStart=p.lastIndexOf('<div class="panel"',dossiersTitleAt);
+  const blockEnd=p.indexOf('<div class="grid3">',dossiersTitleAt);
+  const insertAt=p.indexOf(note+singles);
+  if(blockStart>=0&&blockEnd>blockStart&&insertAt>=0&&insertAt<blockStart){
+   const original=p.slice(blockStart,blockEnd);
+   const highlighted=original.replace('<div class="panel"','<div class="panel meca-active-dossiers"');
+   p=p.slice(0,blockStart)+p.slice(blockEnd);
+   p=p.slice(0,insertAt)+highlighted+p.slice(insertAt);
+  }
+ }
  layout.pages['/admin']=p;
  layout.pages['/admin/statistiques']=layout.pages['/admin/statistiques'].replace('<div class="stats-page">',note+singles+'<div class="stats-page">').replace('Statistiques calculées sur les dossiers de démonstration enregistrés dans ce navigateur.','Statistiques réelles exclusivement.');
  layout.pages['/admin/statistiques']='<main class="main"><div class="pagehead"><div><h1>Statistiques</h1><div class="muted">Activité réelle de Mécascope</div></div></div>'+note+singles+'<section class="panel"><h2>Détail des prestations uniques</h2><div class="meca-single-cards">'+tile('Recherche ciblée','meca-type-targeted','39 € · paiements confirmés')+tile('Recherche approfondie','meca-type-deep','79 € · paiements confirmés')+tile('Investigation Expert','meca-type-expert','149 € · paiements confirmés')+'</div><h2>Encaissements réels</h2><div class="meca-single-cards">'+tile('Paiements initiaux','meca-start-payments','Prestations à l’unité')+tile('Soldes de réussite','meca-success-payments','Règlements confirmés')+tile('Chiffre d’affaires ponctuel','meca-oneoff-revenue','Depuis le lancement')+'</div><p class="note">Ces statistiques seront alimentées par les paiements validés et les dossiers rapprochés. Aucune valeur fictive ou estimation commerciale n’est enregistrée comme encaissement.</p></section><section class="panel"><h2>Abonnements professionnels</h2><div class="meca-single-cards">'+tile('Priorité Pro','meca-pro-priority','Abonnements actifs confirmés')+tile('Pro 5','meca-pro-five','Abonnements actifs confirmés')+tile('Pro 10','meca-pro-ten','Abonnements actifs confirmés')+'</div></section></main>';
