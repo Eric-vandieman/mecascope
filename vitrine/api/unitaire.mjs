@@ -130,7 +130,25 @@ export default async function handler(req,res){
       '<div style="font:16px Arial;max-width:550px;margin:auto"><h2>Mécascope</h2><p>Une nouvelle réponse est disponible pour votre dossier <strong>'+safe(d.reference)+'</strong>.</p><p>Consultez votre lien personnel de suivi de mission reçu dans votre précédent courriel Mécascope. Ne communiquez jamais ce lien.</p></div>');
     return res.status(200).json({sent:true});
   }
-  if(action==='admin-list'){
+  if(action==='admin-sms-claim'){
+    if(!(await getAdmin(req)))return res.status(403).json({message:'Administration uniquement'});
+    if(!/^[a-f0-9-]{36}$/i.test(String(b.id||'')))return res.status(400).json({message:'Dossier invalide'});
+    const rows=await query('meca_demandes_unitaires?id=eq.'+b.id+'&select=id,telephone,statut&limit=1');
+    const dossier=rows?.[0];
+    if(!dossier||dossier.statut!=='devis_envoye')return res.status(409).json({message:'Aucune proposition envoyée pour ce dossier'});
+    const existing=await query('meca_sms_notifications?dossier_id=eq.'+b.id+'&select=statut&limit=1');
+    if(existing?.length)return res.status(200).json({claimed:false,status:existing[0].statut});
+    const numero=String(dossier.telephone||'').trim();
+    const insert=await query('meca_sms_notifications?on_conflict=dossier_id',{method:'POST',headers:{Prefer:'resolution=ignore-duplicates,return=representation'},body:JSON.stringify({dossier_id:b.id,telephone:numero,statut:'en_attente'})});
+    return res.status(200).json({claimed:Array.isArray(insert)&&insert.length===1,telephone:Array.isArray(insert)&&insert.length===1?numero:undefined});
+   }
+   if(action==='admin-sms-complete'){
+    if(!(await getAdmin(req)))return res.status(403).json({message:'Administration uniquement'});
+    if(!/^[a-f0-9-]{36}$/i.test(String(b.id||''))||!['envoye','echec','non_envoye'].includes(b.status))return res.status(400).json({message:'Paramètres invalides'});
+    const result=await query('meca_sms_notifications?dossier_id=eq.'+b.id+'&statut=eq.en_attente',{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({statut:b.status,ovh_job_id:String(b.jobId||'').slice(0,100),erreur:String(b.error||'').slice(0,250),modifie_le:new Date().toISOString()})});
+    return res.status(200).json({ok:Array.isArray(result)&&result.length===1});
+   }
+   if(action==='admin-list'){
    if(!(await getAdmin(req)))return res.status(403).json({message:'Accès réservé à Mécascope'});
    const rows=await query('meca_demandes_unitaires?select=id,reference,contact,email,telephone,details,offre,statut,express_option,reservation_option,express_validee,reservation_validee,initial_paid_at,solde_paid_at,cree_le&order=cree_le.desc&limit=100');
    return res.status(200).json({dossiers:rows});
