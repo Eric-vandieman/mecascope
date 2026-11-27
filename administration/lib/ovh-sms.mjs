@@ -10,7 +10,7 @@ export function normalizeMobile(input){
  return '';
 }
 const URL_BASE='https://api.eu.ovhcloud.com/1.0';
-export async function sendProposalSms(phone,kind='proposition'){
+export async function sendProposalSms(phone,kind='proposition',customMessage=null){
  if(!['proposition','piece_trouvee'].includes(kind))throw Error('Type de SMS invalide');
  const receiver=normalizeMobile(phone);
  if(!receiver)throw Error('Numéro de portable absent ou invalide');
@@ -22,7 +22,15 @@ export async function sendProposalSms(phone,kind='proposition'){
  if(!Number.isFinite(timestamp))throw Error('Horloge OVH invalide');
  const url=URL_BASE+'/sms/'+encodeURIComponent(service)+'/jobs';
  const payload={charset:'UTF-8',message:kind==='piece_trouvee'?'MECASCOPE : Bonne nouvelle ! Nous avons trouve votre piece. Connectez-vous a votre espace client pour regler le solde et obtenir le contact du fournisseur.':'MECASCOPE : votre proposition est disponible. Consultez votre e-mail, y compris les spams, pour acceder a votre dossier.',receivers:[receiver],sender:'MECASCOPE',noStopClause:true,priority:'high',senderForResponse:false};
- const body=JSON.stringify(payload),method='POST';
+ if(typeof customMessage==='string'&&customMessage.trim())payload.message=customMessage.trim();
+ // Limite défensive pour ne jamais facturer de SMS concaténés par inadvertance.
+ const basic=new Set([...("@£$¥èéùìòÇ\\nØø\\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\\\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà")]);
+ const ext=new Set([...("^{}\\\\[~]|€\\f")]);
+ let count=0,unicode=false;
+ for(const char of payload.message){if(basic.has(char))count++;else if(ext.has(char))count+=2;else{unicode=true;break}}
+ const max=unicode?70:160;
+ if((unicode?payload.message.length:count)>max)throw Error('Message trop long pour un seul SMS');
+  const body=JSON.stringify(payload),method='POST';
  const signature='$1$'+createHash('sha1').update([secret,consumer,method,url,body,timestamp].join('+')).digest('hex');
  const response=await fetch(url,{method,headers:{'Content-Type':'application/json','X-Ovh-Application':app,'X-Ovh-Consumer':consumer,'X-Ovh-Timestamp':String(timestamp),'X-Ovh-Signature':signature},body,signal:AbortSignal.timeout(12000)});
  const result=await response.json().catch(()=>({}));
