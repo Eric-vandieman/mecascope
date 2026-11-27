@@ -858,7 +858,7 @@ window.mecaAdminLive=async function(main,path){
        const result=await call({action:'demandes_page',page:demandesPage,size:20,search:demandesSearch,status:demandesStatus||'tous',type:demandesType});
        if(request!==demandesRequest||!main.isConnected)return;
        const items=Array.isArray(result.items)?result.items:[];
-       for(const row of items){if(row.type_dossier==='particulier'&&!dossiers.some(d=>d.id===row.id))dossiers.push(row)}
+       for(const row of items){if(row.type_dossier!=='professionnel'&&!dossiers.some(d=>d.id===row.id))dossiers.push(row)}
        table.replaceChildren();
        main.querySelectorAll('.meca-demandes-counter,.meca-demandes-empty,.meca-demandes-pagination,.meca-demandes-filter-note').forEach(x=>x.remove());
        const counter=document.createElement('p');counter.className='meca-demandes-counter';
@@ -870,7 +870,7 @@ window.mecaAdminLive=async function(main,path){
          tr.style.cssText='background:'+(fresh?'#4b3320':'#29313b')+';color:#f5f7fa;border-left:4px solid '+(fresh?'#eda34b':'#667784');
          const vehicle=[row.details?.brand,row.details?.model,row.details?.year].filter(Boolean).join(' ')||'—';
          const statut=row.statut==='devis_envoye'&&row.devis_decision==='en_attente'?'Devis envoyé · en attente':row.statut||'—';
-         const values=[(pro?'PRO · ':'PART · ')+(row.reference||row.id),row.contact||'—',vehicle,statut,row.cree_le?new Date(row.cree_le).toLocaleString('fr-FR'):'—'];
+         const values=[(pro?'PRO · ':row.type_dossier==='professionnel_unitaire'?'PRO à l’unité · ':'PART · ')+(row.reference||row.id),row.contact||'—',vehicle,statut,row.cree_le?new Date(row.cree_le).toLocaleString('fr-FR'):'—'];
          for(const value of values){const td=document.createElement('td');td.textContent=value;tr.append(td)}
          const action=document.createElement('td'),open=document.createElement('button');
          open.type='button';open.className='btn '+(fresh?'orange':'dark')+' small';open.textContent=pro?'Voir la recherche Pro':fresh?'Traiter la nouvelle demande':'Voir le dossier';
