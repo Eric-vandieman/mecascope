@@ -1,4 +1,5 @@
 import {randomUUID} from 'node:crypto';
+import {normalizeMobile} from './ovh-sms.mjs';
 
 const limited=(v,n=140)=>typeof v==='string'?v.trim().slice(0,n):'';
 const validEmail=s=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)&&s.length<=254;
@@ -25,6 +26,8 @@ export default async function handler(req,res){
  if(entry.count>4)return res.status(429).json({message:'Trop de demandes successives. Réessayez dans une minute.'});
  const email=limited(b.email,254).toLowerCase(),contact=limited(b.contact,120);
  const phone=limited(b.phone,22);
+ const portable=normalizeMobile(phone);
+ if(!portable)return res.status(400).json({message:'Un numéro de téléphone portable valide est obligatoire pour déposer une demande (06/07 ou +33 pour la France).'});
  const urgent=b.urgent===true;
  if(!validEmail(email)||contact.length<2||!allowTypes.has(b.vehicleType)||!limited(b.brand)||!limited(b.model)||!limited(b.part)||!/^((19|20)\d{2})$/.test(String(b.year||'')))
   return res.status(400).json({message:'Complétez votre nom, e-mail, type de véhicule, marque, modèle, année et pièce recherchée.'});
@@ -64,7 +67,7 @@ export default async function handler(req,res){
  const saved=await fetch(dbUrl+'/rest/v1/meca_demandes_unitaires',{
   method:'POST',headers:{apikey:admin,...(admin.startsWith('eyJ')?{Authorization:'Bearer '+admin}:{}),
    'Content-Type':'application/json',Prefer:'return=representation'},
-  body:JSON.stringify({reference,contact,email,telephone:phone,details,urgent,statut:'deposee',particulier_id:particulierId}),
+  body:JSON.stringify({reference,contact,email,telephone:portable,details,urgent,statut:'deposee',particulier_id:particulierId}),
   signal:AbortSignal.timeout(12000)
  }).catch(()=>null);
  if(!saved?.ok)return res.status(503).json({message:'Le dossier n’a pas pu être enregistré. Réessayez.',sent:false});
