@@ -1,3 +1,4 @@
+import {normalizeMobile} from './ovh-sms.mjs';
 import {randomBytes,randomUUID,createHash,createHmac} from 'node:crypto';
 const COOKIE='__Host-mecascope-professional';
 const cookieToken=h=>{const s=String(h||'').split(';').map(x=>x.trim()).find(x=>x.startsWith(COOKIE+'='));return s?decodeURIComponent(s.slice(COOKIE.length+1)):null};
@@ -56,9 +57,11 @@ export default async function handler(req,res){
    if(!brand||!model||!part)return res.status(400).json({message:'Marque, modèle et pièce recherchée sont obligatoires'});
    const details={vehicleType:clean(b.vehicleType,80),brand,model,part,year:clean(b.year,4),ref:clean(b.ref,140),
     engine:clean(b.engine,140),vin:clean(b.vin,60),budget:clean(b.budget,40),notes:clean(b.notes,700)};
+   const portable=normalizeMobile(b.phone);
+   if(!portable)return res.status(400).json({message:'Indiquez un numéro de téléphone portable valide pour recevoir votre proposition.'});
    const reference='MECA-'+new Date().toISOString().slice(0,10).replaceAll('-','')+'-'+randomUUID().slice(0,8).toUpperCase();
    const contact=String(user.user_metadata?.contact||board.garage.contact||board.garage.nom||'Contact professionnel').slice(0,140);
-   const record={reference,contact,email:String(user.email).toLowerCase(),telephone:String(user.user_metadata?.telephone||board.garage.telephone||'').slice(0,30),
+   const record={reference,contact,email:String(user.email).toLowerCase(),telephone:portable,
     details,urgent:b.urgent===true,statut:'deposee',garage_id:board.garage.id,pro_createur_id:user.id};
    const saved=await fetch(table,{method:'POST',headers:{...dbHeaders,Prefer:'return=representation'},body:JSON.stringify(record),signal:AbortSignal.timeout(12000)});
    if(!saved.ok)throw Error('Enregistrement de la recherche impossible');
