@@ -751,55 +751,72 @@ window.mecaAdminLive=async function(main,path){
     await refreshHistory();
    };
    // Alimenter le tableau principal attendu dans Gestion des demandes.
-   function renderDemandesTable(){
-   if(path==='/admin/demandes'){
-     const table=main.querySelector('#list-content tbody');
-     if(table){
+   let demandesPage=1, demandesSearch='', demandesStatus='', demandesType='tous', demandesRequest=0;
+   async function renderDemandesTable(){
+     if(path!=='/admin/demandes')return;
+     const table=main.querySelector('#list-content tbody'),host=main.querySelector('#list-content');
+     if(!table||!host)return;
+     let toolbar=main.querySelector('.meca-demandes-toolbar');
+     if(!toolbar){
+       toolbar=document.createElement('div');toolbar.className='meca-demandes-toolbar';
+       toolbar.style.cssText='display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:14px;background:#1c2935;border-radius:12px;margin:12px 0';
+       const search=document.createElement('input');search.type='search';search.placeholder='Rechercher un dossier, client, pièce, référence…';search.setAttribute('aria-label','Rechercher toutes les demandes');
+       search.style.cssText='flex:1;min-width:210px;padding:10px';
+       const status=document.createElement('select');status.setAttribute('aria-label','Statut des demandes');
+       for(const [value,label] of [['tous','Tous les statuts'],['deposee','Nouvelles demandes'],['devis_en_attente','Devis en attente'],['acompte_paye','Acompte payé'],['reussite','Pièce trouvée'],['solde_paye','Terminées payées'],['refuse','Refusées']]){const o=new Option(label,value);status.append(o)}
+       const type=document.createElement('select');type.setAttribute('aria-label','Type de client');
+       for(const [value,label] of [['tous','Particuliers et professionnels'],['particulier','Particuliers'],['professionnel','Professionnels']])type.append(new Option(label,value));
+       const clear=document.createElement('button');clear.type='button';clear.className='btn dark small';clear.textContent='Effacer les filtres';
+       const notice=document.createElement('small');notice.className='meca-demandes-total';notice.style.cssText='width:100%;color:#d3dbe5';
+       toolbar.append(search,status,type,clear,notice);
+       host.prepend(toolbar);
+       const requested=new URLSearchParams(location.hash.split('?')[1]||'');
+       if(requested.get('filtre')==='devis_en_attente'){demandesStatus='devis_en_attente';status.value='devis_en_attente'}
+       let timer;
+       search.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(()=>{demandesSearch=search.value.trim();demandesPage=1;renderDemandesTable().catch(()=>{})},280)});
+       status.addEventListener('change',()=>{demandesStatus=status.value;demandesPage=1;renderDemandesTable().catch(()=>{})});
+       type.addEventListener('change',()=>{demandesType=type.value;demandesPage=1;renderDemandesTable().catch(()=>{})});
+       clear.onclick=()=>{search.value='';status.value='tous';type.value='tous';demandesSearch='';demandesStatus='tous';demandesType='tous';demandesPage=1;renderDemandesTable().catch(()=>{})};
+     }
+     const request=++demandesRequest;
+     const marker=toolbar.querySelector('.meca-demandes-total');
+     marker.textContent='Chargement des demandes…';
+     try{
+       const result=await call({action:'demandes_page',page:demandesPage,size:20,search:demandesSearch,status:demandesStatus||'tous',type:demandesType});
+       if(request!==demandesRequest||!main.isConnected)return;
+       const items=Array.isArray(result.items)?result.items:[];
+       for(const row of items){if(row.type_dossier==='particulier'&&!dossiers.some(d=>d.id===row.id))dossiers.push(row)}
        table.replaceChildren();
-       main.querySelectorAll('.meca-demandes-filter-note,.meca-demandes-counter,.meca-demandes-empty').forEach(n=>n.remove());
-       const params=new URLSearchParams(location.hash.split('?')[1]||'');
-       const waitingOnly=params.get('filtre')==='devis_en_attente';
-       const visibleDossiers=waitingOnly?dossiers.filter(x=>x.statut==='devis_envoye'&&x.devis_decision==='en_attente'):dossiers;
-       const tableHost=main.querySelector('#list-content');
-       if(waitingOnly&&tableHost){
-         const note=document.createElement('div');note.className='panel meca-demandes-filter-note';
-         note.style.cssText='margin-bottom:12px;border:1px solid #b78849';
-         const title=document.createElement('strong');title.textContent='Propositions envoyées : '+visibleDossiers.length+' en attente de réponse';
-         const explain=document.createElement('p');explain.textContent='La relance reste manuelle. Ouvrez un dossier et utilisez « Renvoyer le même devis » si nécessaire, après 24 à 48 heures.';
-         const all=document.createElement('button');all.type='button';all.className='btn dark small';all.textContent='Afficher toutes les demandes';all.onclick=()=>{location.hash='#/admin/demandes'};
-         note.append(title,explain,all);tableHost.prepend(note);
-       }
-       if(!waitingOnly){
-         const counter=document.createElement('div');counter.className='meca-demandes-counter';counter.style.cssText='margin:12px 0 18px;padding:13px 16px;background:#23313b;border-radius:10px;border:1px solid #667888';
-         const pending=dossiers.filter(x=>x.statut==='deposee').length;
-         counter.textContent=pending+' nouvelle(s) demande(s) à traiter · En brun : non traitée · En gris : déjà prise en charge';
-         tableHost?.prepend(counter);
-       }
-       for(const row of visibleDossiers){
-         const tr=document.createElement('tr');
-         const fresh=row.statut==='deposee';
+       main.querySelectorAll('.meca-demandes-counter,.meca-demandes-empty,.meca-demandes-pagination,.meca-demandes-filter-note').forEach(x=>x.remove());
+       const counter=document.createElement('p');counter.className='meca-demandes-counter';
+       counter.textContent=Number(d.nouvelles_demandes||0)+' nouvelles demandes particulières · En marron : à traiter · En gris : déjà traitées · Les professionnels ont leur propre statut.';
+       toolbar.after(counter);
+       for(const row of items){
+         const pro=row.type_dossier==='professionnel';
+         const tr=document.createElement('tr'),fresh=row.statut==='deposee'||(pro&&['deposee','soumise','en_attente'].includes(row.statut));
          tr.style.cssText='background:'+(fresh?'#4b3320':'#29313b')+';color:#f5f7fa;border-left:4px solid '+(fresh?'#eda34b':'#667784');
          const vehicle=[row.details?.brand,row.details?.model,row.details?.year].filter(Boolean).join(' ')||'—';
-         let statut=row.statut||'—';
-         if(row.statut==='devis_envoye'&&row.devis_decision==='en_attente'){
-          const sent=row.devis_envoye_le?new Date(row.devis_envoye_le):null;
-          const hours=sent&&Number.isFinite(sent.getTime())?Math.max(0,(Date.now()-sent.getTime())/3600000):0;
-          statut=hours>=48?'Devis envoyé · relance 48 h possible':hours>=24?'Devis envoyé · relance 24 h possible':'Devis envoyé · en attente';
-         }
-         for(const value of [(row.urgent?'🚨 URGENT · ':'')+(row.reference||row.id),row.contact||'—',vehicle,statut,row.statut==='devis_envoye'&&row.devis_envoye_le?'Envoyé le '+new Date(row.devis_envoye_le).toLocaleString('fr-FR'):row.cree_le?new Date(row.cree_le).toLocaleString('fr-FR'):'—']){
-           const td=document.createElement('td');td.textContent=value;tr.append(td);
-         }
-         const action=document.createElement('td');
-         const open=document.createElement('button');open.type='button';open.className='btn '+(fresh?'orange':'dark')+' small';open.textContent=fresh?'Traiter la nouvelle demande':'Voir le dossier';
-         open.onclick=()=>openTreatment(row.id);
+         const statut=row.statut==='devis_envoye'&&row.devis_decision==='en_attente'?'Devis envoyé · en attente':row.statut||'—';
+         const values=[(pro?'PRO · ':'PART · ')+(row.reference||row.id),row.contact||'—',vehicle,statut,row.cree_le?new Date(row.cree_le).toLocaleString('fr-FR'):'—'];
+         for(const value of values){const td=document.createElement('td');td.textContent=value;tr.append(td)}
+         const action=document.createElement('td'),open=document.createElement('button');
+         open.type='button';open.className='btn '+(fresh?'orange':'dark')+' small';open.textContent=pro?'Voir la recherche Pro':fresh?'Traiter la nouvelle demande':'Voir le dossier';
+         open.onclick=()=>{if(pro){location.hash='#/admin/demandes?source=professionnel&dossier='+encodeURIComponent(row.id)}else openTreatment(row.id)};
          action.append(open);tr.append(action);table.append(tr);
        }
-       main.querySelector('#list-content .empty')?.remove();
-       if(!visibleDossiers.length){const message=document.createElement('p');message.className='empty meca-demandes-empty';message.textContent=waitingOnly?'Aucun devis actuellement en attente de réponse.':'Aucun dossier client enregistré.';main.querySelector('#list-content .tablewrap')?.append(message)}
-     }
+       if(!items.length){const empty=document.createElement('p');empty.className='empty meca-demandes-empty';empty.textContent='Aucune demande ne correspond aux filtres.';host.querySelector('.tablewrap')?.append(empty)}
+       const pages=Math.max(1,Number(result.total_pages)||1),total=Math.max(0,Number(result.total)||0);
+       marker.textContent=total+' demande(s) correspondante(s) · Page '+demandesPage+' sur '+pages+' · 20 par page';
+       const pagination=document.createElement('div');pagination.className='meca-demandes-pagination';pagination.style.cssText='display:flex;gap:12px;justify-content:center;align-items:center;padding:16px';
+       const previous=document.createElement('button');previous.type='button';previous.className='btn dark small';previous.textContent='← Précédent';previous.disabled=demandesPage<=1;
+       const next=document.createElement('button');next.type='button';next.className='btn dark small';next.textContent='Suivant →';next.disabled=demandesPage>=pages;
+       const position=document.createElement('span');position.textContent=demandesPage+' / '+pages;
+       previous.onclick=()=>{demandesPage=Math.max(1,demandesPage-1);renderDemandesTable().catch(()=>{})};
+       next.onclick=()=>{demandesPage=Math.min(pages,demandesPage+1);renderDemandesTable().catch(()=>{})};
+       pagination.append(previous,position,next);host.append(pagination);
+     }catch(e){if(request!==demandesRequest)return;marker.textContent='Impossible de récupérer la liste : '+e.message}
    }
-   }
-   renderDemandesTable();
+   await renderDemandesTable();
 
    async function syncDemandesAfterAction(id){
      // Synchronisation silencieuse : aucune navigation, aucun rafraîchissement document.
@@ -822,7 +839,7 @@ window.mecaAdminLive=async function(main,path){
        badge.textContent=n?String(n):'';
        badge.hidden=n===0;
      }
-     renderDemandesTable();
+     await renderDemandesTable();
      if(dossiers.some(row=>row.id===current)){
        select.value=current;
        showDossier(dossiers.find(row=>row.id===current));
