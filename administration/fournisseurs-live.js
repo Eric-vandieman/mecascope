@@ -1,6 +1,6 @@
 'use strict';
 window.mecaSuppliers=async function(main,path){
- if(!['/admin/fournisseurs','/admin/demandes'].includes(path))return;
+ if(path!=='/admin/fournisseurs')return; // Le répertoire fournisseurs ne s'injecte plus dans Demandes.
  const isDirectory=path==='/admin/fournisseurs',selection=main.querySelector('#meca-live-dossier');
  if(!isDirectory&&!selection)return;
  const api=async payload=>{
