@@ -1,4 +1,40 @@
 import {sendProposalSms} from '../lib/ovh-sms.mjs';
+
+const siteApi='https://xn--mcascope-b1a.fr/api/unitaire';
+async function sendResultSmsOnce(token,id){
+ const action=async payload=>{
+  const response=await fetch(siteApi,{
+   method:'POST',headers:{Authorization:'Bearer '+token,Origin:'https://xn--mcascope-b1a.fr','Content-Type':'application/json'},
+   body:JSON.stringify(payload),signal:AbortSignal.timeout(10000)});
+  const info=await response.json().catch(()=>({}));
+  if(!response.ok)throw Error(info.message||'Suivi SMS indisponible ('+response.status+')');
+  return info;
+ };
+ try{
+  const claim=await action({action:'admin-sms-claim',id,smsType:'piece_trouvee'});
+  if(!claim.claimed)return claim.status||'deja_traite';
+  let status='echec',jobId='',error='';
+  try{
+   const result=await sendProposalSms(claim.telephone,'piece_trouvee');
+   status='envoye';jobId=result.jobId;
+  }catch(e){
+   error=String(e?.message||'Envoi SMS non confirmé').slice(0,250);
+   if(/portable absent|portable.*invalide/.test(error))status='non_envoye';
+  }
+  try{await action({action:'admin-sms-complete',id,smsType:'piece_trouvee',status,jobId,error})}
+  catch(e){console.error('Mécascope: suivi SMS résultat non confirmé',String(e?.message||e))}
+  return status;
+ }catch(e){console.error('Mécascope SMS résultat:',String(e?.message||e));return 'suivi_indisponible'}
+}
+const resultSmsMessage=status=>({
+ envoye:' SMS pièce trouvée transmis à OVHcloud.',
+ echec:' Attention : SMS pièce trouvée non confirmé.',
+ non_envoye:' Aucun portable valide pour envoyer le SMS pièce trouvée.',
+ en_attente:' SMS pièce trouvée déjà en cours.',
+ suivi_indisponible:' Attention : suivi SMS pièce trouvée indisponible.',
+ deja_traite:' SMS pièce trouvée déjà traité.'
+}[status]||' SMS pièce trouvée déjà traité ('+status+').');
+
 export default async function handler(req,res){
 res.setHeader('Cache-Control','no-store');
 if(req.method!=='POST')return res.status(405).end();
@@ -34,6 +70,10 @@ if(quoteAction){
    }catch(e){answer.smsStatus='suivi_indisponible';console.error('Mécascope SMS:',String(e?.message||'erreur de suivi'))}
    const label={envoye:' SMS transmis à OVHcloud.',echec:' Attention : SMS refusé ou non confirmé.',non_envoye:' Attention : aucun portable valide pour ce client.',en_attente:' SMS déjà en cours de traitement.',suivi_indisponible:' Attention : suivi SMS indisponible.',deja_traite:' SMS déjà traité.'}[answer.smsStatus]||' SMS déjà traité ('+answer.smsStatus+').';
    answer.message=(answer.message||'Proposition transmise au client.')+label;
+  }
+  if(r.ok&&quoteAction==='admin-success'){
+   answer.smsResultatStatus=await sendResultSmsOnce(token,b.id);
+   answer.message=(answer.message||'Résultat communiqué.')+resultSmsMessage(answer.smsResultatStatus);
   }
   return res.status(r.status).json(answer);
  }catch{return res.status(503).json({message:'La proposition n’a pas pu être transmise.'})}
@@ -72,11 +112,13 @@ if(action==='chat'){
  return res.status(200).json({saved:true,id:data,emailed,message:emailed?'Message enregistré et e-mail de notification envoyé.':'Message enregistré dans le dossier ; e-mail de notification non confirmé.'});
 }
 if(action==='reply'){
+ let smsResultatStatus=null;
+ if(b.found)smsResultatStatus=await sendResultSmsOnce(token,b.id);
  let emailed=b.found===true;
  if(!b.found)try{const notify=await fetch('https://xn--mcascope-b1a.fr/api/unitaire',{
   method:'POST',headers:{Authorization:'Bearer '+token,Origin:'https://xn--mcascope-b1a.fr','Content-Type':'application/json'},
   body:JSON.stringify({action:'admin-notify',id:b.id}),signal:AbortSignal.timeout(12000)});emailed=notify.ok}catch{}
- return res.status(200).json({saved:true,id:data,emailed});
+ return res.status(200).json({saved:true,id:data,emailed,...(smsResultatStatus?{smsResultatStatus,message:'Résultat enregistré et proposition de solde transmise.'+resultSmsMessage(smsResultatStatus)}:{})});
 }
 return res.status(200).json(data)}catch{return res.status(503).json({message:'Service indisponible'})}
 }
