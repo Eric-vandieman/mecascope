@@ -345,6 +345,65 @@ window.mecaAdminLive=async function(main,path){
    quotePanel.append(optionPreview);
    const quoteButton=document.createElement('button');quoteButton.type='button';quoteButton.className='btn orange';quoteButton.textContent='Envoyer ma proposition au client';quotePanel.append(quoteButton);
    const proposalStatus=document.createElement('p');proposalStatus.setAttribute('role','status');quotePanel.append(proposalStatus);
+   const reviseButton=document.createElement('button');reviseButton.type='button';reviseButton.className='btn dark';reviseButton.textContent='✎ Modifier le devis';reviseButton.style.marginLeft='10px';reviseButton.hidden=true;quoteButton.after(reviseButton);
+   const revisionPanel=document.createElement('section');revisionPanel.hidden=true;revisionPanel.style.cssText='margin-top:14px;padding:17px;border:2px solid #eda04b;border-radius:12px;background:#2d261d';
+   const revisionTitle=document.createElement('h3');revisionTitle.textContent='Nouvelle proposition commerciale';
+   const revisionHelp=document.createElement('p');revisionHelp.textContent='Ce devis remplacera le précédent. Aucune modification n’est autorisée après acceptation du devis ou paiement de l’acompte. Saisissez le total et la part à payer au départ, puis adaptez le message au-dessus.';
+   revisionHelp.className='muted';
+   const revisionFields=document.createElement('div');revisionFields.style.cssText='display:flex;gap:15px;flex-wrap:wrap';
+   const revisionTotalLabel=document.createElement('label');revisionTotalLabel.textContent='Nouveau total (€)';
+   const revisionTotal=document.createElement('input');revisionTotal.type='number';revisionTotal.step='0.01';revisionTotal.min='2';revisionTotal.max='2000';revisionTotal.required=true;revisionTotal.style.cssText='display:block;min-width:120px;margin-top:5px';
+   revisionTotalLabel.append(revisionTotal);
+   const revisionDepositLabel=document.createElement('label');revisionDepositLabel.textContent='Nouvel acompte (€)';
+   const revisionDeposit=document.createElement('input');revisionDeposit.type='number';revisionDeposit.step='0.01';revisionDeposit.min='1';revisionDeposit.required=true;revisionDeposit.style.cssText='display:block;min-width:120px;margin-top:5px';
+   revisionDepositLabel.append(revisionDeposit);
+   revisionFields.append(revisionTotalLabel,revisionDepositLabel);
+   const revisionBalance=document.createElement('p');revisionBalance.style.cssText='font-weight:700;color:#ffcb86';
+   const sendRevision=document.createElement('button');sendRevision.type='button';sendRevision.className='btn orange';sendRevision.textContent='Envoyer le devis modifié';
+   const cancelRevision=document.createElement('button');cancelRevision.type='button';cancelRevision.className='btn dark';cancelRevision.textContent='Annuler la modification';cancelRevision.style.marginLeft='10px';
+   const revisionStatus=document.createElement('p');revisionStatus.setAttribute('role','status');
+   revisionPanel.append(revisionTitle,revisionHelp,revisionFields,revisionBalance,sendRevision,cancelRevision,revisionStatus);
+   quotePanel.append(revisionPanel);
+   let revisionMode=false;
+   const euroCents=v=>{const n=Number(v);return Number.isFinite(n)?Math.round(n*100):NaN};
+   function revisionAmounts(){
+     const total=euroCents(revisionTotal.value),deposit=euroCents(revisionDeposit.value);
+     revisionBalance.textContent=Number.isFinite(total)&&Number.isFinite(deposit)&&total>deposit?'Acompte : '+(deposit/100).toLocaleString('fr-FR')+' € · Solde de réussite : '+((total-deposit)/100).toLocaleString('fr-FR')+' €':'Vérifiez le total et l’acompte (inférieur au total).';
+   }
+   revisionTotal.oninput=revisionAmounts;revisionDeposit.oninput=revisionAmounts;
+   reviseButton.onclick=()=>{
+     const d=dossiers.find(x=>x.id===select.value);
+     if(!d||d.initial_paid_at||!['devis_envoye','refuse'].includes(d.statut)||d.devis_decision==='accepte')return;
+     revisionMode=true;revisionPanel.hidden=false;reviseButton.hidden=true;quoteButton.hidden=true;personal.disabled=false;
+     const original=plans[d.offre]||plans.approfondie;
+     const oldTotal=d.devis_total_personnalise_centimes?d.devis_total_personnalise_centimes/100:original.price;
+     const oldDeposit=d.devis_acompte_personnalise_centimes?d.devis_acompte_personnalise_centimes/100:original.initial;
+     revisionTotal.value=String(oldTotal);revisionDeposit.value=String(oldDeposit);
+     revisionAmounts();
+     personal.value=d.proposition_texte||defaultDraft(d,d.offre);
+     revisionStatus.textContent='Indiquez un nouveau montant et adaptez librement la proposition au client.';
+     personal.focus();
+   };
+   cancelRevision.onclick=()=>{revisionMode=false;revisionPanel.hidden=true;showOptions()};
+   sendRevision.onclick=async()=>{
+     const d=dossiers.find(x=>x.id===select.value);
+     if(!d||d.initial_paid_at)return;
+     const total=euroCents(revisionTotal.value),deposit=euroCents(revisionDeposit.value);
+     if(!Number.isSafeInteger(total)||!Number.isSafeInteger(deposit)||total<200||total>200000||deposit<100||deposit>=total){revisionStatus.textContent='Total entre 2 € et 2 000 €, et acompte positif inférieur au total.';return}
+     let message=personal.value.trim();
+     const amount=(total/100).toLocaleString('fr-FR',{maximumFractionDigits:2})+' €';
+     if(!message.includes(amount)){revisionStatus.textContent='Adaptez le texte : le nouveau tarif '+amount+' doit y apparaître. L’ancien tarif ne doit plus être présenté comme applicable.';return}
+     if(!message.includes(d.reference))message='Dossier '+d.reference+'\n\n'+message;
+     if(message.length<80||message.length>2800){revisionStatus.textContent='Le message doit faire entre 80 et 2 800 caractères et inclure la référence du dossier.';return}
+     if(!confirm('Remplacer définitivement le devis précédent par la nouvelle offre à '+amount+' (acompte '+(deposit/100).toLocaleString('fr-FR')+' €) et prévenir le client ?'))return;
+     sendRevision.disabled=true;revisionStatus.textContent='Envoi sécurisé du devis révisé…';
+     try{
+       const result=await call({action:'revise_quote',id:d.id,offre:d.offre,proposal:message,totalCentimes:total,depositCentimes:deposit});
+       revisionStatus.textContent=result.message||'Devis révisé transmis au client.';
+       location.reload();
+     }catch(e){revisionStatus.textContent=e.message}finally{sendRevision.disabled=false}
+   };
+
    const failButton=document.createElement('button');failButton.type='button';failButton.className='btn danger';failButton.textContent='Clôturer la recherche sans résultat';failButton.hidden=true;quotePanel.append(failButton);
    wrap.append(quotePanel);
    if(path==='/admin/messages')quotePanel.hidden=true;
@@ -462,16 +521,18 @@ window.mecaAdminLive=async function(main,path){
 
    function showOptions(){
      const row=dossiers.find(x=>x.id===select.value),existing=row?.statut==='devis_envoye';
-     quotePanel.hidden=path==='/admin/messages'||!row||!['deposee','devis_envoye','acompte_paye'].includes(row.statut);
+     quotePanel.hidden=path==='/admin/messages'||!row||!['deposee','devis_envoye','acompte_paye','refuse'].includes(row.statut);
+     revisionMode=false;revisionPanel.hidden=true;
+     reviseButton.hidden=!row||!!row.initial_paid_at||!['devis_envoye','refuse'].includes(row.statut)||row.devis_decision==='accepte';
      if(compactDemandes&&composerPanel){const show=!!(row?.initial_paid_at);composerPanel.hidden=!show;composerPanel.style.display=show?'':'none'}
      quoteButton.hidden=!row||!['deposee','devis_envoye'].includes(row.statut)||(existing&&row.devis_decision!=='en_attente');
      failButton.hidden=!row||row.statut!=='acompte_paye';
-     personal.disabled=existing;planSelect.disabled=true;
+     personal.disabled=existing||row?.statut==='refuse';planSelect.disabled=true;
      quoteButton.textContent=existing?'Renvoyer le même devis':'Envoyer ma proposition au client';
      draftDirty=false;
      const key=row?.qualification_ia?.formule||row?.offre;
      planSelect.value=key&&plans[key]?key:'';
-     personal.value=existing?(row.proposition_texte||''):(row&&key&&plans[key]?defaultDraft(row,key):'');
+     personal.value=(existing||row?.statut==='refuse')?(row.proposition_texte||''):(row&&key&&plans[key]?defaultDraft(row,key):'');
      proposalStatus.textContent='';aiDetails.textContent='';aiStatus.textContent='';currentAiDossier=null;
      if(row?.qualification_ia?.formule)renderAssessment(row.qualification_ia);
      else if(row?.statut==='deposee'){renderAssessment(null);analyzeCurrent()}
