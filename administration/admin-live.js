@@ -237,6 +237,39 @@ window.mecaAdminLive=async function(main,path){
      lines.push('Budget maximum de la pièce : '+(budget?budget:'NON INDIQUÉ — pas de plafond communiqué ; prix fournisseur sans limite contractuelle si offre qualifiée (aucun achat sans accord)'));
      for(const [label,key] of fields){if(key==='budget')continue;const v=row.details?.[key];if(v!==null&&v!==undefined&&String(v).trim())lines.push(label+' : '+String(v))}
      detail.textContent=lines.join('\n');
+     if(path==='/admin/demandes'&&row.initial_paid_at){
+       const supplierPanel=document.createElement('section');
+       supplierPanel.className='meca-dossier-fournisseurs-payes';
+       supplierPanel.style.cssText='white-space:normal;margin-top:17px;padding:17px;border:1px solid #587b91;border-radius:12px;background:#192937';
+       const heading=document.createElement('h3');heading.textContent='Fournisseurs adaptés à ce dossier — acompte confirmé';
+       const info=document.createElement('p');info.className='muted';info.textContent='Seuls les fournisseurs correspondant au type de véhicule demandé sont présentés ici. Le répertoire complet et le journal des contacts restent dans Fournisseurs.';
+       const suppliers=document.createElement('div');suppliers.textContent='Recherche des fournisseurs correspondants…';
+       const link=document.createElement('button');link.type='button';link.className='btn dark small';link.textContent='Ouvrir la gestion des fournisseurs';link.style.marginTop='12px';
+       link.onclick=()=>{location.hash='#/admin/fournisseurs?dossier='+encodeURIComponent(row.id)};
+       supplierPanel.append(heading,info,suppliers,link);detail.append(supplierPanel);
+       const selectedId=row.id;
+       (async()=>{
+         try{
+           const result=await fetch('/api/fournisseurs',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'list',dossier:selectedId,type:'particulier'})});
+           const payload=await result.json().catch(()=>({}));
+           if(select.value!==selectedId||!supplierPanel.isConnected)return;
+           if(!result.ok)throw Error(payload.message||'Fournisseurs momentanément indisponibles');
+           const data=payload.result||{},entries=Array.isArray(data.fournisseurs)?data.fournisseurs:[];
+           suppliers.replaceChildren();
+           const summary=document.createElement('p');summary.textContent=entries.length+' fournisseur(s) correspondant à '+(data.categorie_dossier||'la catégorie du véhicule');
+           suppliers.append(summary);
+           for(const item of entries){
+             const line=document.createElement('article');line.style.cssText='margin:9px 0;padding:11px;background:#233745;border:1px solid #496477;border-radius:9px';
+             const name=document.createElement('strong');name.textContent=item.nom||'Fournisseur';
+             line.append(name);
+             const contact=document.createElement('div');contact.style.cssText='font-size:13px;margin-top:6px;overflow-wrap:anywhere';contact.textContent=[item.pays,item.telephone,item.email].filter(Boolean).join(' · ');
+             line.append(contact);
+             suppliers.append(line);
+           }
+           if(!entries.length){const empty=document.createElement('p');empty.textContent='Aucun fournisseur enregistré pour cette catégorie. Consultez Fournisseurs pour enrichir le répertoire.';suppliers.append(empty)}
+         }catch(e){if(select.value===selectedId&&supplierPanel.isConnected)suppliers.textContent=e.message}
+       })();
+     }
    }
    for(const row of dossiers){
      const button=document.createElement('button');button.type='button';button.className='btn dark small';button.style.cssText='text-align:left;white-space:normal;line-height:1.5;padding:12px';
@@ -428,6 +461,7 @@ window.mecaAdminLive=async function(main,path){
    function showOptions(){
      const row=dossiers.find(x=>x.id===select.value),existing=row?.statut==='devis_envoye';
      quotePanel.hidden=path==='/admin/messages'||!row||!['deposee','devis_envoye','acompte_paye'].includes(row.statut);
+     if(compactDemandes&&composerPanel){const show=!!(row?.initial_paid_at);composerPanel.hidden=!show;composerPanel.style.display=show?'':'none'}
      quoteButton.hidden=!row||!['deposee','devis_envoye'].includes(row.statut)||(existing&&row.devis_decision!=='en_attente');
      failButton.hidden=!row||row.statut!=='acompte_paye';
      personal.disabled=existing;planSelect.disabled=true;
@@ -487,7 +521,7 @@ window.mecaAdminLive=async function(main,path){
     select.value=id;
     if(compactDemandes){
       wrap.hidden=false;wrap.style.display='';
-      if(composerPanel){composerPanel.hidden=false;composerPanel.style.display=''}
+      if(composerPanel){const paid=!!dossiers.find(x=>x.id===id)?.initial_paid_at;composerPanel.hidden=!paid;composerPanel.style.display=paid?'':'none'}
       detail.hidden=false;
       if(sendButton){sendButton.hidden=false;status.hidden=false}
     }
@@ -531,8 +565,16 @@ window.mecaAdminLive=async function(main,path){
          const all=document.createElement('button');all.type='button';all.className='btn dark small';all.textContent='Afficher toutes les demandes';all.onclick=()=>{location.hash='#/admin/demandes'};
          note.append(title,explain,all);tableHost.prepend(note);
        }
+       if(!waitingOnly){
+         const counter=document.createElement('div');counter.style.cssText='margin:12px 0 18px;padding:13px 16px;background:#23313b;border-radius:10px;border:1px solid #667888';
+         const pending=dossiers.filter(x=>x.statut==='deposee').length;
+         counter.textContent=pending+' nouvelle(s) demande(s) à traiter · En brun : non traitée · En gris : déjà prise en charge';
+         tableHost?.prepend(counter);
+       }
        for(const row of visibleDossiers){
          const tr=document.createElement('tr');
+         const fresh=row.statut==='deposee';
+         tr.style.cssText='background:'+(fresh?'#4b3320':'#29313b')+';color:#f5f7fa;border-left:4px solid '+(fresh?'#eda34b':'#667784');
          const vehicle=[row.details?.brand,row.details?.model,row.details?.year].filter(Boolean).join(' ')||'—';
          let statut=row.statut||'—';
          if(row.statut==='devis_envoye'&&row.devis_decision==='en_attente'){
@@ -544,7 +586,7 @@ window.mecaAdminLive=async function(main,path){
            const td=document.createElement('td');td.textContent=value;tr.append(td);
          }
          const action=document.createElement('td');
-         const open=document.createElement('button');open.type='button';open.className='btn orange small';open.textContent='Ouvrir / traiter';
+         const open=document.createElement('button');open.type='button';open.className='btn '+(fresh?'orange':'dark')+' small';open.textContent=fresh?'Traiter la nouvelle demande':'Voir le dossier';
          open.onclick=()=>openTreatment(row.id);
          action.append(open);tr.append(action);table.append(tr);
        }
