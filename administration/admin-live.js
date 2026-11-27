@@ -608,7 +608,7 @@ window.mecaAdminLive=async function(main,path){
      if(!row||!message){chatStatus.textContent='Choisissez un dossier et écrivez votre message.';return}
      if(!confirm('Envoyer ce message au client dans son espace de suivi ?'))return;
      chatButton.disabled=true;
-     try{const response=await call({action:'chat',id:row.id,message});chatInput.value='';chatStatus.textContent=response.message||'Message enregistré.';await refreshHistory();if(path==='/admin/messages'){sessionStorage.setItem('meca-dossier-selected',row.id);location.reload()}}
+     try{const response=await call({action:'chat',id:row.id,message});chatInput.value='';chatStatus.textContent=response.message||'Message enregistré.';await refreshHistory();if(path==='/admin/messages'){const selected=main.querySelector('.meca-messages-layout [data-dossier="'+row.id+'"]');if(selected)selected.click()}}
      catch(e){chatStatus.textContent=e.message}finally{chatButton.disabled=false}
    };
    form.insertAdjacentHTML('beforeend','<label class="wide"><input type="checkbox" name="expressEligible"> Délai Express tenu et éligible au supplément prévu</label><label class="wide"><input type="checkbox" name="reservationConfirmed"> Réservation fournisseur effectivement confirmée</label>');
