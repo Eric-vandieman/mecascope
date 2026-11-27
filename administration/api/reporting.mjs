@@ -15,7 +15,7 @@ async function sendResultSmsOnce(token,id){
   if(!claim.claimed)return claim.status||'deja_traite';
   let status='echec',jobId='',error='';
   try{
-   const result=await sendProposalSms(claim.telephone,'piece_trouvee');
+   const result=await sendProposalSms(claim.telephone,'piece_trouvee',claim.message);
    status='envoye';jobId=result.jobId;
   }catch(e){
    error=String(e?.message||'Envoi SMS non confirmé').slice(0,250);
@@ -41,6 +41,20 @@ if(req.method!=='POST')return res.status(405).end();
 try{if(new URL(req.headers.origin).host!==req.headers.host)return res.status(403).end()}catch{return res.status(403).end()}
 const token=String(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('__Host-admin='))?.slice(13);
 if(!token)return res.status(401).json({message:'Connexion requise'});
+if(req.body?.action==='sms_templates'){
+ const b=req.body||{},payload={action:'admin-sms-templates',mode:b.mode||'list'};
+ if(payload.mode==='save'){
+  payload.smsType=b.smsType;
+  payload.message=b.message;
+ }
+ try{
+  const response=await fetch('https://xn--mcascope-b1a.fr/api/unitaire',{
+   method:'POST',headers:{Authorization:'Bearer '+token,Origin:'https://xn--mcascope-b1a.fr','Content-Type':'application/json'},
+   body:JSON.stringify(payload),signal:AbortSignal.timeout(12000)
+  });
+  return res.status(response.status).json(await response.json().catch(()=>({message:'Réponse SMS indisponible'})));
+ }catch{return res.status(503).json({message:'Impossible de charger ou enregistrer les modèles SMS.'})}
+}
 const quoteAction={quote:'admin-quote',success:'admin-success',fail:'admin-fail'}[req.body?.action];
 if(quoteAction){
  const b=req.body||{};
@@ -62,7 +76,7 @@ if(quoteAction){
     const claim=await sendAction({action:'admin-sms-claim',id:b.id});
     if(claim.claimed){
      let status='echec',jobId='',error='';
-     try{const info=await sendProposalSms(claim.telephone);status='envoye';jobId=info.jobId}
+     try{const info=await sendProposalSms(claim.telephone,'proposition',claim.message);status='envoye';jobId=info.jobId}
      catch(e){error=String(e?.message||'SMS non confirmé').slice(0,250);if(/portable absent|portable.*invalide/.test(error))status='non_envoye'}
      await sendAction({action:'admin-sms-complete',id:b.id,status,jobId,error});
      answer.smsStatus=status;
