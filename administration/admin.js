@@ -33,7 +33,9 @@ async function ouvrir(payload){
         main.querySelector('.pagehead')?.after(summary);
         window.mecaAdminComposer?.(main);
       }
-      if(path==='/admin/clients'){
+      if(path==='/admin/sms'){
+        Promise.resolve(window.mecaSmsModels?.(main)).catch(error=>{const p=document.createElement('p');p.textContent='Erreur SMS : '+error.message;main.append(p)});
+      }else if(path==='/admin/clients'){
         Promise.resolve(window.mecaAdminClients?.(main)).catch(error=>{const p=document.createElement('p');p.textContent='Erreur du fichier clients : '+error.message;main.append(p)});
       }else{
         Promise.resolve(window.mecaAdminLive?.(main,path)).catch(()=>{}).finally(()=>window.mecaSuppliers?.(main,path));
