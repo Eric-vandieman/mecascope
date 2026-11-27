@@ -174,6 +174,9 @@ window.mecaSuppliers=async function(main,path){
   try{
    const dossiers=await api({action:'dossiers'});
    for(const d of dossiers||[])directorySelect.append(new Option(d.reference+' · '+d.client+' ('+(d.type==='professionnel'?'Pro':'Particulier')+')',d.type+'|'+d.id));
+   const request=new URLSearchParams(location.hash.split('?')[1]||'');
+   const dossierId=request.get('dossier');
+   if(dossierId){const kind=request.get('source')==='professionnel'?'professionnel':'particulier';const value=kind+'|'+dossierId;if([...directorySelect.options].some(o=>o.value===value))directorySelect.value=value;}
   }catch(e){error(e)}
  }
  await load();
