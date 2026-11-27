@@ -55,16 +55,16 @@ if(req.body?.action==='sms_templates'){
   return res.status(response.status).json(await response.json().catch(()=>({message:'Réponse SMS indisponible'})));
  }catch{return res.status(503).json({message:'Impossible de charger ou enregistrer les modèles SMS.'})}
 }
-const quoteAction={quote:'admin-quote',success:'admin-success',fail:'admin-fail'}[req.body?.action];
+const quoteAction={quote:'admin-quote',revise_quote:'admin-revise-quote',success:'admin-success',fail:'admin-fail'}[req.body?.action];
 if(quoteAction){
  const b=req.body||{};
  if(!/^[0-9a-f-]{36}$/i.test(String(b.id||'')))return res.status(400).json({message:'Dossier invalide'});
  try{const r=await fetch('https://xn--mcascope-b1a.fr/api/unitaire',{
   method:'POST',headers:{Authorization:'Bearer '+token,Origin:'https://xn--mcascope-b1a.fr','Content-Type':'application/json'},
-  body:JSON.stringify({action:quoteAction,id:b.id,offre:b.offre,express:b.express,reservation:b.reservation,proposal:b.proposal,expressEligible:b.expressEligible,reservationConfirmed:b.reservationConfirmed}),
+  body:JSON.stringify({action:quoteAction,id:b.id,offre:b.offre,express:b.express,reservation:b.reservation,proposal:b.proposal,totalCentimes:b.totalCentimes,depositCentimes:b.depositCentimes,expressEligible:b.expressEligible,reservationConfirmed:b.reservationConfirmed}),
   signal:AbortSignal.timeout(15000)});
   const answer=await r.json().catch(()=>({message:'Réponse indisponible'}));
-  if(r.ok&&quoteAction==='admin-quote'){
+  if(r.ok&&['admin-quote','admin-revise-quote'].includes(quoteAction)){
    const sendAction=async(payload)=>{
     const response=await fetch('https://xn--mcascope-b1a.fr/api/unitaire',{
      method:'POST',headers:{Authorization:'Bearer '+token,Origin:'https://xn--mcascope-b1a.fr','Content-Type':'application/json'},
