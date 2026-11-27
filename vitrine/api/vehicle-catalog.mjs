@@ -37,6 +37,7 @@ for(const [type,kinds] of Object.entries(VEHICLE_TYPES)){
  if(type==='automobile'||type==='collection'){
   for(const brand of localBrands)add(brand,localModels(brand));
  }
+ if(type==='moto'||type==='collection')for(const [brand,models] of Object.entries(supplementalModels.scooter||{}))add(brand,models);
  for(const [brand,models] of Object.entries(supplementalModels[type]||{}))add(brand,models);
  catalog[type]=brands;
 }
