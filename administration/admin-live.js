@@ -102,12 +102,19 @@ window.mecaAdminLive=async function(main,path){
       const tile=document.createElement('div');tile.className='metric';tile.id='meca-inbox-tile';tile.style.cssText='cursor:pointer;border:2px solid '+(pendingCount?'#ff9933':'#586471')+';background:'+(pendingCount?'#38291e':'#1a222b');
       tile.tabIndex=0;tile.setAttribute('role','button');
       const box=document.createElement('div'),caption=document.createElement('div'),count=document.createElement('div'),sub=document.createElement('small');
-      caption.className='label';caption.textContent='Messages clients à traiter';
+      caption.className='label';caption.textContent='Conversations en attente de réponse';
       count.className='value';count.textContent=String(pendingCount);
       sub.textContent=unreadConversationCount+' conversation(s) non lue(s) · '+unreadTotal+' message(s) non lu(s) · '+(inbox.length+proInbox.length)+' conversation(s) particulières et Pro';
       box.append(caption,count,sub);tile.append(box);
       const go=()=>{location.hash='#/admin/messages'};tile.onclick=go;tile.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}};
       metrics.append(tile);
+      const unreadTile=document.createElement('div');unreadTile.className='metric';unreadTile.id='meca-unread-tile';
+      unreadTile.style.cssText='cursor:pointer;border:2px solid '+(unreadTotal?'#4cca87':'#586471')+';background:'+(unreadTotal?'#173b30':'#1a222b');
+      unreadTile.tabIndex=0;unreadTile.setAttribute('role','button');
+      const unreadBox=document.createElement('div');unreadBox.innerHTML='<div class="label">Messages non lus</div><div class="value"></div><small>Particuliers et professionnels · distinct du suivi des réponses</small>';
+      unreadBox.querySelector('.value').textContent=String(unreadTotal);
+      unreadTile.append(unreadBox);unreadTile.onclick=go;unreadTile.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}};
+      metrics.append(unreadTile);
     }
   }
 
@@ -185,7 +192,7 @@ window.mecaAdminLive=async function(main,path){
       const data=await call({action:'conversations'});
       if(!Array.isArray(data))throw Error('Liste des conversations indisponible');
       inboxItems=data;renderList();
-      const unread=data.reduce((n,c)=>n+Number(c.non_lus||0),0);
+      const unread=data.reduce((n,c)=>n+Number(c.non_lus||0),0)+proInbox.reduce((n,c)=>n+Number(c.non_lus||0),0);
       for(const mark of document.querySelectorAll('.meca-inbox-unread-badge')){mark.textContent=unread?String(unread):'';mark.style.background=unread?'#e9812a':'transparent'}
     };
     const renderMessages=items=>{
@@ -214,7 +221,7 @@ window.mecaAdminLive=async function(main,path){
         if(currentId!==id)return;
         renderMessages(Array.isArray(result.messages)?result.messages:[]);
         await call({action:'mark_read',id});
-        if(currentId===id){const item=inboxItems.find(x=>x.dossier_id===id);if(item)item.non_lus=0;renderList();const unread=inboxItems.reduce((n,c)=>n+Number(c.non_lus||0),0);for(const mark of document.querySelectorAll('.meca-inbox-unread-badge')){mark.textContent=unread?String(unread):'';mark.style.background=unread?'#e9812a':'transparent'}}
+        if(currentId===id){const item=inboxItems.find(x=>x.dossier_id===id);if(item)item.non_lus=0;renderList();const unread=inboxItems.reduce((n,c)=>n+Number(c.non_lus||0),0)+proInbox.reduce((n,c)=>n+Number(c.non_lus||0),0);for(const mark of document.querySelectorAll('.meca-inbox-unread-badge')){mark.textContent=unread?String(unread):'';mark.style.background=unread?'#e9812a':'transparent'}}
       }catch(error){if(currentId===id)messages.textContent='Erreur de chargement : '+error.message}
     };
     reply.addEventListener('submit',async event=>{
