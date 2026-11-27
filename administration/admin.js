@@ -16,12 +16,34 @@ async function ouvrir(payload){
     document.querySelector('style').remove();
     document.head.append(css);
     document.body.innerHTML=layout.shell;
+    // Badge des demandes nouvelles : uniquement les dossiers pas encore traités.
+    let lastBadgeCount=null;
+    async function updateDemandesBadge(){
+      try{
+        const r=await fetch('/api/reporting',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'reporting'})});
+        if(!r.ok)return;
+        const data=await r.json();
+        const n=Math.max(0,Number(data.nouvelles_demandes)||0);
+        if(n===lastBadgeCount&&document.querySelector('.meca-demandes-unread'))return;
+        lastBadgeCount=n;
+        const link=document.querySelector('.side a[href="#/admin/demandes"]');
+        if(!link)return;
+        let badge=link.querySelector('.meca-demandes-unread');
+        if(!badge){badge=document.createElement('span');badge.className='meca-demandes-unread';badge.style.cssText='display:inline-block;margin-left:8px;padding:2px 8px;border-radius:22px;font-size:13px;font-weight:800';link.append(badge)}
+        badge.textContent=n?String(n):'';
+        badge.hidden=n===0;
+        badge.style.background=n?'#ed9c38':'transparent';badge.style.color='#18242d';
+        badge.setAttribute('aria-label',n+' nouvelle(s) demande(s)');
+      }catch{}
+    }
+    setInterval(()=>{if(document.visibilityState==='visible')updateDemandesBadge()},30000);
     const afficher=()=>{
       const requested=location.hash.slice(1).split('?')[0];
       const path=Object.hasOwn(layout.pages,requested)?requested:'/admin';
       document.querySelector('main').outerHTML=layout.pages[path];
       document.querySelectorAll('.side a').forEach(a=>a.classList.toggle('active',a.hash==='#'+path));
       const main=document.querySelector('main');
+      updateDemandesBadge();
       main.querySelectorAll('.metric .value,.stat-tile strong').forEach(value=>value.textContent='—');
       main.querySelectorAll('.note').forEach(element=>{
         element.textContent=element.textContent.replace(/démonstration|démo|fictif|fictifs/gi,'non connecté');
