@@ -235,7 +235,7 @@ export default async function handler(req,res){
     stage='reussite';
    }
    const currentRevision=revisionData?.devis_version||(action==='admin-quote'?(d.devis_version||1):1);
-   const token=createHmac('sha256',process.env.STRIPE_WEBHOOK_SECRET).update('meca-unitaire-v1:+d.id+':'+stage+(currentRevision>1?':revision:'+currentRevision:'')).digest('hex'),offer=offers[plan];
+   const token=createHmac('sha256',process.env.STRIPE_WEBHOOK_SECRET).update('meca-unitaire-v1:'+d.id+':'+stage+(currentRevision>1?':revision:'+currentRevision:'')).digest('hex'),offer=offers[plan];
    if(revisionData){
     const oldTotal=d.devis_total_personnalise_centimes||(offers[d.offre]?.total||0)*100;
     const oldDeposit=d.devis_acompte_personnalise_centimes||(offers[d.offre]?.deposit||0)*100;
