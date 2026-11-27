@@ -115,12 +115,12 @@ window.mecaAdminLive=async function(main,path){
     const responsive=document.createElement('style');responsive.textContent='@media(max-width:800px){.meca-messages-layout{grid-template-columns:1fr!important}}';main.append(responsive);
     let currentId=null;
     let inboxItems=Array.isArray(inbox)?inbox:[];
-    const awaiting=c=>c?.dernier_auteur==='client';
+    const awaiting=c=>Number(c?.non_lus||0)>0;
     const renderList=()=>{
       list.replaceChildren();
       const waiting=inboxItems.filter(awaiting).length;
       listTitle.textContent='Conversations clients ('+inboxItems.length+')';
-      listSummary.textContent=waiting+' conversation(s) en attente de réponse · '+inboxItems.reduce((n,c)=>n+Number(c.non_lus||0),0)+' message(s) non lu(s)';
+      listSummary.textContent=waiting+' conversation(s) non lue(s) · Vert : message non lu · Gris : conversation consultée';
       if(!inboxItems.length){const empty=document.createElement('p');empty.textContent='Aucune conversation client enregistrée.';list.append(empty)}
       for(const c of inboxItems){
         const pending=awaiting(c);
@@ -128,7 +128,7 @@ window.mecaAdminLive=async function(main,path){
         button.dataset.dossier=c.dossier_id;button.setAttribute('aria-pressed',String(currentId===c.dossier_id));
         button.style.cssText='width:100%;text-align:left;padding:14px;border-radius:10px;white-space:normal;line-height:1.5;cursor:pointer;border:2px solid '+(pending?'#4cca87':'#617386')+';background:'+(pending?'#174431':'#26313c')+';color:#fff;box-shadow:'+(currentId===c.dossier_id?'0 0 0 2px #f5aa52':'none');
         const name=document.createElement('strong');name.style.cssText='display:block;font-size:15px';
-        name.textContent=(pending?'● À TRAITER · ':'✓ TRAITÉ · ')+(c.reference||'Dossier')+' — '+(c.contact||'Client');
+        name.textContent=(pending?'● NON LU · ':'✓ LU · ')+(c.reference||'Dossier')+' — '+(c.contact||'Client');
         const snippet=document.createElement('div');snippet.style.cssText='margin:7px 0;color:#e1e9f0;font-size:14px;overflow-wrap:anywhere';
         snippet.textContent=String(c.extrait||'Message disponible').slice(0,175);
         const meta=document.createElement('small');meta.textContent=(c.non_lus?c.non_lus+' nouveau(x) · ':'')+(c.dernier_message?new Date(c.dernier_message).toLocaleString('fr-FR'):'');
