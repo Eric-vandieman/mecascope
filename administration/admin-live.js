@@ -48,8 +48,8 @@ window.mecaAdminLive=async function(main,path){
   const pendingCount=inbox.filter(c=>c.dernier_auteur==='client').length;
   for(const nav of document.querySelectorAll('.side a[href*="/admin/messages"],.side a[data-go="/admin/messages"]')){
     const mark=nav.querySelector('.meca-inbox-unread-badge')||document.createElement('span');
-    mark.className='meca-inbox-unread-badge';mark.textContent=pendingCount?String(pendingCount):'';
-    mark.style.cssText='display:inline-block;margin-left:8px;padding:2px 8px;border-radius:20px;background:'+(pendingCount?'#e9812a':'transparent')+';color:#161b22;font-weight:800';
+    mark.className='meca-inbox-unread-badge';mark.textContent=unreadTotal?String(unreadTotal):'';
+    mark.style.cssText='display:inline-block;margin-left:8px;padding:2px 8px;border-radius:20px;background:'+(unreadTotal?'#e9812a':'transparent')+';color:#161b22;font-weight:800';
     if(!mark.parentNode)nav.append(mark);
   }
   if(path==='/admin'){
@@ -88,10 +88,7 @@ window.mecaAdminLive=async function(main,path){
     const old=main.querySelector('.meca-inbox');
     if(old)old.remove();
     const head=main.querySelector('.pagehead');
-    const inboxStatus=document.createElement('p');
-    inboxStatus.setAttribute('role','status');inboxStatus.className='muted';
-    inboxStatus.textContent='Sélectionnez une conversation à gauche pour consulter le dossier et répondre au client.';
-    head?.after(inboxStatus);
+    // La page Messages contient seulement la liste des clients et la conversation.
     const layout=document.createElement('section');
     layout.className='meca-messages-layout';
     layout.style.cssText='display:grid;grid-template-columns:minmax(260px,345px) minmax(0,1fr);gap:18px;margin-top:18px;align-items:start';
@@ -123,7 +120,7 @@ window.mecaAdminLive=async function(main,path){
       list.replaceChildren();
       const waiting=inboxItems.filter(awaiting).length;
       listTitle.textContent='Conversations clients ('+inboxItems.length+')';
-      listSummary.textContent=waiting+' dossier(s) à traiter · En vert : réponse attendue · En gris : déjà traité';
+      listSummary.textContent=waiting+' conversation(s) en attente de réponse · '+inboxItems.reduce((n,c)=>n+Number(c.non_lus||0),0)+' message(s) non lu(s)';
       if(!inboxItems.length){const empty=document.createElement('p');empty.textContent='Aucune conversation client enregistrée.';list.append(empty)}
       for(const c of inboxItems){
         const pending=awaiting(c);
@@ -144,8 +141,8 @@ window.mecaAdminLive=async function(main,path){
       const data=await call({action:'conversations'});
       if(!Array.isArray(data))throw Error('Liste des conversations indisponible');
       inboxItems=data;renderList();
-      const waiting=data.filter(awaiting).length;
-      for(const mark of document.querySelectorAll('.meca-inbox-unread-badge'))mark.textContent=waiting?String(waiting):'';
+      const unread=data.reduce((n,c)=>n+Number(c.non_lus||0),0);
+      for(const mark of document.querySelectorAll('.meca-inbox-unread-badge')){mark.textContent=unread?String(unread):'';mark.style.background=unread?'#e9812a':'transparent'}
     };
     const renderMessages=items=>{
       messages.replaceChildren();
@@ -173,7 +170,7 @@ window.mecaAdminLive=async function(main,path){
         if(currentId!==id)return;
         renderMessages(Array.isArray(result.messages)?result.messages:[]);
         await call({action:'mark_read',id});
-        if(currentId===id){const item=inboxItems.find(x=>x.dossier_id===id);if(item)item.non_lus=0;renderList()}
+        if(currentId===id){const item=inboxItems.find(x=>x.dossier_id===id);if(item)item.non_lus=0;renderList();const unread=inboxItems.reduce((n,c)=>n+Number(c.non_lus||0),0);for(const mark of document.querySelectorAll('.meca-inbox-unread-badge')){mark.textContent=unread?String(unread):'';mark.style.background=unread?'#e9812a':'transparent'}}
       }catch(error){if(currentId===id)messages.textContent='Erreur de chargement : '+error.message}
     };
     reply.addEventListener('submit',async event=>{
