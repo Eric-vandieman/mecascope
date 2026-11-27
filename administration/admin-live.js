@@ -15,6 +15,29 @@ window.mecaAdminLive=async function(main,path){
   label('Chiffre d’affaires',eur((d.ca_unitaire_centimes||0)+(d.abonnements_ca_centimes||0)));
   label('Priorité Pro',d.abonnements_priorite||0);label('Pro 5',d.abonnements_pro5||0);label('Pro 10',d.abonnements_pro10||0);
   label('Récurrence mensuelle',eur(d.abonnements_ca_centimes||0));
+  if(path==='/admin/statistiques'){
+   const tbody=main.querySelector('#meca-pages-report-rows'),status=main.querySelector('#meca-pages-report-status');
+   if(tbody){
+    try{
+     const pages=await call({action:'pages_stats'});
+     if(!Array.isArray(pages))throw Error('Format de statistiques inattendu');
+     const names={'/':'Accueil','/tarifs.html':'Tarifs','/qui-sommes-nous.html':'Qui sommes-nous','/mission.html':'Rechercher une pièce','/espace-pro.html':'Espace Pro','/compte.html':'Compte client'};
+     tbody.replaceChildren();
+     if(!pages.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=3;td.style.padding='12px 8px';td.textContent='Aucune visite enregistrée.';tr.append(td);tbody.append(tr);}
+     for(const item of pages){
+      const tr=document.createElement('tr');
+      const td=document.createElement('td');td.style.padding='12px 8px';td.style.borderTop='1px solid #343b45';td.textContent=names[item.chemin]||item.chemin;
+      const views=document.createElement('td');views.style.cssText='padding:12px 8px;border-top:1px solid #343b45;text-align:right';views.textContent=String(item.vues??0);
+      const unique=document.createElement('td');unique.style.cssText='padding:12px 8px;border-top:1px solid #343b45;text-align:right';unique.textContent=String(item.visiteurs??0);
+      tr.append(td,views,unique);tbody.append(tr);
+     }
+     if(status)status.textContent='Données réelles issues du suivi Mécascope, cumulées depuis son activation.';
+    }catch(e){
+     tbody.replaceChildren();const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=3;td.style.padding='12px 8px';td.textContent='Impossible de charger les visites par page.';tr.append(td);tbody.append(tr);
+     if(status)status.textContent=String(e?.message||'Erreur de chargement');
+    }
+   }
+  }
   if(path==='/admin'){
    const block=main.querySelector('.metrics.six');
    if(block&&!main.querySelector('#meca-proposals-awaiting-tile')){
