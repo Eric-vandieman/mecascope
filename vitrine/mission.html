@@ -89,7 +89,7 @@
    conditions.textContent='Les options figurent dans la proposition déjà transmise.';
    payer.dataset.stage='initial';payer.textContent='J’accepte et je règle '+euro(data.initial);payer.hidden=false;
   }else if(data.statut==='refuse'||data.decision==='refuse'){
-   etat.textContent='Vous avez refusé ce devis. Le dossier est clôturé, aucun paiement n’est dû.';
+   etat.textContent='Vous avez refusé cette proposition. Aucun paiement n’est dû. Mécascope peut vous adresser une nouvelle offre si vous en convenez avec son équipe.';
    conditions.textContent='Vous pouvez contacter Mécascope si vous souhaitez déposer une nouvelle demande.';
   }else if(data.statut==='reussite'){
    etat.textContent='Une source a été identifiée. Solde restant : '+euro(data.solde)+'.';
@@ -124,7 +124,7 @@
   }finally{if(!decided){accept.disabled=false;refuse.disabled=false}}
  };
  refuse.onclick=async()=>{
-  if(!confirm('Refuser définitivement ce devis et clôturer la demande, sans paiement ?'))return;
+  if(!confirm('Refuser cette proposition, sans paiement ? Une nouvelle proposition pourra vous être envoyée ultérieurement si vous le souhaitez.'))return;
   accept.disabled=true;refuse.disabled=true;
   try{await api({action:'decision',choice:'refuser'});await refresh()}
   catch(e){erreur.textContent=e.message}finally{accept.disabled=false;refuse.disabled=false}
