@@ -1,49 +1,89 @@
-import {localBrands,localModels,localMatch} from '../vehicle-models-europe.mjs';
+import {localBrands,localModels} from '../vehicle-models-europe.mjs';
+import {globalVehicleModels} from '../vehicle-models-global.mjs';
+import {supplementalModels} from '../vehicle-models-special.mjs';
 
-// Catalogue NHTSA + référentiel européen local : vPIC seul ne couvre pas tous les
-// véhicules anciens/européens. Le formulaire permet en permanence la saisie libre.
-const TYPES={automobile:'car',moto:'motorcycle',scooter:'motorcycle',quad:'off-road vehicle',agricole:'tractor',collection:'car'};
-const EURO_CAR=new Set(['automobile','collection']);
+// Catalogue multi-sources : VehiclesDB CC-BY 4.0 (2026.11.15), Mécascope,
+// puis vPIC NHTSA en complément pour les catégories quads et agricoles.
+// Aucune liste ne garantit toutes les variantes de toutes les époques.
+// Le formulaire conserve la saisie libre.
+const VEHICLE_TYPES={
+ automobile:['car','van','truck'],
+ moto:['motorcycle'],
+ scooter:['moped'],
+ quad:[],
+ agricole:[],
+ collection:['car','van','motorcycle','moped']
+};
+const NHTSA_TYPES={quad:'off-road vehicle',agricole:'tractor'};
 const normalize=x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
-const uniqueItems=items=>[...new Map(items.filter(x=>x?.name).map(x=>[normalize(x.name),x])).values()].sort((a,b)=>a.name.localeCompare(b.name,'fr',{numeric:true}));
-async function vpic(action,type,make){
- const path=action==='makes'?'GetMakesForVehicleType/'+encodeURIComponent(TYPES[type]):
- 'GetModelsForMakeIdYear/makeId/'+encodeURIComponent(make)+'/vehicletype/'+encodeURIComponent(TYPES[type]);
- const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),7500);
+const alphabet=(a,b)=>a.localeCompare(b,'fr',{numeric:true,sensitivity:'base'});
+const catalog={};
+for(const [type,kinds] of Object.entries(VEHICLE_TYPES)){
+ const brands=new Map();
+ const add=(brand,models)=>{
+  if(!brand||!models?.length)return;
+  const key=normalize(brand);
+  if(!key)return;
+  if(!brands.has(key))brands.set(key,{name:brand,models:new Map()});
+  const entry=brands.get(key);
+  for(const name of models){
+   const n=String(name||'').trim(),modelKey=normalize(n);
+   if(modelKey&&!entry.models.has(modelKey))entry.models.set(modelKey,n);
+  }
+ };
+ for(const kind of kinds){
+  for(const [brand,models] of Object.entries(globalVehicleModels[kind]||{}))add(brand,models);
+ }
+ if(type==='automobile'||type==='collection'){
+  for(const brand of localBrands)add(brand,localModels(brand));
+ }
+ for(const [brand,models] of Object.entries(supplementalModels[type]||{}))add(brand,models);
+ catalog[type]=brands;
+}
+const dedupe=items=>[...new Map(items.filter(x=>x.name).map(x=>[normalize(x.name),x])).values()].sort((a,b)=>alphabet(a.name,b.name));
+async function remoteVpic(action,type,make){
+ const vehicleType=NHTSA_TYPES[type];
+ if(!vehicleType)return [];
+ const path=action==='makes'
+  ?'GetMakesForVehicleType/'+encodeURIComponent(vehicleType)
+  :'GetModelsForMakeIdYear/makeId/'+encodeURIComponent(make)+'/vehicletype/'+encodeURIComponent(vehicleType);
+ const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),3000);
  try{
-  const result=await fetch('https://vpic.nhtsa.dot.gov/api/vehicles/'+path+'?format=json',{signal:controller.signal});
-  if(!result.ok)throw Error('Source distante indisponible');
-  const response=await result.json();
-  const rows=Array.isArray(response.Results)?response.Results:[];
-  return rows.map(x=>action==='makes'?{id:String(x.MakeId??x.Make_ID??''),name:String(x.MakeName??x.Make_Name??'')}:
-    {id:String(x.Model_ID??x.ModelId??''),name:String(x.Model_Name??x.ModelName??'')}).filter(x=>x.name&&(action==='models'||x.id));
+  const response=await fetch('https://vpic.nhtsa.dot.gov/api/vehicles/'+path+'?format=json',{signal:controller.signal});
+  if(!response.ok)throw Error('Catalogue distant indisponible');
+  const data=await response.json();
+  return (Array.isArray(data.Results)?data.Results:[]).map(m=>action==='makes'
+   ?{id:String(m.MakeId??m.Make_ID??''),name:String(m.MakeName??m.Make_Name??'')}
+   :{id:String(m.Model_ID??m.ModelId??''),name:String(m.Model_Name??m.ModelName??'')})
+   .filter(x=>x.name&&(action==='models'||/^[0-9]{1,7}$/.test(x.id)));
  }finally{clearTimeout(timeout)}
 }
 export default async function handler(req,res){
  res.setHeader('Cache-Control','public, s-maxage=86400, stale-while-revalidate=86400');
- if(req.method!=='GET')return res.status(405).json({message:'Méthode interdite'});
- const type=String(req.query.type||'automobile');
- if(!TYPES[type])return res.status(400).json({error:'Catégorie invalide'});
- const action=String(req.query.action||'makes'),make=String(req.query.make||'');
- if(!['makes','models'].includes(action))return res.status(400).json({error:'Action invalide'});
- const isLocal=make.startsWith('local:');
- const localName=isLocal?localMatch(make.slice(6)):null;
- if(action==='models'&&!(localName||/^[0-9]{1,7}$/.test(make)))return res.status(400).json({error:'Marque invalide'});
- const car=EURO_CAR.has(type);
- if(action==='models'&&localName&&car){
-  const items=uniqueItems(localModels(localName).map(name=>({id:name,name})));
-  return res.status(200).json({items,source:'Mécascope référentiel européen',complete:false,manualEntryAllowed:true});
+ if(req.method!=='GET')return res.status(405).json({error:'Méthode interdite'});
+ const type=String(req.query.type||'automobile'),action=String(req.query.action||'makes');
+ const make=String(req.query.make||'');
+ if(!Object.hasOwn(VEHICLE_TYPES,type)||!['makes','models'].includes(action))return res.status(400).json({error:'Catégorie ou action inconnue'});
+ if(action==='makes'){
+  const local=[...catalog[type].values()].map(x=>({id:'local:'+x.name,name:x.name}));
+  if(!NHTSA_TYPES[type]){
+   return res.status(200).json({items:dedupe(local),source:'VehiclesDB 2026.11.15 + Mécascope',complete:false,manualEntryAllowed:true});
+  }
+  let remote=[];
+  try{remote=await remoteVpic('makes',type,'')}catch{}
+  return res.status(200).json({items:dedupe([...remote,...local]),source:'Mécascope + NHTSA vPIC',complete:false,manualEntryAllowed:true});
  }
- let remote=[];
- try{remote=await vpic(action,type,make)}catch(error){
-  if(!car||action!=='makes')return res.status(503).json({error:'Catalogue distant indisponible. Utilisez la saisie manuelle.',items:[],manualEntryAllowed:true});
+ if(make.startsWith('local:')){
+  const brand=make.slice(6);
+  if(brand.length>120)return res.status(400).json({error:'Marque invalide'});
+  const data=catalog[type].get(normalize(brand));
+  if(!data)return res.status(404).json({error:'Marque non trouvée, utilisez la saisie libre',items:[],manualEntryAllowed:true});
+  const items=[...data.models.values()].sort(alphabet).map(name=>({id:name,name}));
+  return res.status(200).json({items,source:'VehiclesDB + Mécascope',complete:false,manualEntryAllowed:true});
  }
- if(action==='makes'&&car){
-  const local=localBrands.map(name=>({id:'local:'+name,name}));
-  // Donner priorité au référentiel européen pour les marques qu'il couvre.
-  const items=uniqueItems([...remote,...local]);
-  return res.status(200).json({items,source:'Mécascope + NHTSA vPIC',complete:false,manualEntryAllowed:true});
- }
- const items=uniqueItems(remote.map(x=>({id:action==='models'?x.name:x.id,name:x.name})));
- return res.status(200).json({items,source:'NHTSA vPIC',complete:false,manualEntryAllowed:true});
+ if(!NHTSA_TYPES[type]||!/^[0-9]{1,7}$/.test(make))return res.status(400).json({error:'Marque invalide, utilisez la saisie libre',items:[],manualEntryAllowed:true});
+ try{
+  const remote=await remoteVpic('models',type,make);
+  return res.status(200).json({items:dedupe(remote.map(x=>({id:x.name,name:x.name}))),source:'NHTSA vPIC',complete:false,manualEntryAllowed:true});
+ }catch{return res.status(503).json({error:'Catalogue temporairement indisponible, saisissez votre modèle',items:[],manualEntryAllowed:true})}
 }
