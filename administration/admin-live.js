@@ -233,6 +233,63 @@ window.mecaAdminLive=async function(main,path){
     const requested=new URLSearchParams(location.hash.split('?')[1]||'').get('dossier');
     if(requested&&inboxItems.some(x=>x.dossier_id===requested))openConversation(requested);
     else if(inboxItems.length){messages.textContent='Cliquez sur un dossier dans la liste verte ou grise à gauche pour afficher toute la conversation.';}
+    // Conversations professionnelles : source distincte, même onglet administrateur.
+    const proPanel=document.createElement('section');proPanel.className='panel meca-messages-pro';proPanel.style.cssText='margin-top:20px;padding:20px;border:1px solid #637d91;border-radius:12px';
+    const proHeading=document.createElement('h2');proHeading.textContent='Conversations professionnelles';
+    const proNote=document.createElement('p');proNote.className='muted';proNote.textContent='Échanges avec les garages et professionnels. Ces messages ne sont pas liés à un devis particulier.';
+    const proColumns=document.createElement('div');proColumns.style.cssText='display:grid;grid-template-columns:minmax(200px,300px) minmax(0,1fr);gap:15px';
+    const proList=document.createElement('div');proList.style.cssText='display:grid;gap:9px;align-content:start';
+    const proBody=document.createElement('div');proBody.style.cssText='background:#202c37;border:1px solid #5e7383;padding:15px;border-radius:11px;min-width:0';
+    const proMessages=document.createElement('div');proMessages.style.cssText='display:grid;gap:10px;max-height:430px;overflow:auto;padding:9px 0';
+    const proForm=document.createElement('form');proForm.style.cssText='display:grid;gap:10px;margin-top:15px';
+    const proInput=document.createElement('textarea');proInput.rows=4;proInput.maxLength=3000;proInput.placeholder='Répondre au professionnel…';proInput.setAttribute('aria-label','Réponse au professionnel');
+    const proSend=document.createElement('button');proSend.type='submit';proSend.className='btn orange';proSend.textContent='Envoyer la réponse au professionnel';
+    const proStatus=document.createElement('p');proStatus.setAttribute('role','status');proStatus.className='muted';
+    proForm.append(proInput,proSend,proStatus);proForm.hidden=true;
+    proBody.append(proMessages,proForm);proColumns.append(proList,proBody);proPanel.append(proHeading,proNote,proColumns);main.append(proPanel);
+    let selectedGarage=null,proConversations=[];
+    const paintPro=()=>{
+      proList.replaceChildren();
+      if(!proConversations.length){const n=document.createElement('p');n.className='muted';n.textContent='Aucune conversation professionnelle pour le moment.';proList.append(n);return}
+      for(const c of proConversations){
+        const btn=document.createElement('button');btn.type='button';btn.className='btn dark';
+        btn.style.cssText='white-space:normal;text-align:left;overflow-wrap:anywhere;padding:13px;background:'+(selectedGarage===c.garage_id?'#31475a':'#26313c');
+        btn.textContent=(c.nom||c.contact||'Garage Pro')+' · '+(c.total_messages||0)+' message(s)';
+        btn.onclick=()=>openPro(c.garage_id);
+        proList.append(btn);
+      }
+    };
+    const openPro=async id=>{
+      selectedGarage=id;paintPro();
+      const c=proConversations.find(item=>item.garage_id===id);
+      proMessages.replaceChildren();
+      const heading=document.createElement('h3');heading.textContent=(c?.nom||'Compte professionnel')+' · '+(c?.email||'');
+      proMessages.append(heading);proForm.hidden=false;proStatus.textContent='Chargement…';
+      try{
+        const rows=await call({action:'pro_messages',id});
+        if(selectedGarage!==id)return;
+        proMessages.replaceChildren(heading);
+        for(const m of Array.isArray(rows)?rows:[]){
+          const entry=document.createElement('article');entry.style.cssText='background:'+(m.auteur==='administrateur'?'#244a67':'#33483c')+';padding:12px;border-radius:9px;white-space:pre-wrap;overflow-wrap:anywhere';
+          const title=document.createElement('strong');title.textContent=(m.auteur==='administrateur'?'Mécascope':'Professionnel')+' · '+(m.cree_le?new Date(m.cree_le).toLocaleString('fr-FR'):'');
+          const content=document.createElement('div');content.textContent=m.contenu||'';
+          entry.append(title,content);proMessages.append(entry);
+        }
+        proStatus.textContent='';
+      }catch(e){proStatus.textContent='Impossible de lire les messages Pro : '+e.message}
+    };
+    proForm.addEventListener('submit',async e=>{
+      e.preventDefault();if(!selectedGarage||!proInput.value.trim())return;
+      const id=selectedGarage;proSend.disabled=true;proStatus.textContent='Envoi en cours…';
+      try{
+        await call({action:'pro_reply',id,message:proInput.value.trim()});
+        proInput.value='';await openPro(id);
+        proStatus.textContent='Réponse enregistrée dans la messagerie du professionnel.';
+      }catch(err){proStatus.textContent='Envoi non confirmé : '+err.message}
+      finally{proSend.disabled=false}
+    });
+    try{const received=await call({action:'pro_conversations'});proConversations=Array.isArray(received)?received:[];paintPro()}
+    catch(err){proList.textContent='Conversations Pro indisponibles : '+err.message}
     return;
   }
   if(['/admin/demandes','/admin/messages'].includes(path)){
