@@ -1,5 +1,5 @@
 import {randomUUID} from 'node:crypto';
-import {normalizeMobile} from './ovh-sms.mjs';
+import {normalizeMobile} from '../lib/ovh-sms.mjs';
 
 const limited=(v,n=140)=>typeof v==='string'?v.trim().slice(0,n):'';
 const validEmail=s=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)&&s.length<=254;
