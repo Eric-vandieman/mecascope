@@ -862,11 +862,11 @@ window.mecaAdminLive=async function(main,path){
        table.replaceChildren();
        main.querySelectorAll('.meca-demandes-counter,.meca-demandes-empty,.meca-demandes-pagination,.meca-demandes-filter-note').forEach(x=>x.remove());
        const counter=document.createElement('p');counter.className='meca-demandes-counter';
-       counter.textContent=Number(d.nouvelles_demandes||0)+' nouvelles demandes particulières · En marron : à traiter · En gris : déjà traitées · Les professionnels ont leur propre statut.';
+       counter.textContent=Number(d.nouvelles_demandes||0)+' nouvelle(s) demande(s), particuliers et Pro · En marron : à traiter · En gris : déjà traitées.';
        toolbar.after(counter);
        for(const row of items){
          const pro=row.type_dossier==='professionnel';
-         const tr=document.createElement('tr'),fresh=row.statut==='deposee'||(pro&&['deposee','soumise','en_attente'].includes(row.statut));
+         const tr=document.createElement('tr'),fresh=row.statut==='deposee'||(pro&&['nouvelle','deposee','soumise','en_attente'].includes(row.statut));
          tr.style.cssText='background:'+(fresh?'#4b3320':'#29313b')+';color:#f5f7fa;border-left:4px solid '+(fresh?'#eda34b':'#667784');
          const vehicle=[row.details?.brand,row.details?.model,row.details?.year].filter(Boolean).join(' ')||'—';
          const statut=row.statut==='devis_envoye'&&row.devis_decision==='en_attente'?'Devis envoyé · en attente':row.statut||'—';
