@@ -72,8 +72,8 @@ function confirmerAlerteEmails(){
 }
 form.addEventListener('submit',async event=>{
  event.preventDefault();
- const phoneValue=String(form.querySelector('[name="phone"]')?.value||'').replace(/[\\s().-]/g,'');
- if(!(/^(0[67]\\d{8}|(?:\\+33|0033)[67]\\d{8}|\\+(?!33)[1-9]\\d{7,14})$/.test(phoneValue))){setStatus('Le numéro de téléphone portable est obligatoire. Pour la France, indiquez un 06 ou 07 valide.');form.querySelector('[name="phone"]')?.focus();return}
+ const phoneValue=String(form.querySelector('[name="phone"]')?.value||'').replace(/[\s().-]/g,'');
+ if(!(/^(0[67]\d{8}|(?:\+33|0033)[67]\d{8}|\+(?!33)[1-9]\d{7,14})$/.test(phoneValue))){setStatus('Le numéro de téléphone portable est obligatoire. Pour la France, indiquez un 06 ou 07 valide.');form.querySelector('[name="phone"]')?.focus();return}
  if(!form.reportValidity()||!checkFiles()){form.reportValidity();return}
  if(!(await confirmerAlerteEmails()))return;
  const button=form.querySelector('[type="submit"]');
