@@ -1,3 +1,4 @@
+import {sendProposalSms} from './ovh-sms.mjs';
 export default async function handler(req,res){
 res.setHeader('Cache-Control','no-store');
 if(req.method!=='POST')return res.status(405).end();
@@ -13,6 +14,27 @@ if(quoteAction){
   body:JSON.stringify({action:quoteAction,id:b.id,offre:b.offre,express:b.express,reservation:b.reservation,proposal:b.proposal,expressEligible:b.expressEligible,reservationConfirmed:b.reservationConfirmed}),
   signal:AbortSignal.timeout(15000)});
   const answer=await r.json().catch(()=>({message:'Réponse indisponible'}));
+  if(r.ok&&quoteAction==='admin-quote'){
+   const sendAction=async(payload)=>{
+    const response=await fetch('https://xn--mcascope-b1a.fr/api/unitaire',{
+     method:'POST',headers:{Authorization:'Bearer '+token,Origin:'https://xn--mcascope-b1a.fr','Content-Type':'application/json'},
+     body:JSON.stringify(payload),signal:AbortSignal.timeout(10000)});
+    if(!response.ok)throw Error('Suivi SMS indisponible ('+response.status+')');
+    return response.json();
+   };
+   try{
+    const claim=await sendAction({action:'admin-sms-claim',id:b.id});
+    if(claim.claimed){
+     let status='echec',jobId='',error='';
+     try{const info=await sendProposalSms(claim.telephone);status='envoye';jobId=info.jobId}
+     catch(e){error=String(e?.message||'SMS non confirmé').slice(0,250);if(/portable absent|portable.*invalide/.test(error))status='non_envoye'}
+     await sendAction({action:'admin-sms-complete',id:b.id,status,jobId,error});
+     answer.smsStatus=status;
+    }else answer.smsStatus=claim.status||'deja_traite';
+   }catch(e){answer.smsStatus='suivi_indisponible';console.error('Mécascope SMS:',String(e?.message||'erreur de suivi'))}
+   const label={envoye:' SMS transmis à OVHcloud.',echec:' Attention : SMS refusé ou non confirmé.',non_envoye:' Attention : aucun portable valide pour ce client.',en_attente:' SMS déjà en cours de traitement.',suivi_indisponible:' Attention : suivi SMS indisponible.',deja_traite:' SMS déjà traité.'}[answer.smsStatus]||' SMS déjà traité ('+answer.smsStatus+').';
+   answer.message=(answer.message||'Proposition transmise au client.')+label;
+  }
   return res.status(r.status).json(answer);
  }catch{return res.status(503).json({message:'La proposition n’a pas pu être transmise.'})}
 }
