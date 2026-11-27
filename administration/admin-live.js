@@ -341,6 +341,39 @@ window.mecaAdminLive=async function(main,path){
     };
     wrap.prepend(close);
    }
+   // Clôture administrative : archive les demandes sans réponse, sans supprimer l'historique.
+   const closeDossierButton=document.createElement('button');
+   closeDossierButton.type='button';closeDossierButton.className='btn danger';
+   closeDossierButton.textContent='Clôturer le dossier';closeDossierButton.hidden=true;
+   closeDossierButton.style.cssText='margin:12px 0;display:none';
+   const closeDossierInfo=document.createElement('p');closeDossierInfo.setAttribute('role','status');closeDossierInfo.className='muted';closeDossierInfo.hidden=true;
+   wrap.append(closeDossierButton,closeDossierInfo);
+   function updateCloseDossierButton(){
+     const dossier=dossiers.find(x=>x.id===select.value);
+     const allowed=!!dossier&&!dossier.cloture_admin_le&&!dossier.initial_paid_at&&!dossier.solde_paid_at
+       &&!dossier.initial_session&&dossier.devis_decision!=='accepte'&&['deposee','devis_envoye','annulee'].includes(dossier.statut);
+     closeDossierButton.hidden=!allowed;closeDossierButton.style.display=allowed?'inline-flex':'none';
+     closeDossierInfo.hidden=!!allowed||!dossier;
+     if(dossier&&!allowed)closeDossierInfo.textContent='Clôture administrative indisponible pour un dossier accepté ou payé. Conservez le suivi des paiements et utilisez la clôture de recherche adaptée.';
+   }
+   closeDossierButton.onclick=async()=>{
+     const dossier=dossiers.find(x=>x.id===select.value);
+     if(!dossier||closeDossierButton.disabled)return;
+     if(!confirm('Clôturer le dossier '+(dossier.reference||'')+' ? Il disparaîtra des demandes actives, des suivis et des relances. Son historique et les paiements éventuels seront conservés.'))return;
+     const reason=prompt('Motif de clôture (conservé dans l’historique administratif) :','Sans réponse du client');
+     if(reason===null)return;
+     if(!reason.trim()){closeDossierInfo.hidden=false;closeDossierInfo.textContent='Précisez un motif pour clôturer le dossier.';return}
+     closeDossierButton.disabled=true;closeDossierInfo.hidden=false;closeDossierInfo.textContent='Clôture du dossier…';
+     try{
+       await call({action:'close_dossier',id:dossier.id,type:'unitaire',reason:reason.trim()});
+       select.value='';wrap.hidden=true;wrap.style.display='none';
+       if(composerPanel){composerPanel.hidden=true;composerPanel.style.display='none'}
+       await syncDemandesAfterAction('');
+       closeDossierInfo.textContent='Dossier archivé. Les relances et compteurs actifs ont été actualisés.';
+       main.querySelector('#list-content')?.scrollIntoView?.({block:'start',behavior:'smooth'});
+     }catch(e){closeDossierInfo.textContent='Clôture non effectuée : '+e.message}
+     finally{closeDossierButton.disabled=false;updateCloseDossierButton()}
+   };
    // Registre des dossiers réels : visible immédiatement, même sans sélection.
    const registry=document.createElement('section');
    registry.className='panel meca-dossiers-registry';
@@ -813,7 +846,7 @@ window.mecaAdminLive=async function(main,path){
    select.onchange=async()=>{
     const row=dossiers.find(x=>x.id===select.value);
     form.elements.ref.value=row?.reference||'';
-    showDossier(row);showOptions();
+    showDossier(row);showOptions();updateCloseDossierButton();
     if(path==='/admin/messages'){
       wrap.hidden=!row;
       if(row){
@@ -880,7 +913,34 @@ window.mecaAdminLive=async function(main,path){
          for(const value of values){const td=document.createElement('td');td.textContent=value;tr.append(td)}
          const action=document.createElement('td'),open=document.createElement('button');
          open.type='button';open.className='btn '+(fresh?'orange':'dark')+' small';open.textContent=pro?'Voir la recherche Pro':fresh?'Traiter la nouvelle demande':'Voir le dossier';
-         open.onclick=()=>{if(pro){location.hash='#/admin/demandes?source=professionnel&dossier='+encodeURIComponent(row.id)}else openTreatment(row.id)};
+         open.onclick=()=>{
+           if(pro){
+             let panel=main.querySelector('.meca-pro-dossier-detail');
+             if(!panel){panel=document.createElement('section');panel.className='panel meca-pro-dossier-detail';panel.style.cssText='margin:15px 0;padding:20px;border:1px solid #789';host.after(panel)}
+             panel.replaceChildren();
+             const h=document.createElement('h2');h.textContent='Dossier professionnel '+(row.reference||'');
+             const info=document.createElement('p');info.style.whiteSpace='pre-wrap';
+             info.textContent='Établissement : '+(row.contact||'—')+'\\nVéhicule : '+vehicle+'\\nPièce recherchée : '+(row.details?.part||'—')+'\\nStatut : '+row.statut;
+             const close=document.createElement('button');close.className='btn dark';close.type='button';close.textContent='Fermer la fiche';close.onclick=()=>panel.remove();
+             panel.append(h,info,close);
+             if(['nouvelle','en_attente'].includes(row.statut)){
+               const archive=document.createElement('button');archive.type='button';archive.className='btn danger';archive.textContent='Clôturer le dossier';
+               archive.style.marginLeft='12px';
+               archive.onclick=async()=>{
+                 if(!confirm('Clôturer le dossier professionnel '+(row.reference||'')+' ? Il sera retiré des demandes à traiter.'))return;
+                 const reason=prompt('Motif de clôture :','Sans réponse du client');if(reason===null||!reason.trim())return;
+                 archive.disabled=true;
+                 try{await call({action:'close_dossier',id:row.id,type:'professionnel',reason:reason.trim()});panel.remove();await syncDemandesAfterAction('')}
+                 catch(e){alert('Clôture non effectuée : '+e.message)}
+                 finally{archive.disabled=false}
+               };
+               panel.append(archive);
+             }else{
+               const note=document.createElement('p');note.className='muted';note.textContent='Clôture directe indisponible si une recherche Pro est déjà engagée ou si ses crédits doivent être régularisés.';panel.append(note);
+             }
+             panel.scrollIntoView?.({block:'start',behavior:'smooth'});
+           }else openTreatment(row.id)
+         };
          action.append(open);tr.append(action);table.append(tr);
        }
        if(!items.length){const empty=document.createElement('p');empty.className='empty meca-demandes-empty';empty.textContent='Aucune demande ne correspond aux filtres.';host.querySelector('.tablewrap')?.append(empty)}
