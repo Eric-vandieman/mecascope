@@ -10,7 +10,8 @@ export function normalizeMobile(input){
  return '';
 }
 const URL_BASE='https://api.eu.ovhcloud.com/1.0';
-export async function sendProposalSms(phone){
+export async function sendProposalSms(phone,kind='proposition'){
+ if(!['proposition','piece_trouvee'].includes(kind))throw Error('Type de SMS invalide');
  const receiver=normalizeMobile(phone);
  if(!receiver)throw Error('Numéro de portable absent ou invalide');
  const app=process.env.OVH_APP_KEY,secret=process.env.OVH_APP_SECRET,consumer=process.env.OVH_CONSUMER_KEY,service=process.env.OVH_SMS_SERVICE;
@@ -20,7 +21,7 @@ export async function sendProposalSms(phone){
  const timestamp=Number(await timeResponse.text());
  if(!Number.isFinite(timestamp))throw Error('Horloge OVH invalide');
  const url=URL_BASE+'/sms/'+encodeURIComponent(service)+'/jobs';
- const payload={charset:'UTF-8',message:'MECASCOPE : votre proposition est disponible. Consultez votre e-mail, y compris les spams, pour acceder a votre dossier.',receivers:[receiver],sender:'MECASCOPE',noStopClause:true,priority:'high',senderForResponse:false};
+ const payload={charset:'UTF-8',message:kind==='piece_trouvee'?'MECASCOPE : Bonne nouvelle ! Nous avons trouve votre piece. Connectez-vous a votre espace client pour regler le solde et obtenir le contact du fournisseur.':'MECASCOPE : votre proposition est disponible. Consultez votre e-mail, y compris les spams, pour acceder a votre dossier.',receivers:[receiver],sender:'MECASCOPE',noStopClause:true,priority:'high',senderForResponse:false};
  const body=JSON.stringify(payload),method='POST';
  const signature='$1$'+createHash('sha1').update([secret,consumer,method,url,body,timestamp].join('+')).digest('hex');
  const response=await fetch(url,{method,headers:{'Content-Type':'application/json','X-Ovh-Application':app,'X-Ovh-Consumer':consumer,'X-Ovh-Timestamp':String(timestamp),'X-Ovh-Signature':signature},body,signal:AbortSignal.timeout(12000)});
