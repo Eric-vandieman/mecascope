@@ -15,6 +15,14 @@ async function ouvrir(payload){
     css.rel='stylesheet'; css.href='/console.css?v=20261125-1627';
     document.querySelector('style').remove();
     document.head.append(css);
+    // Un écran de chargement neutre remplace les anciennes maquettes pendant
+    // que chaque onglet récupère les données et assemble ses vrais composants.
+    if(!document.querySelector('#meca-admin-hydration-css')){
+      const transitionStyle=document.createElement('style');
+      transitionStyle.id='meca-admin-hydration-css';
+      transitionStyle.textContent='main.meca-admin-hydrating{min-height:55vh!important}main.meca-admin-hydrating>:not(.meca-admin-loading){display:none!important}.meca-admin-loading{min-height:44vh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:15px;color:#d7e0e9;text-align:center}.meca-admin-loading-ring{width:37px;height:37px;border-radius:50%;border:3px solid #455665;border-top-color:#f4a245;animation:meca-admin-rotate .85s linear infinite}@keyframes meca-admin-rotate{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.meca-admin-loading-ring{animation:none}}';
+      document.head.append(transitionStyle);
+    }
     document.body.innerHTML=layout.shell;
     // Badge des demandes nouvelles : uniquement les dossiers pas encore traités.
     let lastBadgeCount=null;
@@ -37,12 +45,28 @@ async function ouvrir(payload){
       }catch{}
     }
     setInterval(()=>{if(document.visibilityState==='visible')updateDemandesBadge()},30000);
+    let renderSequence=0;
     const afficher=()=>{
+      const sequence=++renderSequence;
       const requested=location.hash.slice(1).split('?')[0];
       const path=Object.hasOwn(layout.pages,requested)?requested:'/admin';
       document.querySelector('main').outerHTML=layout.pages[path];
       document.querySelectorAll('.side a').forEach(a=>a.classList.toggle('active',a.hash==='#'+path));
       const main=document.querySelector('main');
+      main.classList.add('meca-admin-hydrating');
+      main.setAttribute('aria-busy','true');
+      const loading=document.createElement('div');
+      loading.className='meca-admin-loading';
+      loading.setAttribute('role','status');
+      const ring=document.createElement('span');ring.className='meca-admin-loading-ring';ring.setAttribute('aria-hidden','true');
+      const message=document.createElement('span');message.textContent='Chargement de '+(main.querySelector('h1')?.textContent||'l’administration')+'…';
+      loading.append(ring,message);main.append(loading);
+      const finish=()=>{
+        if(sequence!==renderSequence||!main.isConnected)return;
+        main.classList.remove('meca-admin-hydrating');
+        main.removeAttribute('aria-busy');
+        loading.remove();
+      };
       updateDemandesBadge();
       main.querySelectorAll('.metric .value,.stat-tile strong').forEach(value=>value.textContent='—');
       main.querySelectorAll('.note').forEach(element=>{
@@ -55,14 +79,25 @@ async function ouvrir(payload){
         main.querySelector('.pagehead')?.after(summary);
         window.mecaAdminComposer?.(main);
       }
+      const tasks=[];
+      const showError=(name,e)=>{
+        if(sequence!==renderSequence||!main.isConnected)return;
+        const p=document.createElement('p');p.className='meca-admin-live-status';
+        p.textContent=name+' : '+String(e?.message||e||'indisponible');
+        main.append(p);
+      };
       if(path==='/admin/sms'){
-        Promise.resolve(window.mecaSmsModels?.(main)).catch(error=>{const p=document.createElement('p');p.textContent='Erreur SMS : '+error.message;main.append(p)});
+        tasks.push(Promise.resolve().then(()=>window.mecaSmsModels?.(main)).catch(e=>showError('Messages SMS',e)));
       }else if(path==='/admin/clients'){
-        Promise.resolve(window.mecaAdminClients?.(main)).catch(error=>{const p=document.createElement('p');p.textContent='Erreur du fichier clients : '+error.message;main.append(p)});
+        tasks.push(Promise.resolve().then(()=>window.mecaAdminClients?.(main)).catch(e=>showError('Fichier clients',e)));
       }else{
-        Promise.resolve(window.mecaAdminLive?.(main,path)).catch(()=>{}).finally(()=>window.mecaSuppliers?.(main,path));
+        tasks.push(Promise.resolve().then(()=>window.mecaAdminLive?.(main,path))
+          .catch(e=>showError('Données administrateur',e))
+          .then(()=>window.mecaSuppliers?.(main,path))
+          .catch(e=>showError('Fournisseurs',e)));
       }
-      window.mecaPushSetup?.(main,path);
+      tasks.push(Promise.resolve().then(()=>window.mecaPushSetup?.(main,path)).catch(e=>showError('Notifications',e)));
+      Promise.allSettled(tasks).then(finish);
     };
     document.addEventListener('click',async e=>{
       const target=e.target.closest('[data-go],[data-logout]');
