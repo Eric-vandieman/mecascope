@@ -1,12 +1,12 @@
 import {createHash} from 'node:crypto';
 
 export function normalizeMobile(input){
- let n=String(input||'').trim().replace(/[\\s().-]/g,'');
+ let n=String(input||'').trim().replace(/[\s().-]/g,'');
  if(n.startsWith('00'))n='+'+n.slice(2);
- if(/^0[67]\\d{8}$/.test(n))return '+33'+n.slice(1);
- if(/^\\+33[67]\\d{8}$/.test(n))return n;
+ if(/^0[67]\d{8}$/.test(n))return '+33'+n.slice(1);
+ if(/^\+33[67]\d{8}$/.test(n))return n;
  // Outside France, require an international number; the carrier performs final mobile validation.
- if(/^\\+[1-9]\\d{7,14}$/.test(n)&&!n.startsWith('+33'))return n;
+ if(/^\+[1-9]\d{7,14}$/.test(n)&&!n.startsWith('+33'))return n;
  return '';
 }
 const URL_BASE='https://api.eu.ovhcloud.com/1.0';
