@@ -44,7 +44,9 @@ window.mecaAdminClients=async function(main){
  function make(tag,attributes={}){const node=document.createElement(tag);for(const [k,v] of Object.entries(attributes)){if(k==='className')node.className=v;else node.setAttribute(k,v)}return node}
  function revenue(d){
   const prices={ciblee:[1900,2000],approfondie:[3900,4000],expert:[6900,8000]};
-  const [initial,solde]=prices[d.offre]||[0,0];
+  const [standardInitial,standardSolde]=prices[d.offre]||[0,0];
+  const initial=Number.isInteger(d.devis_acompte_personnalise_centimes)?d.devis_acompte_personnalise_centimes:standardInitial;
+  const solde=Number.isInteger(d.devis_total_personnalise_centimes)&&Number.isInteger(d.devis_acompte_personnalise_centimes)?d.devis_total_personnalise_centimes-d.devis_acompte_personnalise_centimes:standardSolde;
   const express=d.express_option==='24h'?5000:d.express_option==='48h'?2000:0;
   return (d.initial_paid_at?initial+(d.options_paiement_avance?express:0):0)
     +(d.solde_paid_at?solde+(!d.options_paiement_avance&&d.express_validee?express:0)+(d.reservation_validee?1000:0):0);
