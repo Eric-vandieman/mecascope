@@ -1,5 +1,14 @@
 'use strict';
 window.mecaEnhanceAdminLayout=layout=>{
+ const smsPath='/admin/sms';
+ const smsNav='<a href="#/admin/sms" aria-label="SMS automatiques"><span class="mark" style="font-size:20px">✉</span><span class="side-label">SMS automatiques</span></a>';
+ if(!layout.shell.includes('href="#/admin/sms"')){
+  const base='href="#/admin/parametres"';
+  const index=layout.shell.indexOf('<a '+base);
+  if(index>=0)layout.shell=layout.shell.slice(0,index)+smsNav+layout.shell.slice(index);
+  else layout.shell=layout.shell.replace('</aside>',smsNav+'</aside>');
+ }
+ layout.pages[smsPath]='<main class="main"><div class="pagehead"><div><h1>SMS automatiques</h1><div class="muted">Paramètres · Messages envoyés automatiquement aux clients</div></div></div><section class="panel" style="margin-top:18px"><h2>Longueur maximale d\'un SMS</h2><p style="line-height:1.8">Pour rester sur <strong>un seul SMS</strong> : <strong>160 unités en GSM-7</strong> ou <strong>70 unités en Unicode</strong>. Certains accents (par exemple ê) et symboles déclenchent le mode Unicode. Les caractères spéciaux ^ { } \\ [ ] ~ | € occupent deux unités en GSM-7. Le compteur calcule automatiquement la capacité restante et bloque l\'enregistrement si le texte dépasse la limite.</p><p style="line-height:1.7;color:#c9cbd1">Modifiez les textes ci-dessous, puis cliquez sur Enregistrer. Aucune modification dans OVHcloud n\'est nécessaire : les prochains SMS utiliseront ces textes. Un SMS n\'est jamais envoyé par le simple fait de modifier un message.</p><p id="meca-sms-load-status" role="status"></p></section><div id="meca-sms-editor"></div></main>';
  const tile=(label,id,sub)=>'<div class="metric"><div><div class="label">'+label+'</div><div class="value" id="'+id+'">—</div><small>'+sub+'</small></div></div>';
  const singles='<section class="meca-single-section"><h2>Prestations uniques</h2><div class="meca-single-cards">'+tile('Ce mois','meca-single-month','Paiements confirmés')+tile('Mois précédent','meca-single-previous','Comparatif')+tile('Depuis toujours','meca-single-total','Total historique')+'</div></section>';
  const note='<div class="meca-admin-live-status"><strong>Données réelles uniquement :</strong> le registre des prestations ponctuelles n’est pas encore connecté. Aucun paiement ni dossier réel n’est effacé. Les valeurs non disponibles sont affichées par « — ».</div>';
