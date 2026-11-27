@@ -347,7 +347,7 @@ window.mecaAdminLive=async function(main,path){
    closeDossierButton.textContent='Clôturer le dossier';closeDossierButton.hidden=true;
    closeDossierButton.style.cssText='margin:12px 0;display:none';
    const closeDossierInfo=document.createElement('p');closeDossierInfo.setAttribute('role','status');closeDossierInfo.className='muted';closeDossierInfo.hidden=true;
-   wrap.append(closeDossierButton,closeDossierInfo);
+   select.after(closeDossierButton,closeDossierInfo);
    function updateCloseDossierButton(){
      const dossier=dossiers.find(x=>x.id===select.value);
      const allowed=!!dossier&&!dossier.cloture_admin_le&&!dossier.initial_paid_at&&!dossier.solde_paid_at
@@ -962,6 +962,7 @@ window.mecaAdminLive=async function(main,path){
      const current=select.value||id;
      const latest=await call({action:'reporting'});
      if(!main.isConnected)return;
+     d.nouvelles_demandes=Number(latest.nouvelles_demandes)||0;
      const updated=Array.isArray(latest.dossiers)?latest.dossiers:[];
      dossiers.splice(0,dossiers.length,...updated);
      for(const row of dossiers){
