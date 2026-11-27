@@ -204,7 +204,9 @@ window.mecaAdminLive=async function(main,path){
    for(const row of dossiers){const option=document.createElement('option');option.value=row.id;option.textContent=row.reference+' — '+row.contact+' ('+row.statut+')';select.append(option)}
    const wrap=document.createElement('div');wrap.className='panel';wrap.append(select);
    const history=document.createElement('div');history.id='meca-live-history';history.style.cssText='white-space:pre-wrap;padding:12px;line-height:1.7';wrap.append(history);
-   form.before(wrap);
+   // La fiche doit être hors du panneau de compte rendu, qui reste masqué avant paiement.
+   if(compactDemandes&&composerPanel)composerPanel.before(wrap);
+   else form.before(wrap);
    if(compactDemandes){
     wrap.hidden=true;wrap.style.display='none';
     if(composerPanel){composerPanel.hidden=true;composerPanel.style.display='none'}
