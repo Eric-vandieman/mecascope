@@ -363,6 +363,7 @@ window.mecaAdminLive=async function(main,path){
      const opt=document.createElement('option');opt.value=v;opt.textContent=label;revisionOffer.append(opt)
    }
    revisionOfferLabel.append(revisionOffer);
+   revisionOfferLabel.style.cssText='display:block;margin-top:12px';revisionModeLabel.style.cssText='display:block;margin-top:12px';
    const revisionFields=document.createElement('div');revisionFields.style.cssText='display:flex;gap:15px;flex-wrap:wrap;margin-top:10px';
    const revisionTotalLabel=document.createElement('label');revisionTotalLabel.textContent='Nouveau prix de base (€)';
    const revisionTotal=document.createElement('input');revisionTotal.type='number';revisionTotal.step='0.01';revisionTotal.min='2';revisionTotal.max='2000';revisionTotal.style.cssText='display:block;min-width:120px;padding:9px;margin-top:5px';
@@ -464,6 +465,7 @@ window.mecaAdminLive=async function(main,path){
      const d=dossiers.find(x=>x.id===select.value);
      if(!d||d.initial_paid_at||!['devis_envoye','refuse'].includes(d.statut)||d.devis_decision==='accepte')return;
      revisionMode=true;revisionPanel.hidden=false;reviseButton.hidden=true;quoteButton.hidden=true;
+     personalLabel.hidden=true;aiPanel.hidden=true;optionPreview.hidden=true;priceInfo.hidden=true;
      personal.disabled=true;
      const original=plans[d.offre]||plans.approfondie;
      revisionChoice.value=d.devis_total_personnalise_centimes?'personnalise':'formule';
@@ -615,6 +617,7 @@ window.mecaAdminLive=async function(main,path){
      const row=dossiers.find(x=>x.id===select.value),existing=row?.statut==='devis_envoye';
      quotePanel.hidden=path==='/admin/messages'||!row||!['deposee','devis_envoye','acompte_paye','refuse'].includes(row.statut);
      revisionMode=false;revisionPanel.hidden=true;
+     personalLabel.hidden=false;aiPanel.hidden=false;optionPreview.hidden=false;priceInfo.hidden=false;
      reviseButton.hidden=!row||!!row.initial_paid_at||!['devis_envoye','refuse'].includes(row.statut)||row.devis_decision==='accepte';
      if(compactDemandes&&composerPanel){const show=!!(row?.initial_paid_at);composerPanel.hidden=!show;composerPanel.style.display=show?'':'none'}
      quoteButton.hidden=!row||!['deposee','devis_envoye'].includes(row.statut)||(existing&&row.devis_decision!=='en_attente');
