@@ -85,9 +85,11 @@ window.mecaAdminLive=async function(main,path){
   const dossiers=Array.isArray(d.dossiers)?d.dossiers:[];
   const conversations=await call({action:'conversations'}).catch(()=>[]);
   const inbox=Array.isArray(conversations)?conversations:[];
-  const unreadTotal=inbox.reduce((n,c)=>n+Number(c.non_lus||0),0);
-  const pendingCount=inbox.filter(c=>c.dernier_auteur==='client').length;
-  const unreadConversationCount=inbox.filter(c=>Number(c.non_lus||0)>0).length;
+  const proInboxResult=await call({action:'pro_conversations'}).catch(()=>[]);
+  const proInbox=Array.isArray(proInboxResult)?proInboxResult:[];
+  const unreadTotal=inbox.reduce((n,c)=>n+Number(c.non_lus||0),0)+proInbox.reduce((n,c)=>n+Number(c.non_lus||0),0);
+  const pendingCount=inbox.filter(c=>c.dernier_auteur==='client').length+proInbox.filter(c=>c.dernier_auteur==='client').length;
+  const unreadConversationCount=inbox.filter(c=>Number(c.non_lus||0)>0).length+proInbox.filter(c=>Number(c.non_lus||0)>0).length;
   for(const nav of document.querySelectorAll('.side a[href*="/admin/messages"],.side a[data-go="/admin/messages"]')){
     const mark=nav.querySelector('.meca-inbox-unread-badge')||document.createElement('span');
     mark.className='meca-inbox-unread-badge';mark.textContent=unreadTotal?String(unreadTotal):'';
@@ -102,7 +104,7 @@ window.mecaAdminLive=async function(main,path){
       const box=document.createElement('div'),caption=document.createElement('div'),count=document.createElement('div'),sub=document.createElement('small');
       caption.className='label';caption.textContent='Messages clients à traiter';
       count.className='value';count.textContent=String(pendingCount);
-      sub.textContent=unreadConversationCount+' conversation(s) non lue(s) · '+unreadTotal+' message(s) non lu(s) · '+inbox.length+' conversation(s) au total';
+      sub.textContent=unreadConversationCount+' conversation(s) non lue(s) · '+unreadTotal+' message(s) non lu(s) · '+(inbox.length+proInbox.length)+' conversation(s) particulières et Pro';
       box.append(caption,count,sub);tile.append(box);
       const go=()=>{location.hash='#/admin/messages'};tile.onclick=go;tile.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}};
       metrics.append(tile);
@@ -253,8 +255,8 @@ window.mecaAdminLive=async function(main,path){
       if(!proConversations.length){const n=document.createElement('p');n.className='muted';n.textContent='Aucune conversation professionnelle pour le moment.';proList.append(n);return}
       for(const c of proConversations){
         const btn=document.createElement('button');btn.type='button';btn.className='btn dark';
-        btn.style.cssText='white-space:normal;text-align:left;overflow-wrap:anywhere;padding:13px;background:'+(selectedGarage===c.garage_id?'#31475a':'#26313c');
-        btn.textContent=(c.nom||c.contact||'Garage Pro')+' · '+(c.total_messages||0)+' message(s)';
+        btn.style.cssText='white-space:normal;text-align:left;overflow-wrap:anywhere;padding:13px;background:'+(selectedGarage===c.garage_id?'#31475a':Number(c.non_lus||0)>0?'#174431':'#26313c');
+        btn.textContent=(Number(c.non_lus||0)>0?'● NON LU · ':'✓ LU · ')+(c.nom||c.contact||'Garage Pro')+' · '+(c.total_messages||0)+' message(s)';
         btn.onclick=()=>openPro(c.garage_id);
         proList.append(btn);
       }
@@ -275,6 +277,13 @@ window.mecaAdminLive=async function(main,path){
           const content=document.createElement('div');content.textContent=m.contenu||'';
           entry.append(title,content);proMessages.append(entry);
         }
+        await call({action:'pro_read',id});
+        const conversation=proConversations.find(item=>item.garage_id===id);
+        if(conversation)conversation.non_lus=0;
+        const oldPro=proInbox.find(item=>item.garage_id===id);if(oldPro)oldPro.non_lus=0;
+        paintPro();
+        const allUnread=inbox.reduce((n,c)=>n+Number(c.non_lus||0),0)+proInbox.reduce((n,c)=>n+Number(c.non_lus||0),0);
+        for(const badge of document.querySelectorAll('.meca-inbox-unread-badge')){badge.textContent=allUnread?String(allUnread):'';badge.style.background=allUnread?'#e9812a':'transparent'}
         proStatus.textContent='';
       }catch(e){proStatus.textContent='Impossible de lire les messages Pro : '+e.message}
     };
