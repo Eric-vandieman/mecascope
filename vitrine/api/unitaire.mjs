@@ -1,3 +1,4 @@
+import {measureSms,DEFAULT_SMS} from '../lib/sms-text.mjs';
 import {createHash,createHmac} from 'node:crypto';
 const cookieName='__Host-mecascope-professional';
 const hash=t=>createHash('sha256').update(String(t)).digest('hex');
@@ -130,6 +131,28 @@ export default async function handler(req,res){
       '<div style="font:16px Arial;max-width:550px;margin:auto"><h2>Mécascope</h2><p>Une nouvelle réponse est disponible pour votre dossier <strong>'+safe(d.reference)+'</strong>.</p><p>Consultez votre lien personnel de suivi de mission reçu dans votre précédent courriel Mécascope. Ne communiquez jamais ce lien.</p></div>');
     return res.status(200).json({sent:true});
   }
+  if(action==='admin-sms-templates'){
+    if(!(await getAdmin(req)))return res.status(403).json({message:'Administration uniquement'});
+    if(req.method!=='POST')return res.status(405).json({message:'Méthode non autorisée'});
+    const mode=b.mode||'list';
+    if(mode==='list'){
+      const models=await query('meca_sms_modeles?select=type,message,modifie_le&order=type.asc');
+      return res.status(200).json({models:models||[]});
+    }
+    if(mode!=='save'||!['proposition','piece_trouvee'].includes(b.smsType)||typeof b.message!=='string')
+      return res.status(400).json({message:'Modèle de SMS invalide'});
+    const message=b.message.trim();
+    const info=measureSms(message);
+    if(!message||message.length>160||!info.oneSms)
+      return res.status(400).json({message:'Un SMS unique doit contenir 160 unités GSM-7 maximum, ou 70 unités Unicode. Retirez des caractères ou des accents avant d’enregistrer.',measure:info});
+    const updated=await query('meca_sms_modeles?type=eq.'+b.smsType,{
+      method:'PATCH',headers:{Prefer:'return=representation'},
+      body:JSON.stringify({message,modifie_le:new Date().toISOString()})
+    });
+    if(!Array.isArray(updated)||updated.length!==1)
+      return res.status(503).json({message:'Enregistrement du modèle non confirmé'});
+    return res.status(200).json({saved:true,model:updated[0],measure:info});
+  }
   if(action==='admin-sms-claim'){
     if(!(await getAdmin(req)))return res.status(403).json({message:'Administration uniquement'});
     if(!/^[a-f0-9-]{36}$/i.test(String(b.id||'')))return res.status(400).json({message:'Dossier invalide'});
@@ -144,7 +167,13 @@ export default async function handler(req,res){
     if(existing?.length)return res.status(200).json({claimed:false,status:existing[0].statut});
     const numero=String(dossier.telephone||'').trim();
     const insert=await query('meca_sms_notifications?on_conflict=dossier_id,type',{method:'POST',headers:{Prefer:'resolution=ignore-duplicates,return=representation'},body:JSON.stringify({dossier_id:b.id,type:smsType,telephone:numero,statut:'en_attente'})});
-    return res.status(200).json({claimed:Array.isArray(insert)&&insert.length===1,telephone:Array.isArray(insert)&&insert.length===1?numero:undefined});
+    const claimed=Array.isArray(insert)&&insert.length===1;
+    if(!claimed)return res.status(200).json({claimed:false,status:'en_attente'});
+    const templates=await query('meca_sms_modeles?type=eq.'+smsType+'&select=message&limit=1');
+    const message=String(templates?.[0]?.message||DEFAULT_SMS[smsType]);
+    // Un modèle non valide ne doit jamais déclencher un envoi facturable.
+    if(!measureSms(message).oneSms)return res.status(409).json({message:'Modèle SMS invalide : envoi bloqué'});
+    return res.status(200).json({claimed:true,telephone:numero,message});
    }
    if(action==='admin-sms-complete'){
     if(!(await getAdmin(req)))return res.status(403).json({message:'Administration uniquement'});
