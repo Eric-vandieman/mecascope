@@ -270,8 +270,8 @@ window.mecaAdminLive=async function(main,path){
         if(selectedGarage!==id)return;
         proMessages.replaceChildren(heading);
         for(const m of Array.isArray(rows)?rows:[]){
-          const entry=document.createElement('article');entry.style.cssText='background:'+(m.auteur==='administrateur'?'#244a67':'#33483c')+';padding:12px;border-radius:9px;white-space:pre-wrap;overflow-wrap:anywhere';
-          const title=document.createElement('strong');title.textContent=(m.auteur==='administrateur'?'Mécascope':'Professionnel')+' · '+(m.cree_le?new Date(m.cree_le).toLocaleString('fr-FR'):'');
+          const entry=document.createElement('article');entry.style.cssText='background:'+(m.auteur==='support'?'#244a67':'#33483c')+';padding:12px;border-radius:9px;white-space:pre-wrap;overflow-wrap:anywhere';
+          const title=document.createElement('strong');title.textContent=(m.auteur==='support'?'Mécascope':'Professionnel')+' · '+(m.cree_le?new Date(m.cree_le).toLocaleString('fr-FR'):'');
           const content=document.createElement('div');content.textContent=m.contenu||'';
           entry.append(title,content);proMessages.append(entry);
         }
