@@ -96,6 +96,40 @@ window.mecaAdminClients=async function(main){
    const h=make('h2');h.textContent='Suivi client — '+p.name;detail.append(h);
    const desc=make('p');desc.className='mc-muted';desc.textContent=(p.type==='professionnel'?'Compte professionnel':'Compte particulier')+' · '+(p.email||'E-mail non renseigné')+' · '+(p.phone||'Téléphone non communiqué');detail.append(desc);
    const total=make('p');total.textContent=(p.orders.length+p.pro.length)+' demande(s) enregistrée(s) · '+euro(p.spent)+' encaissés sur les prestations à l’unité';detail.append(total);
+   const deletion=make('div');
+   deletion.style.cssText='margin:18px 0 20px;padding:15px;border:1px solid #89695b;border-radius:11px;background:#2b2225';
+   const deletionHeading=make('strong');deletionHeading.textContent='Gestion de la fiche client';deletionHeading.style.cssText='display:block;margin-bottom:10px';
+   const deletionButtons=make('div');deletionButtons.style.cssText='display:flex;flex-wrap:wrap;gap:10px';
+   const hide=make('button',{type:'button'});hide.textContent='Supprimer uniquement la fiche client';
+   hide.style.cssText='padding:11px 13px;border-radius:8px;border:1px solid #bd985f;color:#ffe4bb;background:#413522;cursor:pointer;font-weight:700';
+   const purge=make('button',{type:'button'});purge.textContent='Supprimer toutes les données client';
+   purge.style.cssText='padding:11px 13px;border-radius:8px;border:1px solid #ec8585;color:#fff;background:#822f34;cursor:pointer;font-weight:700';
+   const hint=make('p');hint.className='mc-muted';hint.textContent='Fiche seule : masquer dans ce répertoire, sans modifier les commandes. Données client : retirer le suivi et les échanges non financiers ; paiements, factures et obligations comptables conservés. Les comptes de connexion ne sont pas supprimés.';
+   const deleteStatus=make('p');deleteStatus.setAttribute('role','status');deleteStatus.style.cssText='margin:8px 0;color:#ffcd95';
+   deletionButtons.append(hide,purge);deletion.append(deletionHeading,deletionButtons,hint,deleteStatus);detail.append(deletion);
+   async function deleteClient(scope){
+     const identity=p.type==='professionnel'?p.key.slice(4):lower(p.email);
+     if(!identity){deleteStatus.textContent='Identifiant client indisponible : suppression impossible.';return}
+     const full=scope==='complete';
+     const explanation=full
+       ?'ATTENTION : supprimer les demandes et les échanges non financiers de '+p.name+' ? Les paiements et justificatifs comptables seront préservés. Les comptes avec des obligations financières actives peuvent être bloqués.'
+       :'Retirer la fiche de '+p.name+' du fichier clients ? Ses demandes, paiements et statistiques resteront inchangés.';
+     if(!confirm(explanation))return;
+     const phrase=full?'EFFACER':'SUPPRIMER';
+     const typed=prompt('Pour confirmer, saisissez exactement '+phrase+' :');
+     if(typed!==phrase){deleteStatus.textContent='Suppression annulée : confirmation incorrecte.';return}
+     hide.disabled=true;purge.disabled=true;deleteStatus.textContent='Suppression sécurisée en cours…';
+     try{
+       const response=await fetch('/api/reporting',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'client_delete',clientType:p.type,clientKey:identity,scope,confirmation:phrase}),cache:'no-store'});
+       const result=await response.json().catch(()=>({}));
+       if(!response.ok||result.ok!==true)throw Error(result.message||'Suppression refusée');
+       deleteStatus.textContent=result.message||'Opération confirmée.';
+       location.reload();
+     }catch(error){deleteStatus.textContent=error.message;hide.disabled=false;purge.disabled=false}
+   }
+   hide.onclick=()=>deleteClient('fiche');
+   purge.onclick=()=>deleteClient('complete');
+
    if(!p.orders.length&&!p.pro.length){const t=make('p');t.textContent='Ce client possède un compte, mais aucune commande enregistrée.';detail.append(t)}
    for(const d of p.orders){
     const card=make('div',{className:'mc-order'}),left=make('div'),right=make('div'),ref=make('strong');
