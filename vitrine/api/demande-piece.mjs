@@ -3,8 +3,8 @@ import {normalizeMobile} from '../lib/ovh-sms.mjs';
 
 const limited=(v,n=140)=>typeof v==='string'?v.trim().slice(0,n):'';
 const validEmail=s=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)&&s.length<=254;
-const names=['vehicleType','brand','model','year','engine','trim','vin','fuel','gearbox','ref','part','budget','colourType','notes'];
-const descriptions={vehicleType:'Catégorie',brand:'Marque',model:'Modèle',year:'Année',engine:'Motorisation / cylindrée',trim:'Version / finition',vin:'VIN / numéro de châssis',fuel:'Énergie',gearbox:'Transmission',ref:'Référence OEM',part:'Pièce recherchée',budget:'Budget maximal',colourType:'Couleur',notes:'Précisions'};
+const names=['vehicleType','brand','model','year','engine','trim','vin','fuel','gearbox','ref','part','budget','colourType','notes','recoveryMethod','sourceRegion','pickupCity','pickupRadiusKm'];
+const descriptions={vehicleType:'Catégorie',brand:'Marque',model:'Modèle',year:'Année',engine:'Motorisation / cylindrée',trim:'Version / finition',vin:'VIN / numéro de châssis',fuel:'Énergie',gearbox:'Transmission',ref:'Référence OEM',part:'Pièce recherchée',budget:'Budget maximal',colourType:'Couleur',notes:'Précisions',recoveryMethod:'Mode de récupération (delivery=livraison, pickup=retrait, both=les deux)',sourceRegion:'Origine autorisée (france/europe/world)',pickupCity:'Ville de retrait',pickupRadiusKm:'Rayon de retrait (km)'};
 const allowTypes=new Set(['automobile','moto','scooter','quad','agricole','collection']);
 // Limiteur de précaution par instance : compléter par une règle WAF distribuée avant une campagne massive.
 const attempts=new Map();
@@ -32,6 +32,8 @@ export default async function handler(req,res){
  if(!validEmail(email)||contact.length<2||!allowTypes.has(b.vehicleType)||!limited(b.brand)||!limited(b.model)||!limited(b.part)||!/^((19|20)\d{2})$/.test(String(b.year||'')))
   return res.status(400).json({message:'Complétez votre nom, e-mail, type de véhicule, marque, modèle, année et pièce recherchée.'});
  if(b.vin && !/^[A-HJ-NPR-Z0-9]{4,17}$/i.test(limited(b.vin,30)))return res.status(400).json({message:'Le VIN indiqué semble incorrect. Corrigez-le ou laissez ce champ vide.'});
+ const method=limited(b.recoveryMethod,12),source=limited(b.sourceRegion,12),city=limited(b.pickupCity,120),radius=limited(b.pickupRadiusKm,5);
+ if(!['delivery','pickup','both'].includes(method)|| (method!=='pickup'&&!['france','europe','world'].includes(source)) || (method!=='delivery'&&(!city||!['25','50','100','200','500'].includes(radius))))return res.status(400).json({message:'Indiquez le mode de récupération, la provenance autorisée et, pour un retrait, votre ville et la distance maximale.'});
  const photos=Array.isArray(b.photos)?b.photos:[];
  if(photos.length>5)return res.status(413).json({message:'Cinq photos maximum.'});
  const allowed=new Set(['image/jpeg','image/png','image/webp']);
@@ -64,6 +66,8 @@ export default async function handler(req,res){
   }catch{}
  }
  const details=Object.fromEntries(names.map(name=>[name,limited(b[name],800)]));
+ if(method==='pickup')details.sourceRegion='';
+ if(method==='delivery'){details.pickupCity='';details.pickupRadiusKm='';}
  const saved=await fetch(dbUrl+'/rest/v1/meca_demandes_unitaires',{
   method:'POST',headers:{apikey:admin,...(admin.startsWith('eyJ')?{Authorization:'Bearer '+admin}:{}),
    'Content-Type':'application/json',Prefer:'return=representation'},
