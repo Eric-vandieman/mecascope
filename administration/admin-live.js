@@ -552,7 +552,7 @@ window.mecaAdminLive=async function(main,path){
    const estimateSources=document.createElement('div');estimateSources.style.cssText='display:flex;flex-direction:column;gap:6px;margin-top:10px';
    const estimateFooter=document.createElement('p');estimateFooter.className='muted';
    estimateFooter.style.cssText='font-size:12px;line-height:1.5;margin:12px 0 4px';
-   estimateFooter.textContent='Estimation indicative basée sur des prix PUBLICS demandés, pas des ventes confirmées. Pièce seule, hors main-d’œuvre et hors prestation Mécascope. Compatibilité, état et prix réel à vérifier.';
+   estimateFooter.textContent='Prix PUBLICS affichés, non ventes confirmées. Les pièces voisines sont des REPÈRES, pas un devis ni une preuve de compatibilité. Frais de livraison, main-d’œuvre et prestation Mécascope exclus. Vérifier disponibilité, état et ensemble vendu.';
    const estimateRefresh=document.createElement('button');estimateRefresh.type='button';estimateRefresh.className='btn dark';estimateRefresh.textContent='↻ Actualiser les prix du marché';
    estimateRefresh.style.cssText='margin-top:10px;max-width:100%;white-space:normal';
    estimateBox.append(estimateHeader,estimateText,estimateSources,estimateFooter,estimateRefresh);
@@ -563,9 +563,9 @@ window.mecaAdminLive=async function(main,path){
      if(!estimate){estimateText.textContent='Recherche de prix publics en attente…';return}
      if(estimate.statut==='estimation'){
        const fmt=v=>Number(v).toLocaleString('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0});
-       estimateText.textContent='Fourchette indicative : '+fmt(estimate.min_eur)+' à '+fmt(estimate.max_eur)
+       estimateText.textContent=(estimate.repere_indicatif?'Repères de prix (pièces voisines, non équivalentes) : ':'Fourchette indicative : ')+fmt(estimate.min_eur)+' à '+fmt(estimate.max_eur)
          +(estimate.nombre_comparables>=2?'\nMoyenne : '+fmt(estimate.moyenne_eur)+' · Médiane : '+fmt(estimate.mediane_eur):'\nPrix repère isolé — comparaison insuffisante')
-         +'\nAnnonces comparables : '+(estimate.nombre_comparables||1)+' · '+(estimate.methode||'')
+         +'\nAnnonces de référence : '+(estimate.nombre_comparables||1)+' · '+(estimate.methode||'')
          +'\nConfiance : '+(estimate.confiance||'faible')+' · État : '+(estimate.etat||'non précisé')
          +'\n'+(estimate.motif||'')+'\nPoints à confirmer : '+(estimate.points_attention||'Référence et disponibilité')
          +(estimate.alertes?.length?'\n⚠️ Écarts / offres douteuses : '+estimate.alertes.map(a=>a.prix_eur+' € ('+a.motif+')').join(' ; '):'');
