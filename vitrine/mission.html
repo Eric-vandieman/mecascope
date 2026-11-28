@@ -207,7 +207,16 @@
    location.assign(u.href);
   }catch(e){erreur.textContent=e.message;payer.disabled=false}
  };
- try{await refresh()}catch(e){etat.textContent=e.message}
+ let pageViewLogged=false;
+ const markProposalConsulted=async()=>{
+   if(pageViewLogged||document.visibilityState!=='visible'||!current||current.statut!=='devis_envoye')return;
+   pageViewLogged=true;
+   try{await api({action:'proposal-viewed'})}catch{pageViewLogged=false}
+ };
+ // Enregistre la première consultation effective de cette page, pas l'ouverture de l'e-mail.
+ const scheduleConsultation=()=>{if(document.visibilityState==='visible')setTimeout(markProposalConsulted,5000)};
+ document.addEventListener('visibilitychange',scheduleConsultation,{passive:true});
+ try{await refresh();scheduleConsultation()}catch(e){etat.textContent=e.message}
  if(location.hash==='#revision'&&current&&!current.revisionDemandee&&current.statut==='devis_envoye'&&current.decision==='en_attente'&&current.optionsPayeesAvance){
    $('ouvrir-revision').click();
  }
