@@ -147,7 +147,7 @@ window.mecaAdminClients=async function(main){
       tracking.style.cssText='margin-top:9px;font-size:12px;line-height:1.5;overflow-wrap:anywhere';
       tracking.textContent='✉ Envoyé : '+(d.devis_email_envoye_le?fmtDateTime(d.devis_email_envoye_le):'historique')+
        ' · Livraison : '+(d.devis_email_delivre_confirme?'confirmée Resend':'non confirmée')+
-       ' · Page devis : '+(d.devis_page_consultee_le?'consultée le '+fmtDateTime(d.devis_page_consultee_le):'non constatée');
+       ' · Ouverture e-mail : '+(d.devis_email_ouverture_detectee_le?'détection Resend le '+fmtDateTime(d.devis_email_ouverture_detectee_le):'non mesurée / non détectée')+' · Page devis : '+(d.devis_page_consultee_le?'consultée le '+fmtDateTime(d.devis_page_consultee_le):'non constatée');
       left.append(tracking);
     }
     const price=make('div');price.textContent=euro(revenue(d))+' encaissés';price.style.cssText='font-weight:700;margin-bottom:9px;text-align:right';
