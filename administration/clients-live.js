@@ -142,6 +142,14 @@ window.mecaAdminClients=async function(main){
     const info=make('p');info.textContent=[d.details?.brand,d.details?.model,d.details?.part].filter(Boolean).join(' · ')||'Pièce non précisée';info.style.margin='6px 0';
     const meta=make('div',{className:'mc-muted'});meta.textContent=fmtDateTime(d.cree_le)+' · '+(statusText[d.statut]||d.statut||'Statut inconnu')+' · '+(d.devis_decision==='refuse'?'Devis refusé':d.offre||'Formule non définie');
     left.append(ref,info,meta);
+    if(d.devis_email_envoye_le||d.devis_email_delivre_confirme||d.devis_page_consultee_le){
+      const tracking=make('div',{className:'mc-muted'});
+      tracking.style.cssText='margin-top:9px;font-size:12px;line-height:1.5;overflow-wrap:anywhere';
+      tracking.textContent='✉ Envoyé : '+(d.devis_email_envoye_le?fmtDateTime(d.devis_email_envoye_le):'historique')+
+       ' · Livraison : '+(d.devis_email_delivre_confirme?'confirmée Resend':'non confirmée')+
+       ' · Page devis : '+(d.devis_page_consultee_le?'consultée le '+fmtDateTime(d.devis_page_consultee_le):'non constatée');
+      left.append(tracking);
+    }
     const price=make('div');price.textContent=euro(revenue(d))+' encaissés';price.style.cssText='font-weight:700;margin-bottom:9px;text-align:right';
     const btn=make('button',{type:'button',className:'mc-button'});btn.textContent='Ouvrir le dossier';btn.onclick=()=>{sessionStorage.setItem('meca-dossier-selected',d.id);location.hash='#/admin/demandes?dossier='+encodeURIComponent(d.id)};
     right.append(price,btn);card.append(left,right);detail.append(card);
