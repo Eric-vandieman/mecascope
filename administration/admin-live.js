@@ -399,7 +399,7 @@ window.mecaAdminLive=async function(main,path){
    const deliveryHeader=document.createElement('h3');deliveryHeader.textContent='Suivi du devis envoyé au client';
    const deliveryLines=document.createElement('div');deliveryLines.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:10px;margin-top:12px';
    const deliveryNote=document.createElement('small');deliveryNote.className='muted';
-   deliveryNote.textContent='« Délivré » signifie accepté par la messagerie du destinataire. « Page consultée » indique un affichage du devis, pas une preuve de lecture de son e-mail.';
+   deliveryNote.textContent='« Délivré » signifie accepté par la messagerie du destinataire. Le signal Resend ne prouve pas une lecture humaine. Sans suivi actif au moment de l’envoi ou si les images sont bloquées, la lecture reste inconnue. La consultation de la page est suivie séparément.';
    deliveryBox.append(deliveryHeader,deliveryLines,deliveryNote);
    detail.after(deliveryBox);deliveryBox.hidden=true;
    let deliveryRequest=0;
@@ -415,9 +415,10 @@ window.mecaAdminLive=async function(main,path){
      };
      item('1 · E-mail envoyé',format(row.devis_email_envoye_le||row.devis_envoye_le)||'Envoi non confirmé','#e7f0ff');
      item('2 · E-mail délivré',row.devis_email_delivre_confirme?'✓ Livraison confirmée par Resend'+(row.devis_email_delivre_le?' · '+format(row.devis_email_delivre_le):' · heure exacte indisponible'):'En attente de confirmation Resend',row.devis_email_delivre_confirme?'#a4e9b6':'#f7cf94');
-     item('3 · Page du devis consultée',row.devis_page_consultee_le?'✓ '+format(row.devis_page_consultee_le):'Non constatée',row.devis_page_consultee_le?'#a4e9b6':'#f7cf94');
+     item('3 · E-mail ouvert (signal Resend)',row.devis_email_ouverture_detectee_le?'✓ Ouverture détectée (vérifiée '+format(row.devis_email_ouverture_detectee_le)+')':'Ouverture non mesurée ou non détectée',row.devis_email_ouverture_detectee_le?'#a4e9b6':'#f7cf94');
+     item('4 · Page du devis consultée',row.devis_page_consultee_le?'✓ '+format(row.devis_page_consultee_le):'Aucune consultation enregistrée',row.devis_page_consultee_le?'#a4e9b6':'#f7cf94');
      const answer=row.revision_demandee_le?'Révision demandée · '+format(row.revision_demandee_le):row.devis_decision==='accepte'?'Devis accepté':row.devis_decision==='refuse'?'Devis refusé':row.initial_paid_at?'Acompte réglé':'Réponse en attente';
-     item('4 · Réponse du client',answer,row.devis_decision==='accepte'?'#a4e9b6':'#f7cf94');
+     item('5 · Réponse du client',answer,row.devis_decision==='accepte'?'#a4e9b6':'#f7cf94');
    }
    async function refreshDelivery(row){
      const seq=++deliveryRequest;
@@ -431,6 +432,7 @@ window.mecaAdminLive=async function(main,path){
          devis_email_delivre_confirme:data.devis_email_delivre_confirme,
          devis_email_delivre_le:data.devis_email_delivre_le,
          devis_email_delivre_verifie_le:data.devis_email_delivre_verifie_le,
+         devis_email_ouverture_detectee_le:data.devis_email_ouverture_detectee_le,
          devis_page_consultee_le:data.devis_page_consultee_le,
          devis_page_consultations:data.devis_page_consultations,
          devis_decision:data.devis_decision
