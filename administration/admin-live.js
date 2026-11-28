@@ -479,7 +479,8 @@ window.mecaAdminLive=async function(main,path){
    const planLabel=document.createElement('label');planLabel.textContent='Formule proposée';
    const planSelect=document.createElement('select');planSelect.id='meca-quote-plan';const pendingOption=document.createElement('option');pendingOption.value='';pendingOption.textContent='Analyse du dossier en cours…';planSelect.append(pendingOption);
    for(const [key,name] of [['ciblee','Recherche ciblée — 39 € · 3 jours ouvrés'],['approfondie','Recherche approfondie — 79 € · 5 jours ouvrés'],['expert','Investigation Expert — 149 € · 7 jours ouvrés']]){const option=document.createElement('option');option.value=key;option.textContent=name;planSelect.append(option)}
-   planLabel.append(planSelect);quotePanel.append(planLabel);planSelect.disabled=true;
+   planLabel.append(planSelect);quotePanel.append(planLabel);planSelect.disabled=false;
+   const humanHelp=document.createElement('p');humanHelp.className='muted';humanHelp.textContent='La formule indiquée par l’IA est une suggestion : sélectionnez librement Ciblée, Approfondie ou Expert. Le prix, l’acompte et le brouillon suivront votre choix avant tout envoi.';quotePanel.append(humanHelp);
    const titleLabel=document.createElement('label');titleLabel.textContent='Civilité (ne pas deviner à partir du nom)';
    const titleSelect=document.createElement('select');
    for(const [value,label] of [['','Madame, Monsieur (si inconnue)'],['Monsieur','Monsieur'],['Madame','Madame']]){const o=document.createElement('option');o.value=value;o.textContent=label;titleSelect.append(o)}
@@ -701,18 +702,27 @@ window.mecaAdminLive=async function(main,path){
    }
    function setPriceInfo(){const p=plans[planSelect.value]||plans.ciblee;priceInfo.textContent='Formule '+p.price+' € : acompte '+p.initial+' € + solde '+p.solde+' € si recherche aboutie. Options : Express 48 h (+20 €) ou 24 h (+50 €) payé avec l’acompte ; réservation 24 h (+10 €) ajoutée au solde seulement si elle est confirmée.'}
    function renderAssessment(q){
-     if(!q||!plans[q.formule]){assessmentBody.textContent='Analyse en attente. Aucun prix provisoire ne peut être transmis au client.';quoteButton.disabled=true;return}
-     const p=plans[q.formule];planSelect.value=q.formule;planSelect.disabled=true;
-     assessmentBody.textContent='Formule retenue : '+p.name+' — '+p.price+' €'
+     if(!q||!plans[q.formule]){assessmentBody.textContent='Analyse IA en attente. Vous pouvez néanmoins préparer votre choix ; l’envoi nécessite une analyse enregistrée.';quoteButton.disabled=true;return}
+     const p=plans[q.formule];if(!planSelect.value||!plans[planSelect.value])planSelect.value=q.formule;planSelect.disabled=false;
+     assessmentBody.textContent='Recommandation IA (modifiable par l’administrateur) : '+p.name+' — '+p.price+' €'
        +'\nDélai prévu : '+p.days+' jours ouvrés'
        +'\nAcompte : '+p.initial+' € · Solde en cas de réussite : '+p.solde+' €'
        +'\nDifficulté : '+(q.difficulte||'évaluation à confirmer')
        +'\nAnalyse / justification : '+(q.justification||'références et compatibilité à vérifier')
        +'\nPoints sensibles : '+(Array.isArray(q.risques)?q.risques.join(' ; '):q.risques||'à vérifier')
        +'\nRecherche : en France, et auprès de fournisseurs étrangers si le dossier le justifie.'
-       +'\n\nCe tarif est enregistré pour ce dossier. Une nouvelle analyse ne peut pas le remplacer automatiquement.';
+       +'\n\nVous êtes libre de choisir une autre formule avant l’envoi. L’IA ne prend jamais la décision commerciale finale.';
      quoteButton.disabled=false;setPriceInfo();
    }
+   planSelect.addEventListener('change',()=>{
+     const row=dossiers.find(x=>x.id===select.value);
+     if(!row||!plans[planSelect.value])return;
+     setPriceInfo();
+     if(row.statut==='deposee'){
+       if(draftDirty){proposalStatus.textContent='Formule changée : vérifiez et mettez à jour le prix et le délai dans votre texte personnalisé.'}
+       else{personal.value=defaultDraft(row,planSelect.value);proposalStatus.textContent='Brouillon mis à jour avec la formule choisie.'}
+     }
+   });
    let currentAiDossier=null;
    async function analyzeCurrent(force=false){
      const row=dossiers.find(x=>x.id===select.value);if(!row||row.type_dossier==='professionnel'||!['deposee','devis_envoye'].includes(row.statut))return;
@@ -728,10 +738,11 @@ window.mecaAdminLive=async function(main,path){
        if(!plans[key])throw Error('Formule IA invalide : envoi bloqué');
        row.qualification_ia=q;renderAssessment(q);
        if(row.statut==='deposee'&&!draftDirty){
-         const text=String(q.message_client||'').trim();
+         const chosen=plans[planSelect.value]?planSelect.value:key;
+         const text=chosen===key?String(q.message_client||'').trim():'';
          // Le tarif affiché et le message sont toujours le même : une suggestion hors tarif est rejetée.
-         const exact=String(plans[key].price)+' €';
-         const draft=text.length>75&&text.includes(exact)?text:defaultDraft(row,key);
+         const exact=String(plans[chosen].price)+' €';
+         const draft=text.length>75&&text.includes(exact)?text:defaultDraft(row,chosen);
          const heading=greeting(row);
          const telephoneManquant=!String(row.telephone||'').trim();
          const budgetManquant=!String(row.details?.budget??'').trim();
@@ -773,16 +784,20 @@ window.mecaAdminLive=async function(main,path){
      revisionMode=false;revisionPanel.hidden=true;
      personalLabel.hidden=false;aiPanel.hidden=false;optionPreview.hidden=false;priceInfo.hidden=false;
      reviseButton.hidden=!row||!!row.initial_paid_at||!['devis_envoye','refuse'].includes(row.statut)||row.devis_decision==='accepte';
+     if(row?.revision_demandee_le){
+       proposalStatus.textContent='🔔 DEMANDE DE RÉVISION CLIENT — Le devis est suspendu. Informations complémentaires : '+JSON.stringify(row.revision_demande_details?.champs||{})+' · Motif : '+String(row.revision_demande_details?.motif||'aucun')+'. Utilisez « Modifier le devis » pour préparer et transmettre la nouvelle proposition.';
+       proposalStatus.style.cssText='padding:14px;border:2px solid #f0a047;border-radius:9px;background:#49341a;color:#ffdda6;white-space:pre-wrap';
+     }else{proposalStatus.style.cssText=''}
      if(compactDemandes&&composerPanel){const show=!!(row?.initial_paid_at);composerPanel.hidden=!show;composerPanel.style.display=show?'':'none'}
-     quoteButton.hidden=!row||!['deposee','devis_envoye'].includes(row.statut)||(existing&&row.devis_decision!=='en_attente');
+     quoteButton.hidden=!row||!!row.revision_demandee_le||!['deposee','devis_envoye'].includes(row.statut)||(existing&&row.devis_decision!=='en_attente');
      failButton.hidden=!row||row.statut!=='acompte_paye';
-     personal.disabled=existing||row?.statut==='refuse';planSelect.disabled=true;
+     personal.disabled=existing||row?.statut==='refuse';planSelect.disabled=existing||row?.statut==='refuse'||!row;
      quoteButton.textContent=existing?'Renvoyer le même devis':'Envoyer ma proposition au client';
      draftDirty=false;
-     const key=row?.qualification_ia?.formule||row?.offre;
+     const key=row?.offre||row?.qualification_ia?.formule;
      planSelect.value=key&&plans[key]?key:'';
      personal.value=(existing||row?.statut==='refuse')?(row.proposition_texte||''):(row&&key&&plans[key]?defaultDraft(row,key):'');
-     proposalStatus.textContent='';aiDetails.textContent='';aiStatus.textContent='';currentAiDossier=null;
+     if(!row?.revision_demandee_le)proposalStatus.textContent='';aiDetails.textContent='';aiStatus.textContent='';currentAiDossier=null;
      if(row?.devis_total_personnalise_centimes){priceInfo.textContent='DEVIS RÉVISÉ : total '+(row.devis_total_personnalise_centimes/100).toLocaleString('fr-FR')+' € · acompte '+(row.devis_acompte_personnalise_centimes/100).toLocaleString('fr-FR')+' € · solde '+((row.devis_total_personnalise_centimes-row.devis_acompte_personnalise_centimes)/100).toLocaleString('fr-FR')+' €. Les options Express éventuelles restent facultatives.'}
      if(row?.qualification_ia?.formule)renderAssessment(row.qualification_ia);
      else if(row?.statut==='deposee'){renderAssessment(null);analyzeCurrent()}
@@ -790,10 +805,10 @@ window.mecaAdminLive=async function(main,path){
    }
    quoteButton.onclick=async()=>{
      const row=dossiers.find(x=>x.id===select.value);if(!row)return;
-     const fixed=row.qualification_ia?.formule;
-     if(!fixed||fixed!==planSelect.value){proposalStatus.textContent='Le tarif n’est pas cohérent avec le bilan IA enregistré. Envoi bloqué.';return}
+     const fixed=planSelect.value;
+     if(!plans[fixed]||!row.qualification_ia?.formule){proposalStatus.textContent='Choisissez une formule et vérifiez que l’analyse IA a été enregistrée.';return}
      const message=buildProposal();
-     const negotiated=Number.isInteger(row.devis_total_personnalise_centimes)?row.devis_total_personnalise_centimes/100:plans[fixed].price;
+     const negotiated=Number.isInteger(row.devis_total_personnalise_centimes)&&row.devis_total_personnalise_centimes!==null?row.devis_total_personnalise_centimes/100:plans[fixed].price;
      const requiredPrice=negotiated.toLocaleString('fr-FR',{maximumFractionDigits:2})+' €';
      if(!message.includes(requiredPrice)){proposalStatus.textContent='Le message doit contenir le tarif exact enregistré : '+requiredPrice+'. Corrigez la proposition avant envoi.';return}
      if(message.length<80||message.length>2800){proposalStatus.textContent='Vérifiez votre message (80 à 2 800 caractères, référence comprise).';return}
