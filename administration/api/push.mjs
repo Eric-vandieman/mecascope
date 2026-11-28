@@ -78,7 +78,7 @@ async function dispatch(id){
   body:isUrgent?'Nouveau client en urgence : à examiner en priorité (Express non souscrit).':(notification?.[1]||data.reference+' : nouvelle activité à consulter.'),
   url,tag:'meca-'+data.id
  });
- const ok=(data.subscribers?.length===0)||result.success>0&&result.errors.length===0;
+ const ok=result.success>0&&result.errors.length===0;
  await rpc('meca_push_finish',{p_secret:secret(),p_id:id,p_success:ok,
   p_error:result.success===0?'Aucun appareil livré : '+result.errors.join(', '):result.errors.join(', '),
   p_expired:result.expired}).catch(()=>{});
