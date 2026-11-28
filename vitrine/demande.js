@@ -21,6 +21,12 @@ function checkFiles(){
  return valid;
 }
 files?.addEventListener('change',checkFiles);
+const originBlock=document.getElementById('meca-origin-block'),pickupBlock=document.getElementById('meca-pickup-block');
+const originSelect=form.querySelector('[name="sourceRegion"]'),pickupCity=form.querySelector('[name="pickupCity"]'),pickupRadius=form.querySelector('[name="pickupRadiusKm"]');
+function updateRecovery(){const mode=form.querySelector('[name="recoveryMethod"]:checked')?.value||'';const ship=mode==='delivery'||mode==='both',pickup=mode==='pickup'||mode==='both';originBlock.hidden=!ship;pickupBlock.hidden=!pickup;originSelect.required=ship;pickupCity.required=pickup;pickupRadius.required=pickup;originSelect.disabled=!ship;pickupCity.disabled=!pickup;pickupRadius.disabled=!pickup;}
+form.querySelectorAll('[name="recoveryMethod"]').forEach(r=>r.addEventListener('change',updateRecovery));
+updateRecovery();
+
 function readPhoto(file){return new Promise((resolve,reject)=>{
  const url=URL.createObjectURL(file),image=new Image();
  image.onerror=()=>{URL.revokeObjectURL(url);reject(Error('Photo illisible : choisissez une image JPG, PNG ou WebP.'))};
@@ -83,7 +89,7 @@ form.addEventListener('submit',async event=>{
   const fields=new FormData(form);
   const brandSelect=form.querySelector('select[name="brand"]');
   if(brandSelect&&!brandSelect.hidden&&brandSelect.value)fields.set('brand',brandSelect.selectedOptions[0]?.textContent||'');
-  const names=['vehicleType','brand','model','year','engine','trim','vin','fuel','gearbox','ref','part','budget','colourType','notes','contact','email','phone','website'];
+  const names=['vehicleType','brand','model','year','engine','trim','vin','fuel','gearbox','ref','part','budget','colourType','notes','recoveryMethod','sourceRegion','pickupCity','pickupRadiusKm','contact','email','phone','website'];
   const payload=Object.fromEntries(names.map(name=>[name,String(fields.get(name)||'').trim()]));
   payload.urgent=fields.get('urgent')==='oui';
   payload.vin=payload.vin.replace(/\s+/g,'').toUpperCase();
@@ -92,7 +98,7 @@ form.addEventListener('submit',async event=>{
   const result=await response.json().catch(()=>({}));
   if(!response.ok||!result.sent)throw Error(result.message||'La transmission a échoué.');
   setStatus((payload.urgent?'🚨 Votre demande urgente est enregistrée. Elle sera examinée pendant nos horaires de traitement.':'Demande transmise à Mécascope !')+' Référence : '+result.reference,true);
-  form.reset();checkFiles();
+  form.reset();updateRecovery();checkFiles();
   setStatus((payload.urgent?'🚨 Votre demande urgente est enregistrée.':'Votre demande est enregistrée.')+' Référence : '+result.reference+' IMPORTANT : surveillez votre boîte mail et vos spams. Si vous ne voyez pas de réponse sous 24 heures, vérifiez les courriers indésirables.',true);
  }catch(e){
   setStatus(((e&&e.message)||'Erreur d’envoi.')+' Aucun envoi n’a été confirmé.');
