@@ -561,11 +561,14 @@ window.mecaAdminLive=async function(main,path){
    function renderPriceEstimate(estimate){
      estimateSources.replaceChildren();
      if(!estimate){estimateText.textContent='Recherche de prix publics en attente…';return}
+     const countExact=(estimate.sources||[]).filter(x=>x.comparabilite==='exacte').length;
+     const countLinked=(estimate.sources||[]).filter(x=>x.comparabilite!=='exclue').length;
+     const progress='Annonces à référence confirmée : '+countExact+' / 5 recherchées · Liens examinés : '+countLinked;
      if(estimate.statut==='estimation'){
        const fmt=v=>Number(v).toLocaleString('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0});
        estimateText.textContent=(estimate.repere_indicatif?'Repères de prix (pièces voisines, non équivalentes) : ':'Fourchette indicative : ')+fmt(estimate.min_eur)+' à '+fmt(estimate.max_eur)
          +(estimate.nombre_comparables>=2?'\nMoyenne : '+fmt(estimate.moyenne_eur)+' · Médiane : '+fmt(estimate.mediane_eur):'\nPrix repère isolé — comparaison insuffisante')
-         +'\nAnnonces de référence : '+(estimate.nombre_comparables||1)+' · '+(estimate.methode||'')
+         +'\n'+progress+'\n'+(estimate.methode||'')
          +'\nConfiance : '+(estimate.confiance||'faible')+' · État : '+(estimate.etat||'non précisé')
          +'\n'+(estimate.motif||'')+'\nPoints à confirmer : '+(estimate.points_attention||'Référence et disponibilité')
          +(estimate.alertes?.length?'\n⚠️ Écarts / offres douteuses : '+estimate.alertes.map(a=>a.prix_eur+' € ('+a.motif+')').join(' ; '):'');
@@ -576,11 +579,11 @@ window.mecaAdminLive=async function(main,path){
          estimateSources.append(a);
        }
      }else{
-       estimateText.textContent='Estimation fiable indisponible pour cette référence.\n'+(estimate.motif||'Aucun comparable public vérifié')+'\n'+(estimate.points_attention||'');
+       estimateText.textContent=progress+'\nAucune moyenne calculée sans annonces strictement identiques.\n'+(estimate.motif||'Aucun comparable public vérifié')+'\n'+(estimate.points_attention||'');
        for(const [i,src] of (estimate.sources||[]).entries()){
          const a=document.createElement('a');a.href=src.url;a.target='_blank';a.rel='noopener noreferrer';
          a.style.cssText='color:#ffc3a5;text-decoration:underline;font-size:13px';
-         a.textContent='Annonce non retenue '+(i+1)+' : '+src.titre+' — '+Number(src.prix_eur).toLocaleString('fr-FR')+' € ('+src.comparabilite+')';
+         a.textContent='Annonce '+(i+1)+' : '+src.titre+' — '+Number(src.prix_eur).toLocaleString('fr-FR')+' € ('+[src.pays,src.reference_vue||'OEM non confirmé',src.type_piece,src.comparabilite].filter(Boolean).join(' · ')+')';
          estimateSources.append(a);
        }
      }
