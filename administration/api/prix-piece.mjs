@@ -72,31 +72,37 @@ export default async function handler(req,res){
   const errors=results.filter(r=>r.status==='rejected').map(r=>String(r.reason?.message||r.reason).slice(0,90));
   if(results.every(r=>r.status==='rejected')&&!saved?.sources?.length)throw Error('Recherches internet indisponibles : '+errors.join(' ; '));
   const seen=new Set(),sources=[];
+  const wantedNormalized=v=>String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'').replace(/^OM(?=\d{6}$)/,'');
+  const target=wantedNormalized(wantedRef);
+  const addSource=x=>{
+   let url;try{url=new URL(String(x.url||''))}catch{return}
+   if(!['https:','http:'].includes(url.protocol)||!url.hostname.includes('.'))return;
+   url.hash='';
+   const key=url.hostname.replace(/^www\./,'')+url.pathname.replace(/\/$/,'').toLowerCase();
+   if(seen.has(key))return;
+   const price=Number(x.prix_eur);
+   if(!Number.isFinite(price)||price<=0||price>100000)return;
+   const ref=wantedNormalized(x.reference_vue);
+   if(target&&ref&&ref!==target)return;
+   const title=String(x.titre||url.hostname),type=String(x.type_piece||'inconnu');
+   const combined=(title+' '+type).toLowerCase();
+   if(/culasse|cylinder head|zylinderkopf|testata|volant moteur|flywheel|embrayage|clutch|alternateur|oil pump|boite de vitesse/.test(combined))return;
+   const wantedBlock=/bloc moteur|motorblock|engine block|blocco motore|bloc nu/.test(piece.piece.toLowerCase());
+   const whole=/moteur complet|complete engine|motore completo|komplettmotor|motor komplett|silnik kompletny/.test(combined);
+   const confirmed=!!target&&ref===target;
+   const compatibleType=!(wantedBlock&&whole);
+   const exact=confirmed&&compatibleType&&String(x.comparabilite||'').toLowerCase()==='exacte'&&String(x.alerte||'aucune')==='aucune';
+   seen.add(key);
+   sources.push({titre:title.slice(0,115),url:url.href,prix_eur:Math.round(price*100)/100,etat:String(x.etat||'inconnu').slice(0,25),comparabilite:exact?'exacte':'a_verifier',reference_vue:String(x.reference_vue||'').slice(0,70),type_piece:type.slice(0,85),pays:String(x.pays||'inconnu').slice(0,35),alerte:exact?'aucune':String(x.alerte&&x.alerte!=='aucune'?x.alerte:!confirmed?'OEM non confirmé':!compatibleType?'Moteur complet, bloc nu non confirmé':'Configuration à vérifier').slice(0,65)});
+  };
+  // Préserver les recherches précédentes, puis compléter avec les nouveaux sites.
+  for(const x of (Array.isArray(saved?.sources)?saved.sources:[]))addSource(x);
   for(const result of results){
    if(result.status!=='fulfilled')continue;
-   for(const x of (Array.isArray(result.value?.sources)?result.value.sources:[])){
-    let url;try{url=new URL(String(x.url||''))}catch{continue}
-    if(!['https:','http:'].includes(url.protocol)||!url.hostname.includes('.'))continue;
-    url.hash='';
-    const canonical=url.href.replace(/\/$/,'');
-    if(seen.has(canonical))continue;
-    const price=Number(x.prix_eur);
-    if(!Number.isFinite(price)||price<=0||price>100000)continue;
-    seen.add(canonical);
-    const ref=String(x.reference_vue||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
-    const matchesRef=!wantedRef||ref===wantedRef;
-    const declared=String(x.comparabilite||'').toLowerCase();
-    const type=String(x.type_piece||'').slice(0,90);
-    const wanted=piece.piece.toLowerCase(),sourceType=type.toLowerCase();
-    const wantedBlock=/bloc moteur|motorblock|engine block|blocco motore/.test(wanted);
-    const isWholeEngine=/moteur complet|complete engine|motore completo|komplettmotor|entier/.test(sourceType);
-    const clearlyWrong=wantedBlock&&isWholeEngine;
-    // Ne jamais montrer un OEM différent ou un type de pièce manifestement autre.
-    if((wantedRef&&!matchesRef)||clearlyWrong)continue;
-    const comparable=wantedRef&&matchesRef&&!clearlyWrong&&declared==='exacte'?'exacte':matchesRef&&!clearlyWrong&&declared!=='exclue'?'a_verifier':'exclue';
-    sources.push({titre:String(x.titre||url.hostname).slice(0,115),url:canonical,prix_eur:Math.round(price*100)/100,etat:String(x.etat||'inconnu').slice(0,25),comparabilite:comparable,reference_vue:String(x.reference_vue||'').slice(0,70),type_piece:type,pays:String(x.pays||'inconnu').slice(0,35),alerte:String(x.alerte||'aucune').slice(0,65)});
-   }
+   for(const x of (Array.isArray(result.value?.sources)?result.value.sources:[]))addSource(x);
   }
+  sources.sort((a,b)=>(a.comparabilite==='exacte'?0:1)-(b.comparabilite==='exacte'?0:1));
+  sources.length=Math.min(sources.length,10);
   const exact=sources.filter(x=>x.comparabilite==='exacte'&&x.alerte==='aucune');
   const sorted=exact.map(x=>x.prix_eur).sort((a,b)=>a-b);
   const median=a=>a.length?(a.length%2?a[(a.length-1)/2]:(a[a.length/2-1]+a[a.length/2])/2):null;
@@ -114,7 +120,7 @@ export default async function handler(req,res){
    points_attention:errors.length?'Certaines zones ont échoué : '+errors.join('; '):'Vérifier la référence constructeur, composition, disponibilité et livraison.',
    methode:prices.length<2?'Aucune moyenne fiable sans au moins deux offres strictement identiques':'Moyenne et médiane des offres strictement comparables',
    alertes:sources.filter(x=>x.alerte!=='aucune'||x.comparabilite!=='exacte').slice(0,6).map(x=>({titre:x.titre,prix_eur:x.prix_eur,motif:x.alerte!=='aucune'?x.alerte:'Référence ou type à vérifier'})),
-   sources:sources.sort((a,b)=>({exacte:0,a_verifier:1,exclue:2}[a.comparabilite]??3)-({exacte:0,a_verifier:1,exclue:2}[b.comparabilite]??3)).slice(0,12),
+   sources:sources.slice(0,10),
    date_recherche:new Date().toISOString().slice(0,10)
   };
   const persisted=await rpc('meca_admin_estimation_piece',{p_dossier:id,p_estimation:estimate});
