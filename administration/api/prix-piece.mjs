@@ -79,14 +79,14 @@ export default async function handler(req,res){
     if(!Number.isFinite(price)||price<=0||price>100000)continue;
     seen.add(canonical);
     const ref=String(x.reference_vue||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
-    const matchesRef=!!wantedRef&&ref===wantedRef;
+    const matchesRef=!wantedRef||ref===wantedRef;
     const declared=String(x.comparabilite||'').toLowerCase();
     const type=String(x.type_piece||'').slice(0,90);
     const wanted=piece.piece.toLowerCase(),sourceType=type.toLowerCase();
     const wantedBlock=/bloc moteur|motorblock|engine block|blocco motore/.test(wanted);
     const isWholeEngine=/moteur complet|complete engine|motore completo|komplettmotor|entier/.test(sourceType);
     const clearlyWrong=wantedBlock&&isWholeEngine;
-    const comparable=matchesRef&&!clearlyWrong&&declared==='exacte'?'exacte':matchesRef&&!clearlyWrong&&declared!=='exclue'?'a_verifier':'exclue';
+    const comparable=wantedRef&&matchesRef&&!clearlyWrong&&declared==='exacte'?'exacte':matchesRef&&!clearlyWrong&&declared!=='exclue'?'a_verifier':'exclue';
     sources.push({titre:String(x.titre||url.hostname).slice(0,115),url:canonical,prix_eur:Math.round(price*100)/100,etat:String(x.etat||'inconnu').slice(0,25),comparabilite:comparable,reference_vue:String(x.reference_vue||'').slice(0,70),type_piece:type,pays:String(x.pays||'inconnu').slice(0,35),alerte:String(x.alerte||'aucune').slice(0,65)});
    }
   }
