@@ -270,7 +270,7 @@ export default async function handler(req,res){
       devis_accepte_le:null,devis_refuse_le:null,initial_session:null,solde_session:null,
       express_option:null,reservation_option:false,options_paiement_avance:true,devis_decision:'en_attente',
       proposition_texte:proposal,devis_envoye_le:new Date().toISOString(),revision_demandee_le:null,revision_demande_details:null,
-      qualification_ia:{...(d.qualification_ia||{}),revision_commerciale:true,formule_choisie_admin:plan}};
+      qualification_ia:d.qualification_ia?.formule?{...d.qualification_ia,revision_commerciale:true,formule_choisie_admin:plan}:null};
     selectedExpress=null;selectedReservation=false;stage='devis_envoye';
    }else{
     if(action==='admin-success'&&d.statut==='reussite'&&d.initial_paid_at&&d.solde_email_envoye_le)return res.status(200).json({ok:true,already:true,message:'Résultat déjà notifié au client.'});
