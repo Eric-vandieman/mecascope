@@ -543,7 +543,60 @@ window.mecaAdminLive=async function(main,path){
    if(path==='/admin/messages')assessmentPanel.hidden=true;
    const assessmentTitle=document.createElement('h3');assessmentTitle.textContent='Bilan IA — formule définitive du dossier';
    const assessmentBody=document.createElement('div');assessmentBody.style.cssText='white-space:pre-wrap;line-height:1.65';
-   assessmentPanel.append(assessmentTitle,assessmentBody);wrap.insertBefore(assessmentPanel,history);
+   assessmentPanel.append(assessmentTitle,assessmentBody);
+   const estimateBox=document.createElement('section');estimateBox.className='meca-estimation-prix-piece';
+   estimateBox.style.cssText='margin-top:18px;padding:15px;border:2px solid #ea5151;background:rgba(135,28,28,.14);border-radius:11px;overflow-wrap:anywhere';
+   const estimateHeader=document.createElement('h4');estimateHeader.textContent='🔴 Prix estimé de la pièce recherchée';estimateHeader.style.cssText='margin:0 0 8px;color:#ff7272;font-size:17px';
+   const estimateText=document.createElement('div');estimateText.setAttribute('role','status');estimateText.textContent='Sélectionnez un dossier pour rechercher les prix publics de pièces comparables.';
+   estimateText.style.cssText='white-space:pre-wrap;line-height:1.6;font-size:14px';
+   const estimateSources=document.createElement('div');estimateSources.style.cssText='display:flex;flex-direction:column;gap:6px;margin-top:10px';
+   const estimateFooter=document.createElement('p');estimateFooter.className='muted';
+   estimateFooter.style.cssText='font-size:12px;line-height:1.5;margin:12px 0 4px';
+   estimateFooter.textContent='Estimation indicative basée sur des prix PUBLICS demandés, pas des ventes confirmées. Pièce seule, hors main-d’œuvre et hors prestation Mécascope. Compatibilité, état et prix réel à vérifier.';
+   const estimateRefresh=document.createElement('button');estimateRefresh.type='button';estimateRefresh.className='btn dark';estimateRefresh.textContent='↻ Actualiser les prix du marché';
+   estimateRefresh.style.cssText='margin-top:10px;max-width:100%;white-space:normal';
+   estimateBox.append(estimateHeader,estimateText,estimateSources,estimateFooter,estimateRefresh);
+   assessmentPanel.append(estimateBox);wrap.insertBefore(assessmentPanel,history);
+   let activePriceRequest=null;
+   function renderPriceEstimate(estimate){
+     estimateSources.replaceChildren();
+     if(!estimate){estimateText.textContent='Recherche de prix publics en attente…';return}
+     if(estimate.statut==='estimation'){
+       const fmt=v=>Number(v).toLocaleString('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0});
+       estimateText.textContent='Fourchette indicative : '+fmt(estimate.min_eur)+' à '+fmt(estimate.max_eur)
+         +'\nConfiance : '+(estimate.confiance||'faible')+' · État : '+(estimate.etat||'non précisé')
+         +'\n'+(estimate.motif||'')+'\nPoints à confirmer : '+(estimate.points_attention||'Référence et disponibilité');
+       for(const [i,src] of (estimate.sources||[]).entries()){
+         const a=document.createElement('a');a.href=src.url;a.target='_blank';a.rel='noopener noreferrer';
+         a.style.cssText='color:#ffc3a5;text-decoration:underline;line-height:1.45;overflow-wrap:anywhere;font-size:13px';
+         a.textContent='Source '+(i+1)+' : '+src.titre+' — '+Number(src.prix_eur).toLocaleString('fr-FR')+' € ('+src.etat+', correspondance '+src.comparabilite+')';
+         estimateSources.append(a);
+       }
+     }else{
+       estimateText.textContent='Estimation fiable indisponible pour cette référence.\n'+(estimate.motif||'Aucun comparable public vérifié')+'\n'+(estimate.points_attention||'');
+     }
+   }
+   async function estimateCurrentPrice(force=false){
+     const row=dossiers.find(x=>x.id===select.value);
+     if(!row||row.type_dossier==='professionnel'){estimateBox.hidden=true;return}
+     estimateBox.hidden=false;
+     if(activePriceRequest===row.id&&!force)return;
+     activePriceRequest=row.id;
+     const id=row.id;estimateRefresh.disabled=true;
+     if(!row.estimation_prix_piece||force)renderPriceEstimate(null);
+     else renderPriceEstimate(row.estimation_prix_piece);
+     try{
+       const response=await fetch('/api/prix-piece',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,refresh:force}),cache:'no-store'});
+       const data=await response.json().catch(()=>({}));
+       if(!response.ok)throw Error(data.message||'Recherche des prix indisponible');
+       row.estimation_prix_piece=data.estimation;
+       if(select.value===id)renderPriceEstimate(data.estimation);
+     }catch(e){
+       if(select.value===id)estimateText.textContent=(row.estimation_prix_piece?'Dernière estimation disponible. ':'')+'Recherche de prix momentanément indisponible : '+e.message;
+     }finally{if(activePriceRequest===id)activePriceRequest=null;estimateRefresh.disabled=false}
+   }
+   estimateRefresh.onclick=()=>estimateCurrentPrice(true).catch(()=>{});
+
    const conversationTitle=document.createElement('h2');conversationTitle.textContent='Conversation avec le client';wrap.insertBefore(conversationTitle,history);
    const quotePanel=document.createElement('section');quotePanel.className='panel meca-simple-proposal';quotePanel.style.cssText='margin-top:14px;border:1px solid #b07c3b;padding:18px';
    const quoteHeader=document.createElement('h3');quoteHeader.textContent='Ma proposition de recherche';quotePanel.append(quoteHeader);
@@ -934,7 +987,7 @@ window.mecaAdminLive=async function(main,path){
    select.onchange=async()=>{
     const row=dossiers.find(x=>x.id===select.value);
     form.elements.ref.value=row?.reference||'';
-    showDossier(row);showOptions();updateCloseDossierButton();refreshDelivery(row).catch(()=>{});
+    showDossier(row);showOptions();updateCloseDossierButton();refreshDelivery(row).catch(()=>{});estimateCurrentPrice().catch(()=>{});
     if(path==='/admin/messages'){
       wrap.hidden=!row;
       if(row){
