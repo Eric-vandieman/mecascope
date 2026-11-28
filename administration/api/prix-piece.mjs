@@ -61,7 +61,7 @@ La classification exacte exige même type de pièce, même motorisation/référe
   const sources=(Array.isArray(raw.sources)?raw.sources:[]).slice(0,16).map(x=>{
    let url;try{url=new URL(String(x.url||''));}catch{return null}
    if(!['https:','http:'].includes(url.protocol)||!url.hostname.includes('.'))return null;
-   url.hash='';const keyUrl=url.href.replace(/\\/$/,'');if(seen.has(keyUrl))return null;seen.add(keyUrl);
+   url.hash='';const keyUrl=url.href;if(seen.has(keyUrl))return null;seen.add(keyUrl);
    const price=Number(x.prix_eur);
    if(!Number.isFinite(price)||price<=0||price>100000)return null;
    const comparable=['exacte','proche','indicative','exclue'].includes(x.comparabilite)?x.comparabilite:'indicative';
