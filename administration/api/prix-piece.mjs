@@ -108,7 +108,11 @@ export default async function handler(req,res){
   // de moteurs portant le même OEM, sans les présenter comme le prix du bloc nu.
   const alternative=sources.filter(x=>x.comparabilite==='a_verifier'&&target&&wantedNormalized(x.reference_vue)===target&&x.prix_eur>=20);
   const fallback=!exact.length&&alternative.length>0;
-  const priced=fallback?alternative:exact;
+  const blockRequested=/bloc moteur|motorblock|engine block|blocco motore|bloc nu/.test(piece.piece.toLowerCase());
+  const sameTypeAlternative=alternative.filter(x=>!blockRequested||/bloc|motorblock|engine block|blocco|κορμος|κορμός/.test((x.type_piece+' '+x.titre).toLowerCase()));
+  // Ne jamais moyenner un moteur complet avec un bloc nu : priorité au même périmètre.
+  const benchmark=sameTypeAlternative.length?sameTypeAlternative:alternative;
+  const priced=fallback?benchmark:exact;
   const sorted=priced.map(x=>x.prix_eur).sort((a,b)=>a-b);
   const median=a=>a.length?(a.length%2?a[(a.length-1)/2]:(a[a.length/2-1]+a[a.length/2])/2):null;
   const midpoint=median(sorted);
@@ -121,9 +125,9 @@ export default async function handler(req,res){
    mediane_eur:prices.length>=2?Math.round(median(prices)):null,
    nombre_comparables:prices.length,nombre_annonces:sources.filter(x=>x.comparabilite!=='exclue').length,
    objectif_annonces:5,nombre_relances:round+1,recherche_incomplete:sources.filter(x=>x.comparabilite==='exacte').length<5,confiance:fallback?'faible':prices.length>=5?'elevee':prices.length>=3?'moyenne':'faible',etat:prices.length?'occasion':'inconnu',
-   motif:fallback?'Prix indicatifs pour moteur portant le même OEM, mais ensemble vendu différent ou non confirmé. Ce ne sont PAS les prix d un bloc nu.':prices.length?'Prix affichés pour OEM identique, configuration à vérifier avant devis.':'Aucune annonce confirmée strictement identique en référence et nature de pièce.',
+   motif:fallback?(sameTypeAlternative.length?'Prix indicatifs pour annonces de bloc portant le même OEM, contenu et état non confirmés.':'Prix indicatifs de moteurs du même OEM, PAS des prix de bloc nu.'):prices.length?'Prix affichés pour OEM identique, configuration à vérifier avant devis.':'Aucune annonce confirmée strictement identique en référence et nature de pièce.',
    points_attention:errors.length?'Certaines zones ont échoué : '+errors.join('; '):'Vérifier la référence constructeur, composition, disponibilité et livraison.',
-   methode:fallback?'Repères moteur de même référence, type de pièce différent ou incertain':prices.length<2?'Prix isolé, pas de moyenne fiable':'Moyenne et médiane des offres strictement comparables',
+   methode:fallback?(sameTypeAlternative.length?'Repères de blocs de même OEM, état et pièces incluses non confirmés':'Repères de moteurs complets du même OEM, PAS prix de bloc nu'):prices.length<2?'Prix isolé, pas de moyenne fiable':'Moyenne et médiane des offres strictement comparables',
    alertes:sources.filter(x=>x.alerte!=='aucune'||x.comparabilite!=='exacte').slice(0,6).map(x=>({titre:x.titre,prix_eur:x.prix_eur,motif:x.alerte!=='aucune'?x.alerte:'Référence ou type à vérifier'})),
    sources:sources.slice(0,10),
    date_recherche:new Date().toISOString().slice(0,10)
