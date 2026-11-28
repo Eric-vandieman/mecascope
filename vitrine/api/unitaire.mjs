@@ -79,6 +79,7 @@ async function email(to,subject,html,options={}){
  body:JSON.stringify({from:sender,reply_to:'contact@xn--mcascope-b1a.fr',to:[to],subject,html,text:plain}),signal:AbortSignal.timeout(12000)});
  if(!r.ok)throw Error('Envoi du courriel impossible');
  const d=await obj(r);if(!d?.id)throw Error('Courriel non confirmé');
+ return d.id;
 }
 async function replace(d,status,values,revisionGuard=false){
  const search='meca_demandes_unitaires?id=eq.'+d.id+'&statut=eq.'+status+(revisionGuard?'&devis_decision=eq.'+encodeURIComponent(d.devis_decision)+'&initial_paid_at=is.null&initial_session=is.null':'');
@@ -214,7 +215,28 @@ export default async function handler(req,res){
     const result=await query('meca_sms_notifications?dossier_id=eq.'+b.id+'&type=eq.'+smsType+'&statut=eq.en_attente',{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({statut:b.status,ovh_job_id:String(b.jobId||'').slice(0,100),erreur:String(b.error||'').slice(0,250),modifie_le:new Date().toISOString()})});
     return res.status(200).json({ok:Array.isArray(result)&&result.length===1});
    }
-   if(action==='admin-list'){
+   if(action==='admin-email-tracking'){
+   if(!(await getAdmin(req)))return res.status(403).json({message:'Administration uniquement'});
+   if(!/^[a-f0-9-]{36}$/i.test(String(b.id||'')))return res.status(400).json({message:'Dossier invalide'});
+   const records=await query('meca_demandes_unitaires?id=eq.'+encodeURIComponent(b.id)+'&select=id,devis_email_resend_id,devis_email_envoye_le,devis_email_delivre_le,devis_email_delivre_confirme,devis_email_delivre_verifie_le,devis_page_consultee_le,devis_page_consultations,devis_decision,initial_paid_at,devis_version&limit=1');
+   const item=records?.[0];if(!item)return res.status(404).json({message:'Dossier non trouvé'});
+   const id=String(item.devis_email_resend_id||'');
+   if(/^[0-9a-f-]{36}$/i.test(id)&&process.env.RESEND_API_KEY){
+    try{
+     const response=await fetch('https://api.resend.com/emails/'+encodeURIComponent(id),{headers:{Authorization:'Bearer '+process.env.RESEND_API_KEY},signal:AbortSignal.timeout(7000)});
+     if(response.ok){
+      const remote=await response.json();const delivered=remote.last_event==='delivered'||remote.last_event==='opened'||remote.last_event==='clicked'||remote.last_event==='delivery_delayed'?remote.last_event!=='delivery_delayed':remote.last_event==='delivered';
+      if(delivered&&!item.devis_email_delivre_confirme){
+       const now=new Date().toISOString();
+       await query('meca_demandes_unitaires?id=eq.'+b.id+'&devis_email_resend_id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({devis_email_delivre_confirme:true,devis_email_delivre_verifie_le:now})});
+       item.devis_email_delivre_confirme=true;item.devis_email_delivre_verifie_le=now;
+      }
+     }
+    }catch{}
+   }
+   return res.status(200).json({ok:true,...item});
+  }
+  if(action==='admin-list'){
    if(!(await getAdmin(req)))return res.status(403).json({message:'Accès réservé à Mécascope'});
    const rows=await query('meca_demandes_unitaires?select=id,reference,contact,email,telephone,details,offre,statut,express_option,reservation_option,express_validee,reservation_validee,initial_paid_at,solde_paid_at,cree_le&order=cree_le.desc&limit=100');
    return res.status(200).json({dossiers:rows});
@@ -303,7 +325,15 @@ export default async function handler(req,res){
    const button='<p style="margin:22px 0"><a href="'+safe(link)+'" style="display:inline-block;background:#ed932d;color:#171717;font-weight:700;padding:14px 20px;border-radius:6px;text-decoration:none">'+(isProposal?'Voir ma proposition, les options ou demander une révision':'Consulter mon dossier')+'</a></p>';
    const reviseCta=isProposal?'<p style="margin:20px 0;padding:14px;border:1px solid #b8a18c;border-radius:9px"><b>Vous disposez de nouvelles informations ?</b><br>Vous pouvez demander une réévaluation de la formule avant de l’accepter, sans payer. <a href="'+safe(link)+'#revision" style="color:#a65b11;font-weight:bold">Demander une révision de ma formule et compléter mon dossier</a>.</p>':'';
    const html='<div style="font:16px/1.55 Arial,sans-serif;color:#202329;max-width:580px;margin:auto"><div style="padding:14px 16px;background:#171b20;color:#ffb25c;font-weight:bold;font-size:23px"><img src="https://xn--mcascope-b1a.fr/logo-officiel-email-20261126.jpg" width="48" height="48" alt="Logo Mécascope" style="width:48px;height:48px;object-fit:contain;vertical-align:middle;margin-right:12px;border-radius:10px">Mécascope</div><h2>'+heading+'</h2>'+intro+(isProposal?'<p><strong>'+safe(offer.label)+' : '+shownTotal+' €</strong> — acompte '+shownDeposit+' €, solde '+shownBalance+' € en cas de résultat conforme.</p>':'')+button+(isProposal?'<p>Vous préférez répondre à ce message ? Notre équipe est joignable à contact@mécascope.fr.</p>':'')+'<div style="border-top:1px solid #ddd;padding-top:14px;margin-top:16px"><h3>Détail du dossier</h3>'+text+'</div>'+reviseCta+'<p style="font-size:13px;color:#52565c">Ne communiquez pas ce lien personnel. Si vous ne retrouvez pas nos messages, vérifiez également les courriers indésirables.</p><p style="text-align:center;border-top:1px solid #ddd;padding-top:17px;margin-top:16px;font-size:15px"><a href="https://xn--mcascope-b1a.fr/" style="color:#a65b11;font-weight:bold;text-decoration:underline">www.mécascope.fr</a></p></div>';
-   try{await email(d.email,heading+' — '+d.reference,html,{devis:isProposal});
+   try{
+    const resendId=await email(d.email,heading+' — '+d.reference,html,{devis:isProposal});
+    if(isProposal){
+     await query('meca_demandes_unitaires?id=eq.'+d.id+'&devis_version=eq.'+String(updated.devis_version||1),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({
+       devis_email_resend_id:resendId,devis_email_envoye_le:new Date().toISOString(),devis_email_delivre_le:null,devis_email_delivre_confirme:false,devis_email_delivre_verifie_le:null,
+       devis_page_consultee_le:null,devis_page_consultations:0
+     })});
+    }
+   
    }catch(e){return res.status(503).json({message:'Le dossier est enregistré mais le courriel a échoué. Renouvelez l’envoi depuis la console.'})}
    if(action==='admin-success'){
     try{await query('meca_demandes_unitaires?id=eq.'+d.id,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({solde_email_envoye_le:new Date().toISOString()})})}
@@ -314,6 +344,14 @@ export default async function handler(req,res){
   const token=req.method==='GET'?req.query?.t:b.token;
   const d=await dossier(token);
   if(!d)return res.status(404).json({message:'Lien invalide ou expiré'});
+  if(action==='proposal-viewed'){
+   if(req.method!=='POST')return res.status(405).json({message:'Méthode invalide'});
+   if(!origin(req))return res.status(403).json({message:'Origine refusée'});
+   if(d.statut!=='devis_envoye'||d.devis_decision==='refuse'||d.initial_paid_at||d.cloture_admin_le)return res.status(200).json({ok:false,reason:'Dossier non éligible'});
+   if(d.devis_page_consultee_le)return res.status(200).json({ok:true,already:true});
+   const rows=await query('meca_demandes_unitaires?id=eq.'+d.id+'&devis_page_consultee_le=is.null&statut=eq.devis_envoye',{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({devis_page_consultee_le:new Date().toISOString(),devis_page_consultations:1})});
+   return res.status(200).json({ok:true,recorded:Array.isArray(rows)&&rows.length===1});
+  }
   if(action==='status')return res.status(200).json({...minimal(d),accountReady:d.initial_paid_at?await clientAccount(req,d):false});
   if(action==='request-revision'){
    if(req.method!=='POST')return res.status(405).json({message:'Méthode invalide'});
