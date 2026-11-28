@@ -236,9 +236,9 @@ export default async function handler(req,res){
    if(action==='admin-quote'){
     if(d.revision_demandee_le)return res.status(409).json({message:'Le client a demandé une révision : utilisez Modifier le devis pour envoyer une nouvelle proposition.'});
     if(!['deposee','devis_envoye'].includes(d.statut)||!offers[b.offre]||d.initial_paid_at||d.devis_decision==='accepte')return res.status(409).json({message:'Devis non autorisé'});
+    // L'IA recommande sans jamais décider : l'administrateur choisit et confirme la formule.
     const planFige=d.qualification_ia?.formule;
-    if(!planFige||!offers[planFige])return res.status(409).json({message:'Analyse IA non validée/enregistrée : aucun devis ne peut être transmis.'});
-    // La qualification IA est un conseil, pas un verrou commercial. L’administrateur choisit la formule.
+    if(!process.env[offers[b.offre].initial]||!process.env[offers[b.offre].balance])return res.status(503).json({message:'Prix Stripe de cette formule non configurés.'});
     const advertised=d.statut==='devis_envoye'&&d.devis_total_personnalise_centimes?d.devis_total_personnalise_centimes/100:offers[b.offre].total;
     if(!proposal.includes(advertised.toLocaleString('fr-FR',{maximumFractionDigits:2})+' €'))return res.status(409).json({message:'Le message client doit mentionner le montant exact de '+advertised+' €. Envoi bloqué.'});
     if(d.statut==='devis_envoye'&&d.devis_decision!=='en_attente')return res.status(409).json({message:'Devis déjà accepté ou refusé : aucun renvoi ou changement commercial possible.'});
@@ -270,7 +270,7 @@ export default async function handler(req,res){
       devis_accepte_le:null,devis_refuse_le:null,initial_session:null,solde_session:null,
       express_option:null,reservation_option:false,options_paiement_avance:true,devis_decision:'en_attente',
       proposition_texte:proposal,devis_envoye_le:new Date().toISOString(),revision_demandee_le:null,revision_demande_details:null,
-      qualification_ia:{...(d.qualification_ia||{}),formule:plan,revision_commerciale:true}};
+      qualification_ia:{...(d.qualification_ia||{}),revision_commerciale:true,formule_choisie_admin:plan}};
     selectedExpress=null;selectedReservation=false;stage='devis_envoye';
    }else{
     if(action==='admin-success'&&d.statut==='reussite'&&d.initial_paid_at&&d.solde_email_envoye_le)return res.status(200).json({ok:true,already:true,message:'Résultat déjà notifié au client.'});
