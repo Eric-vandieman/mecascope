@@ -552,8 +552,8 @@ window.mecaAdminLive=async function(main,path){
    const estimateSources=document.createElement('div');estimateSources.style.cssText='display:flex;flex-direction:column;gap:6px;margin-top:10px';
    const estimateFooter=document.createElement('p');estimateFooter.className='muted';
    estimateFooter.style.cssText='font-size:12px;line-height:1.5;margin:12px 0 4px';
-   estimateFooter.textContent='Les annonces au même OEM sont séparées par nature de pièce (bloc nu / moteur complet). Cinq annonces sont un objectif, jamais une garantie. Les prix sont affichés et non des ventes confirmées ; frais de livraison et prestation exclus.';
-   const estimateRefresh=document.createElement('button');estimateRefresh.type='button';estimateRefresh.className='btn dark';estimateRefresh.textContent='↻ Poursuivre la recherche mondiale (objectif 5 annonces)';
+   estimateFooter.textContent='Le moteur retient uniquement la pièce demandée (même intitulé et même OEM). Une offre sans prix est notée « Prix sur demande ». Les offres ambiguës ne sont pas utilisées comme cotes fiables. Cinq annonces reste un objectif, jamais une garantie.';
+   const estimateRefresh=document.createElement('button');estimateRefresh.type='button';estimateRefresh.className='btn dark';estimateRefresh.textContent='↻ Chercher 5 annonces de la pièce exacte (OEM + type)';
    estimateRefresh.style.cssText='margin-top:10px;max-width:100%;white-space:normal';
    estimateBox.append(estimateHeader,estimateText,estimateSources,estimateFooter,estimateRefresh);
    assessmentPanel.append(estimateBox);wrap.insertBefore(assessmentPanel,history);
@@ -575,7 +575,7 @@ window.mecaAdminLive=async function(main,path){
        for(const [i,src] of (estimate.sources||[]).entries()){
          const a=document.createElement('a');a.href=src.url;a.target='_blank';a.rel='noopener noreferrer';
          a.style.cssText='color:#ffc3a5;text-decoration:underline;line-height:1.45;overflow-wrap:anywhere;font-size:13px';
-         a.textContent='Annonce '+(i+1)+' : '+src.titre+' — '+Number(src.prix_eur).toLocaleString('fr-FR')+' € ('+[src.pays,src.reference_vue||'OEM à confirmer',src.type_piece,src.etat,src.comparabilite,src.alerte&&src.alerte!=='aucune'?src.alerte:''].filter(Boolean).join(' · ')+')';
+         a.textContent='Annonce '+(i+1)+' : '+src.titre+' — '+(src.prix_eur==null?'Prix sur demande':Number(src.prix_eur).toLocaleString('fr-FR')+' €')+' ('+[src.pays,src.reference_vue||'OEM à confirmer',src.type_piece,src.etat,src.comparabilite,src.alerte&&src.alerte!=='aucune'?src.alerte:''].filter(Boolean).join(' · ')+')';
          estimateSources.append(a);
        }
      }else{
@@ -583,7 +583,7 @@ window.mecaAdminLive=async function(main,path){
        for(const [i,src] of (estimate.sources||[]).entries()){
          const a=document.createElement('a');a.href=src.url;a.target='_blank';a.rel='noopener noreferrer';
          a.style.cssText='color:#ffc3a5;text-decoration:underline;font-size:13px';
-         a.textContent='Annonce '+(i+1)+' : '+src.titre+' — '+Number(src.prix_eur).toLocaleString('fr-FR')+' € ('+[src.pays,src.reference_vue||'OEM non confirmé',src.type_piece,src.comparabilite].filter(Boolean).join(' · ')+')';
+         a.textContent='Annonce '+(i+1)+' : '+src.titre+' — '+(src.prix_eur==null?'Prix sur demande':Number(src.prix_eur).toLocaleString('fr-FR')+' €')+' ('+[src.pays,src.reference_vue||'OEM non confirmé',src.type_piece,src.comparabilite].filter(Boolean).join(' · ')+')';
          estimateSources.append(a);
        }
      }
