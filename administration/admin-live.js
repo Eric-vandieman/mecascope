@@ -438,8 +438,22 @@ window.mecaAdminLive=async function(main,path){
          devis_decision:data.devis_decision
        });
        renderDelivery(row);
-     }catch{ /* Afficher les derniers statuts confirmés sans inventer une livraison. */ }
+       if(data.trackingWarning){
+         deliveryNote.textContent='Suivi Resend en attente : '+data.trackingWarning+' Les événements confirmés précédemment restent affichés.';
+       }else{
+         deliveryNote.textContent='Statut actualisé depuis '+(data.source==='resend'?'Resend':'la base Mécascope')+'. Une ouverture détectée ne prouve pas une lecture humaine. Les dates de détection sont les dates de constat, pas nécessairement de l’ouverture réelle.';
+       }
+     }catch(e){
+       deliveryNote.textContent='Impossible de rafraîchir Resend : '+(e?.message||'erreur de connexion')+'. Le dernier état confirmé reste affiché.';
+     }
    }
+   // Tant que la fiche est ouverte, revérifier Resend régulièrement sans recharger la page.
+   const deliveryTimer=setInterval(()=>{
+     if(!main.isConnected){clearInterval(deliveryTimer);return}
+     if(document.visibilityState!=='visible'||!select.value)return;
+     const row=dossiers.find(x=>x.id===select.value);
+     if(row&&row.devis_email_resend_id)refreshDelivery(row).catch(()=>{});
+   },25000);
    const fields=[['Type de véhicule','vehicleType'],['Marque','brand'],['Modèle','model'],['Année','year'],['Motorisation','engine'],['Carburant','fuel'],['Boîte','gearbox'],['Finition','trim'],['Pièce recherchée','part'],['Référence de pièce','ref'],['VIN','vin'],['Budget maximum d’achat de la pièce','budget'],['Remarques','notes']];
    function showDossier(row){
      if(!row){detail.textContent='Sélectionnez un dossier.';return}
