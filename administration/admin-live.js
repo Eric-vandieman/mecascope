@@ -566,7 +566,7 @@ window.mecaAdminLive=async function(main,path){
      const progress='Annonces de pièce et OEM vérifiés : '+countExact+' / 5 recherchées · Pistes tarifées : '+countLinked+' · Campagnes effectuées : '+(estimate.nombre_relances||1);
      if(estimate.statut==='estimation'){
        const fmt=v=>Number(v).toLocaleString('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0});
-       estimateText.textContent=(estimate.repere_indicatif?'Repères de prix (pièces voisines, non équivalentes) : ':'Fourchette indicative : ')+fmt(estimate.min_eur)+' à '+fmt(estimate.max_eur)
+       estimateText.textContent=(estimate.repere_indicatif?'Repères de prix du bloc demandé, à confirmer : ':'Fourchette indicative : ')+fmt(estimate.min_eur)+' à '+fmt(estimate.max_eur)
          +(estimate.nombre_comparables>=2?'\nMoyenne : '+fmt(estimate.moyenne_eur)+' · Médiane : '+fmt(estimate.mediane_eur):'\nPrix repère isolé — comparaison insuffisante')
          +'\n'+progress+'\n'+(estimate.methode||'')
          +'\nConfiance : '+(estimate.confiance||'faible')+' · État : '+(estimate.etat||'non précisé')
