@@ -32,7 +32,7 @@ async function getAdmin(req){
 function minimal(d){const offer=offers[d.offre];const negotiatedTotal=Number(d.devis_total_personnalise_centimes)||null;const negotiatedDeposit=Number(d.devis_acompte_personnalise_centimes)||null;const fullAmount=negotiatedTotal!==null?negotiatedTotal/100:offer?.total;const baseDeposit=negotiatedDeposit!==null?negotiatedDeposit/100:offer?.deposit;const expressFee=d.express_option==='24h'?50:d.express_option==='48h'?20:0;const reservationFee=d.reservation_option?10:0;
  const prepaid=d.options_paiement_avance===true;const later=(prepaid?0:(d.express_validee?expressFee:0))+(d.reservation_validee?reservationFee:0);
  const initial=offer?baseDeposit+(prepaid?expressFee:0):null;
- return {reference:d.reference,statut:d.statut,decision:d.devis_decision||'en_attente',offre:offer?.label||null,initial,total:offer?fullAmount:null,solde:offer?fullAmount-baseDeposit+(d.statut==='reussite'||d.statut==='solde_paye'?later:0):null,versionDevis:d.devis_version||1,expressOption:d.express_option||null,reservationOption:!!d.reservation_option,optionsPayeesAvance:prepaid,conditionalMax:(prepaid?0:expressFee)+reservationFee,paid:!!d.initial_paid_at,professional:!!d.garage_id,balancePaid:!!d.solde_paid_at,proposition:d.proposition_texte||null,budgetNonRenseigne:!String(d.details?.budget??'').trim(),sansPlafondConfirme:!!d.sans_plafond_confirme};}
+ return {reference:d.reference,statut:d.statut,decision:d.devis_decision||'en_attente',offre:offer?.label||null,initial,total:offer?fullAmount:null,solde:offer?fullAmount-baseDeposit+(d.statut==='reussite'||d.statut==='solde_paye'?later:0):null,versionDevis:d.devis_version||1,expressOption:d.express_option||null,reservationOption:!!d.reservation_option,optionsPayeesAvance:prepaid,conditionalMax:(prepaid?0:expressFee)+reservationFee,paid:!!d.initial_paid_at,professional:!!d.garage_id,balancePaid:!!d.solde_paid_at,proposition:d.proposition_texte||null,budgetNonRenseigne:!String(d.details?.budget??'').trim(),sansPlafondConfirme:!!d.sans_plafond_confirme,revisionDemandee:!!d.revision_demandee_le,champsManquants:Object.fromEntries(['engine','trim','vin','fuel','gearbox','ref','budget'].map(k=>[k,!String(d.details?.[k]??'').trim()])),telephoneManquant:!String(d.telephone||'').trim()};}
 // Après paiement initial, le suivi privé exige un compte particulier confirmé.
 async function clientAccount(req,d){
  if(!d?.initial_paid_at)return false;
@@ -234,11 +234,12 @@ export default async function handler(req,res){
    if(action==='admin-quote' && d.statut==='devis_envoye' && d.proposition_texte && d.proposition_texte!==proposal)return res.status(409).json({message:'Le devis est déjà accessible au paiement. Son argumentaire ne peut être modifié sans une procédure de révision sécurisée.'});
    let plan=d.offre,stage,selectedExpress=null,selectedReservation=false;let revisionData=null;
    if(action==='admin-quote'){
+    if(d.revision_demandee_le)return res.status(409).json({message:'Le client a demandé une révision : utilisez Modifier le devis pour envoyer une nouvelle proposition.'});
     if(!['deposee','devis_envoye'].includes(d.statut)||!offers[b.offre]||d.initial_paid_at||d.devis_decision==='accepte')return res.status(409).json({message:'Devis non autorisé'});
     const planFige=d.qualification_ia?.formule;
     if(!planFige||!offers[planFige])return res.status(409).json({message:'Analyse IA non validée/enregistrée : aucun devis ne peut être transmis.'});
-    if(b.offre!==planFige)return res.status(409).json({message:'Incohérence de formule : ce dossier est fixé sur '+offers[planFige].total+' €. Actualisez la page avant d’envoyer.'});
-    const advertised=d.statut==='devis_envoye'&&d.devis_total_personnalise_centimes?d.devis_total_personnalise_centimes/100:offers[planFige].total;
+    // La qualification IA est un conseil, pas un verrou commercial. L’administrateur choisit la formule.
+    const advertised=d.statut==='devis_envoye'&&d.devis_total_personnalise_centimes?d.devis_total_personnalise_centimes/100:offers[b.offre].total;
     if(!proposal.includes(advertised.toLocaleString('fr-FR',{maximumFractionDigits:2})+' €'))return res.status(409).json({message:'Le message client doit mentionner le montant exact de '+advertised+' €. Envoi bloqué.'});
     if(d.statut==='devis_envoye'&&d.devis_decision!=='en_attente')return res.status(409).json({message:'Devis déjà accepté ou refusé : aucun renvoi ou changement commercial possible.'});
     if(d.statut==='devis_envoye'&&d.offre!==b.offre)return res.status(409).json({message:'Une proposition a déjà été envoyée. Son tarif ne peut plus être modifié pendant qu’un paiement Stripe peut être en cours.'});
@@ -268,7 +269,7 @@ export default async function handler(req,res){
       solde_price:pricingMode==='personnalise'?'custom:'+(total-deposit):process.env[offers[plan].balance],
       devis_accepte_le:null,devis_refuse_le:null,initial_session:null,solde_session:null,
       express_option:null,reservation_option:false,options_paiement_avance:true,devis_decision:'en_attente',
-      proposition_texte:proposal,devis_envoye_le:new Date().toISOString(),
+      proposition_texte:proposal,devis_envoye_le:new Date().toISOString(),revision_demandee_le:null,revision_demande_details:null,
       qualification_ia:{...(d.qualification_ia||{}),formule:plan,revision_commerciale:true}};
     selectedExpress=null;selectedReservation=false;stage='devis_envoye';
    }else{
@@ -294,12 +295,12 @@ export default async function handler(req,res){
    const shownBalance=shownTotal-shownDeposit;
    const link='https://xn--mcascope-b1a.fr/mission.html?t='+encodeURIComponent(token);
    const text=['admin-quote','admin-revise-quote'].includes(action)?
-    '<p>'+(revisionData?'Voici votre nouvelle proposition, qui remplace le devis précédent':'Vous avez reçu une proposition de recherche')+' pour votre dossier <b>'+safe(d.reference)+'</b>.</p><div style="white-space:pre-line;line-height:1.65;padding:12px;border-left:3px solid #ed932d;background:#f8f8f8;color:#222">'+safe(updated.proposition_texte||proposal)+'</div><p><b>Offre : '+safe(offer.label)+' — '+shownTotal+' €</b> (acompte '+shownDeposit+' € ; solde '+shownBalance+' € uniquement en cas de résultat conforme).</p><p>Sur votre formulaire, vous pourrez sélectionner des options facultatives : recherche Express 48 h (+20 €), Express 24 h (+50 €), ou demande de réservation fournisseur (+10 €). Seule l’option Express est ajoutée à l’acompte. La demande de réservation de 10 € est facturée uniquement au solde si une réservation auprès du fournisseur a effectivement été confirmée.</p><p>'+(String(d.details?.budget??'').trim()?'':'<b>Budget de la pièce :</b> aucun montant maximal n’a été renseigné. Une offre fournisseur compatible, effectivement disponible et au prix vérifié pourra valider la mission et rendre exigible le solde de recherche, quel que soit le prix de la pièce. Vous gardez le choix de l’acheter ou non. Cette condition devra être expressément acceptée dans le formulaire.')+'</p><p>Vous pourrez accepter ou refuser sans obligation.</p>'+(d.garage_id?'<p><b>Après paiement initial :</b> utilisez votre <b>compte professionnel Mécascope</b> pour suivre le dossier, échanger avec nous et régler le solde le cas échéant. Cette prestation est à l’unité, sans abonnement ni crédit Pro consommé.</p>':'<p><b>Après confirmation du paiement initial :</b> pour suivre votre dossier et recevoir nos messages, vous devrez créer votre compte particulier Mécascope (ou vous connecter à votre compte existant) avec cette même adresse e-mail. Nous vous inviterons à activer les notifications sur votre téléphone afin d’être informé rapidement des mises à jour, en complément des e-mails. L’autorisation des notifications reste facultative.</p>'):
+    '<p>'+(revisionData?'Voici votre nouvelle proposition, qui remplace le devis précédent':'Vous avez reçu une proposition de recherche')+' pour votre dossier <b>'+safe(d.reference)+'</b>.</p><div style="white-space:pre-line;line-height:1.65;padding:12px;border-left:3px solid #ed932d;background:#f8f8f8;color:#222">'+safe(updated.proposition_texte||proposal)+'</div><p><b>Offre : '+safe(offer.label)+' — '+shownTotal+' €</b> (acompte '+shownDeposit+' € ; solde '+shownBalance+' € uniquement en cas de résultat conforme).</p><p>Sur votre formulaire, vous pourrez sélectionner des options facultatives : recherche Express 48 h (+20 €), Express 24 h (+50 €), ou demande de réservation fournisseur (+10 €). Seule l’option Express est ajoutée à l’acompte. La demande de réservation de 10 € est facturée uniquement au solde si une réservation auprès du fournisseur a effectivement été confirmée.</p><p>'+(String(d.details?.budget??'').trim()?'':'<b>Budget de la pièce :</b> aucun montant maximal n’a été renseigné. Une offre fournisseur compatible, effectivement disponible et au prix vérifié pourra valider la mission et rendre exigible le solde de recherche, quel que soit le prix de la pièce. Vous gardez le choix de l’acheter ou non. Cette condition devra être expressément acceptée dans le formulaire.')+'</p><p>Vous pourrez accepter, refuser ou demander une révision de la formule en apportant des renseignements complémentaires, sans obligation.</p>'+(d.garage_id?'<p><b>Après paiement initial :</b> utilisez votre <b>compte professionnel Mécascope</b> pour suivre le dossier, échanger avec nous et régler le solde le cas échéant. Cette prestation est à l’unité, sans abonnement ni crédit Pro consommé.</p>':'<p><b>Après confirmation du paiement initial :</b> pour suivre votre dossier et recevoir nos messages, vous devrez créer votre compte particulier Mécascope (ou vous connecter à votre compte existant) avec cette même adresse e-mail. Nous vous inviterons à activer les notifications sur votre téléphone afin d’être informé rapidement des mises à jour, en complément des e-mails. L’autorisation des notifications reste facultative.</p>'):
     '<h2>Une source a été identifiée</h2><p>Pour votre dossier '+safe(d.reference)+', Mécascope a identifié une source conforme.</p><p>Le solde à régler est de <b>'+(shownBalance+((updated.options_paiement_avance?0:(updated.express_validee?(updated.express_option==='24h'?50:20):0))+(updated.reservation_validee?10:0)))+' €</b>.</p>';
    const isProposal=['admin-quote','admin-revise-quote'].includes(action);
    const heading=isProposal?(revisionData?'Votre devis Mécascope révisé est disponible':'Votre proposition Mécascope est prête'):'Votre recherche Mécascope : résultat disponible';
    const intro=isProposal?'<p>Bonjour,</p><p>Nous avons étudié votre demande concernant le dossier <strong>'+safe(d.reference)+'</strong>. '+(revisionData?'Votre précédent devis est remplacé par cette nouvelle proposition. Le précédent lien ne permet plus de payer.':'Votre proposition est prête.')+' Vous pouvez la consulter, l’accepter ou la refuser, sans engagement.</p>':'<p>Votre dossier <strong>'+safe(d.reference)+'</strong> a été mis à jour.</p>';
-   const button='<p style="margin:22px 0"><a href="'+safe(link)+'" style="display:inline-block;background:#ed932d;color:#171717;font-weight:700;padding:14px 20px;border-radius:6px;text-decoration:none">'+(isProposal?'Voir ma proposition et répondre':'Consulter mon dossier')+'</a></p>';
+   const button='<p style="margin:22px 0"><a href="'+safe(link)+'" style="display:inline-block;background:#ed932d;color:#171717;font-weight:700;padding:14px 20px;border-radius:6px;text-decoration:none">'+(isProposal?'Voir ma proposition, les options ou demander une révision':'Consulter mon dossier')+'</a></p>';
    const html='<div style="font:16px/1.55 Arial,sans-serif;color:#202329;max-width:580px;margin:auto"><div style="padding:14px 16px;background:#171b20;color:#ffb25c;font-weight:bold;font-size:23px"><img src="https://xn--mcascope-b1a.fr/logo-officiel-email-20261126.jpg" width="48" height="48" alt="Logo Mécascope" style="width:48px;height:48px;object-fit:contain;vertical-align:middle;margin-right:12px;border-radius:10px">Mécascope</div><h2>'+heading+'</h2>'+intro+(isProposal?'<p><strong>'+safe(offer.label)+' : '+shownTotal+' €</strong> — acompte '+shownDeposit+' €, solde '+shownBalance+' € en cas de résultat conforme.</p>':'')+button+(isProposal?'<p>Vous préférez répondre à ce message ? Notre équipe est joignable à contact@mécascope.fr.</p>':'')+'<div style="border-top:1px solid #ddd;padding-top:14px;margin-top:16px"><h3>Détail du dossier</h3>'+text+'</div><p style="font-size:13px;color:#52565c">Ne communiquez pas ce lien personnel. Si vous ne retrouvez pas nos messages, vérifiez également les courriers indésirables.</p><p style="text-align:center;border-top:1px solid #ddd;padding-top:17px;margin-top:16px;font-size:15px"><a href="https://xn--mcascope-b1a.fr/" style="color:#a65b11;font-weight:bold;text-decoration:underline">www.mécascope.fr</a></p></div>';
    try{await email(d.email,heading+' — '+d.reference,html,{devis:isProposal});
    }catch(e){return res.status(503).json({message:'Le dossier est enregistré mais le courriel a échoué. Renouvelez l’envoi depuis la console.'})}
@@ -313,9 +314,38 @@ export default async function handler(req,res){
   const d=await dossier(token);
   if(!d)return res.status(404).json({message:'Lien invalide ou expiré'});
   if(action==='status')return res.status(200).json({...minimal(d),accountReady:d.initial_paid_at?await clientAccount(req,d):false});
+  if(action==='request-revision'){
+   if(req.method!=='POST')return res.status(405).json({message:'Méthode invalide'});
+   if(d.statut!=='devis_envoye'||d.devis_decision!=='en_attente'||d.initial_paid_at||d.initial_session||d.revision_demandee_le)
+    return res.status(409).json({message:'La révision n’est plus disponible pour ce devis ou elle a déjà été demandée.'});
+   const allowed=['engine','trim','vin','fuel','gearbox','ref','budget','telephone'];
+   const input=b.fields&&typeof b.fields==='object'&&!Array.isArray(b.fields)?b.fields:{};
+   const additions={},old=d.details||{};
+   for(const key of Object.keys(input)){
+    if(!allowed.includes(key))return res.status(400).json({message:'Champ non reconnu'});
+    const value=String(input[key]??'').trim();
+    if(!value)continue;
+    if(key==='telephone'&&String(d.telephone||'').trim())return res.status(400).json({message:'Téléphone déjà renseigné'});
+    if(key!=='telephone'&&String(old[key]??'').trim())return res.status(400).json({message:'Information déjà renseignée : '+key});
+    if(value.length>(key==='vin'?17:120))return res.status(400).json({message:'Information trop longue : '+key});
+    if(key==='budget'&&(!/^\\d+(?:[.,]\\d{1,2})?$/.test(value)||Number(value.replace(',','.'))<=0))return res.status(400).json({message:'Budget invalide'});
+    additions[key]=value;
+   }
+   const explanation=String(b.explanation||'').trim();
+   if(explanation.length>1500||(!explanation&&!Object.keys(additions).length))return res.status(400).json({message:'Ajoutez des renseignements ou une explication de la révision (1 500 caractères maximum).'});
+   const details={...old,...Object.fromEntries(Object.entries(additions).filter(([k])=>k!=='telephone'))};
+   const body={details,revision_demandee_le:new Date().toISOString(),revision_demande_details:{champs: additions,motif:explanation,version_devis:d.devis_version||1},modifie_le:new Date().toISOString()};
+   if(additions.telephone)body.telephone=additions.telephone;
+   const rows=await query('meca_demandes_unitaires?id=eq.'+encodeURIComponent(d.id)+'&statut=eq.devis_envoye&devis_decision=eq.en_attente&revision_demandee_le=is.null&initial_paid_at=is.null&initial_session=is.null',{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify(body)});
+   if(rows?.length!==1)return res.status(409).json({message:'Le dossier a changé, rechargez la page.'});
+   // L’alerte admin ne doit pas bloquer l’enregistrement de la demande.
+   try{await email('contact@xn--mcascope-b1a.fr','Demande de révision client — '+safe(d.reference),'<p>Le client a demandé une révision de sa formule pour le dossier <b>'+safe(d.reference)+'</b>.</p><p>Informations complétées : '+safe(Object.keys(additions).join(', ')||'Aucune')+'</p><p>Motif : '+safe(explanation||'Voir le dossier')+'</p><p>Ouvrez le tableau de bord administrateur Mécascope pour réexaminer la proposition.</p>')}catch{}
+   return res.status(200).json({ok:true,message:'Votre demande de révision a été transmise à Mécascope. L’ancien devis est suspendu jusqu’à notre nouvelle proposition.'});
+  }
+
   if(action==='decision'){
    if(req.method!=='POST'||!d.options_paiement_avance)return res.status(409).json({message:'Décision indisponible pour cette proposition'});
-   if(d.statut!=='devis_envoye')return res.status(409).json({message:'Ce devis n’est plus en attente de réponse'});
+   if(d.statut!=='devis_envoye'||d.revision_demandee_le)return res.status(409).json({message:'Ce devis est en révision ou n’est plus en attente de réponse'});
    const choice=String(b.choice||'');
    if(!['accepter','refuser'].includes(choice))return res.status(400).json({message:'Choix invalide'});
    if(choice==='accepter'&&(!Object.hasOwn(b,'express')||!['','24h','48h'].includes(b.express)||!Object.hasOwn(b,'reservation')||typeof b.reservation!=='boolean'))
@@ -336,7 +366,7 @@ export default async function handler(req,res){
   const stage=b.stage,offer=offers[d.offre];
   if(!offer||!['initial','solde'].includes(stage))return res.status(400).json({message:'Paiement invalide'});
   if(stage==='solde'&&!(await clientAccount(req,d)))return res.status(403).json({message:'Connectez-vous à votre espace Mécascope confirmé, particulier ou professionnel selon le dossier, avant de régler le solde.'});
-  if(stage==='initial'&&(d.statut!=='devis_envoye'||(d.options_paiement_avance&&d.devis_decision!=='accepte'))||stage==='solde'&&d.statut!=='reussite')
+  if(stage==='initial'&&(d.statut!=='devis_envoye'||d.revision_demandee_le||(d.options_paiement_avance&&d.devis_decision!=='accepte'))||stage==='solde'&&d.statut!=='reussite')
    return res.status(409).json({message:'Ce paiement n’est pas disponible pour le dossier'});
   const customPrice=stage==='initial'?d.devis_acompte_personnalise_centimes:(d.devis_total_personnalise_centimes-d.devis_acompte_personnalise_centimes);
   const custom=Number.isSafeInteger(Number(d.devis_total_personnalise_centimes))&&d.devis_total_personnalise_centimes!==null;
