@@ -454,7 +454,7 @@ window.mecaAdminLive=async function(main,path){
      const row=dossiers.find(x=>x.id===select.value);
      if(row&&row.devis_email_resend_id)refreshDelivery(row).catch(()=>{});
    },25000);
-   const fields=[['Type de véhicule','vehicleType'],['Marque','brand'],['Modèle','model'],['Année','year'],['Motorisation','engine'],['Carburant','fuel'],['Boîte','gearbox'],['Finition','trim'],['Pièce recherchée','part'],['Référence de pièce','ref'],['VIN','vin'],['Budget maximum d’achat de la pièce','budget'],['Remarques','notes']];
+   const fields=[['Type de véhicule','vehicleType'],['Marque','brand'],['Modèle','model'],['Année','year'],['Motorisation','engine'],['Carburant','fuel'],['Boîte','gearbox'],['Finition','trim'],['Pièce recherchée','part'],['Référence de pièce','ref'],['VIN','vin'],['Budget maximum d’achat de la pièce','budget'],['Remarques','notes'],['Mode de récupération (delivery=livraison, pickup=retrait, both=les deux)','recoveryMethod'],['Origine autorisée (france/europe/world)','sourceRegion'],['Ville de retrait','pickupCity'],['Rayon de retrait en km','pickupRadiusKm']];
    function showDossier(row){
      if(!row){detail.textContent='Sélectionnez un dossier.';return}
      const lines=['DOSSIER '+(row.reference||row.id),'Statut : '+(row.statut==='refuse'?'Devis refusé — nouvelle proposition possible':row.statut||'—')+(row.statut==='devis_envoye'&&row.devis_decision==='accepte'?' (devis accepté, paiement initial attendu)':''),'Client : '+(row.contact||'—'),'E-mail : '+(row.email||'—'),'Créé le : '+(row.cree_le?new Date(row.cree_le).toLocaleString('fr-FR'):'—'),'Type : '+(row.garage_id||row.type_dossier==='professionnel'?'Professionnel — recherche à l’unité':'Particulier')];
