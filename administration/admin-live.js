@@ -730,6 +730,7 @@ window.mecaAdminLive=async function(main,path){
      const row=dossiers.find(x=>x.id===select.value);
      if(!row||!plans[planSelect.value])return;
      setPriceInfo();
+     quoteButton.disabled=false;
      if(row.statut==='deposee'){
        if(draftDirty){proposalStatus.textContent='Formule changée : vérifiez et mettez à jour le prix et le délai dans votre texte personnalisé.'}
        else{personal.value=defaultDraft(row,planSelect.value);proposalStatus.textContent='Brouillon mis à jour avec la formule choisie.'}
