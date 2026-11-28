@@ -328,10 +328,12 @@ export default async function handler(req,res){
    try{
     const resendId=await email(d.email,heading+' — '+d.reference,html,{devis:isProposal});
     if(isProposal){
-     await query('meca_demandes_unitaires?id=eq.'+d.id+'&devis_version=eq.'+String(updated.devis_version||1),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({
+     try{
+      await query('meca_demandes_unitaires?id=eq.'+d.id+'&devis_version=eq.'+String(updated.devis_version||1),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({
        devis_email_resend_id:resendId,devis_email_envoye_le:new Date().toISOString(),devis_email_delivre_le:null,devis_email_delivre_confirme:false,devis_email_delivre_verifie_le:null,
        devis_page_consultee_le:null,devis_page_consultations:0
-     })});
+      })});
+     }catch(error){console.error('Courriel envoyé mais métadonnées de suivi non enregistrées',String(error?.message||error))}
     }
    
    }catch(e){return res.status(503).json({message:'Le dossier est enregistré mais le courriel a échoué. Renouvelez l’envoi depuis la console.'})}
