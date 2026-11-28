@@ -218,7 +218,7 @@ export default async function handler(req,res){
    if(action==='admin-email-tracking'){
    if(!(await getAdmin(req)))return res.status(403).json({message:'Administration uniquement'});
    if(!/^[a-f0-9-]{36}$/i.test(String(b.id||'')))return res.status(400).json({message:'Dossier invalide'});
-   const records=await query('meca_demandes_unitaires?id=eq.'+encodeURIComponent(b.id)+'&select=id,devis_email_resend_id,devis_email_envoye_le,devis_email_delivre_le,devis_email_delivre_confirme,devis_email_delivre_verifie_le,devis_page_consultee_le,devis_page_consultations,devis_decision,initial_paid_at,devis_version&limit=1');
+   const records=await query('meca_demandes_unitaires?id=eq.'+encodeURIComponent(b.id)+'&select=id,devis_email_resend_id,devis_email_envoye_le,devis_email_delivre_le,devis_email_delivre_confirme,devis_email_delivre_verifie_le,devis_email_ouverture_detectee_le,devis_page_consultee_le,devis_page_consultations,devis_decision,initial_paid_at,devis_version&limit=1');
    const item=records?.[0];if(!item)return res.status(404).json({message:'Dossier non trouvé'});
    const id=String(item.devis_email_resend_id||'');
    if(/^[0-9a-f-]{36}$/i.test(id)&&process.env.RESEND_API_KEY){
@@ -226,6 +226,12 @@ export default async function handler(req,res){
      const response=await fetch('https://api.resend.com/emails/'+encodeURIComponent(id),{headers:{Authorization:'Bearer '+process.env.RESEND_API_KEY},signal:AbortSignal.timeout(7000)});
      if(response.ok){
       const remote=await response.json();const delivered=remote.last_event==='delivered'||remote.last_event==='opened'||remote.last_event==='clicked'||remote.last_event==='delivery_delayed'?remote.last_event!=='delivery_delayed':remote.last_event==='delivered';
+      const opened=['opened','clicked'].includes(remote.last_event);
+      if(opened&&!item.devis_email_ouverture_detectee_le){
+       const detected=new Date().toISOString();
+       await query('meca_demandes_unitaires?id=eq.'+b.id+'&devis_email_resend_id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({devis_email_ouverture_detectee_le:detected})});
+       item.devis_email_ouverture_detectee_le=detected;
+      }
       if(delivered&&!item.devis_email_delivre_confirme){
        const now=new Date().toISOString();
        await query('meca_demandes_unitaires?id=eq.'+b.id+'&devis_email_resend_id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({devis_email_delivre_confirme:true,devis_email_delivre_verifie_le:now})});
@@ -330,7 +336,7 @@ export default async function handler(req,res){
     if(isProposal){
      try{
       await query('meca_demandes_unitaires?id=eq.'+d.id+'&devis_version=eq.'+String(updated.devis_version||1),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({
-       devis_email_resend_id:resendId,devis_email_envoye_le:new Date().toISOString(),devis_email_delivre_le:null,devis_email_delivre_confirme:false,devis_email_delivre_verifie_le:null,
+       devis_email_resend_id:resendId,devis_email_envoye_le:new Date().toISOString(),devis_email_delivre_le:null,devis_email_delivre_confirme:false,devis_email_delivre_verifie_le:null,devis_email_ouverture_detectee_le:null,
        devis_page_consultee_le:null,devis_page_consultations:0
       })});
      }catch(error){console.error('Courriel envoyé mais métadonnées de suivi non enregistrées',String(error?.message||error))}
