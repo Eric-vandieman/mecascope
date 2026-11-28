@@ -64,6 +64,14 @@ if(req.body?.action==='finance_stripe'){
   return res.status(response.status).json(await response.json().catch(()=>({message:'Statistiques Stripe indisponibles'})));
  }catch{return res.status(503).json({message:'Rapprochement Stripe impossible'})}
 }
+if(req.body?.action==='email_tracking'){
+ const id=String(req.body?.id||'');
+ if(!/^[0-9a-f-]{36}$/i.test(id))return res.status(400).json({message:'Dossier invalide'});
+ try{
+  const response=await fetch(siteApi,{method:'POST',headers:{Authorization:'Bearer '+token,Origin:'https://xn--mcascope-b1a.fr','Content-Type':'application/json'},body:JSON.stringify({action:'admin-email-tracking',id}),signal:AbortSignal.timeout(12000)});
+  return res.status(response.status).json(await response.json().catch(()=>({message:'Suivi e-mail momentanément indisponible'})));
+ }catch{return res.status(503).json({message:'Impossible de vérifier la livraison auprès de Resend'})}
+}
 const quoteAction={quote:'admin-quote',revise_quote:'admin-revise-quote',success:'admin-success',fail:'admin-fail'}[req.body?.action];
 if(quoteAction){
  const b=req.body||{};
