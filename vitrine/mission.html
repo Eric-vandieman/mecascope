@@ -21,6 +21,20 @@
 <label id="confirmation-sans-plafond" hidden style="display:block;padding:15px;margin:18px 0;border:1px solid #efac64;border-radius:10px;line-height:1.7"><input type="checkbox" id="accord-sans-plafond"> <strong>Budget de la pièce non renseigné — confirmation obligatoire.</strong> Je reconnais que Mécascope peut présenter une offre fournisseur compatible, disponible et à prix vérifié, sans plafond de prix fixé par moi. Une telle offre peut valider la mission de recherche et rendre le solde prévu au devis exigible, même si je décide de ne pas acheter cette pièce. Aucun achat ne sera effectué sans mon accord.</label>
 <div id="resume-paiement" style="font-size:18px;font-weight:700;padding:14px;background:#12202a;border-radius:8px"></div><label style="display:block;margin-top:14px"><input type="checkbox" id="accord-conditions"> Je reconnais avoir consulté les <a href="/legal.html#cgv" target="_blank" rel="noopener noreferrer" style="color:#ffbd74">conditions générales de vente</a> et compris les montants payables immédiatement, les conditions de réalisation et les remboursements des options.</label>
 <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:18px"><button id="accepter" type="button">Valider mes options et accepter le devis</button><button id="refuser" type="button" style="background:#343e49;color:white;border:1px solid #9d8875">Refuser le devis</button></div>
+<section id="revision-demande" style="margin-top:22px;border-top:1px solid #7c664f;padding-top:19px">
+ <h3 style="color:#efac64">Des informations à ajouter avant de choisir ?</h3>
+ <p class="muted">Si des précisions sur votre véhicule ou votre pièce peuvent changer la difficulté de la recherche, demandez une nouvelle étude de la formule. Aucun paiement ne sera prélevé ; l'équipe Mécascope réexaminera votre dossier.</p>
+ <button id="ouvrir-revision" type="button" style="background:#364754;color:#fff;border:1px solid #efac64">Demander une révision de ma formule</button>
+ <form id="form-revision" hidden style="margin-top:15px;padding:15px;border:1px solid #84633b;border-radius:12px" autocomplete="on">
+ <p style="margin-top:0">Complétez uniquement les informations non renseignées dans votre demande initiale. Vos informations précédentes sont conservées.</p>
+ <div id="revision-champs" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px"></div>
+ <label style="display:block;margin-top:16px">Précisions complémentaires / raison de la révision
+ <textarea id="revision-motif" maxlength="1500" rows="4" placeholder="Ex. J'ai retrouvé une référence OEM, le véhicule est une version spéciale…" style="display:block;width:100%;box-sizing:border-box;margin-top:8px;background:#17232e;color:#fff;border:1px solid #9c8268;border-radius:8px;padding:12px"></textarea></label>
+ <p class="muted" style="font-size:13px">Votre devis actuel sera suspendu jusqu'à la réponse de Mécascope. Vous recevrez une nouvelle proposition si la formule doit être ajustée, puis vous pourrez l'accepter ou la refuser.</p>
+ <div style="display:flex;flex-wrap:wrap;gap:10px"><button id="envoyer-revision" type="submit">Envoyer les compléments à Mécascope</button><button id="annuler-revision" type="button" style="background:#364754;color:white">Annuler</button></div>
+ <p id="revision-statut" role="status"></p>
+ </form>
+</section>
 </div><p id="offre"></p><p id="conditions" class="muted"></p><button id="payer" hidden>Payer mon acompte et mes options</button><p id="erreur" role="alert"></p><p class="muted">Lien personnel : ne le partagez pas. Le retour du navigateur ne confirme pas le paiement. Seul Stripe confirme les fonds au serveur.</p></main><script>
 (async()=>{
  const qs=new URLSearchParams(location.search),token=qs.get('t');
@@ -28,6 +42,58 @@
  const paymentPending=()=>qs.get('paiement')==='retour'&&(stripeStage==='solde'?!current?.balancePaid:!current?.paid);
  const $=id=>document.getElementById(id),etat=$('etat'),payer=$('payer'),offre=$('offre'),conditions=$('conditions'),erreur=$('erreur');
  const quote=$('devis-formulaire'),intro=$('message-personnel'),summary=$('resume-paiement'),priceTable=$('tableau-tarif'),accept=$('accepter'),refuse=$('refuser');
+ const revision=$('revision-demande'),revisionForm=$('form-revision'),revisionFields=$('revision-champs'),revisionStatus=$('revision-statut');
+ const revisionSpecs=[
+  ['telephone','Téléphone','tel','Ex. 06 12 34 56 78'],
+  ['engine','Motorisation / cylindrée','text','Ex. 1.6 HDi 110, 600 cm³'],
+  ['trim','Version / finition','text','Ex. GT Line, Série limitée'],
+  ['vin','VIN / numéro de châssis','text','VIN à 17 caractères si disponible'],
+  ['fuel','Énergie','select',''],
+  ['gearbox','Boîte / transmission','text','Ex. automatique, 6 rapports'],
+  ['ref','Référence OEM / constructeur','text','Ex. 964.343.021.01'],
+  ['budget','Budget maximal de la pièce (€)','number','Ex. 500']
+ ];
+ function showRevisionFields(data){
+  revisionFields.replaceChildren();
+  const missing=data.champsManquants||{};
+  for(const [key,label,type,placeholder] of revisionSpecs){
+   if(key==='telephone'?!data.telephoneManquant:!missing[key])continue;
+   const wrapper=document.createElement('label');wrapper.textContent=label;wrapper.style.cssText='display:block;color:#f5efe7;line-height:1.5';
+   let field;
+   if(type==='select'){
+    field=document.createElement('select');
+    for(const choice of ['','Essence','Diesel','Électrique','Hybride','GPL','Autre'])field.append(new Option(choice||'Choisir si connu',choice));
+   }else{
+    field=document.createElement('input');field.type=type;field.placeholder=placeholder;
+    if(key==='budget'){field.min='1';field.step='0.01'}
+    if(key==='vin')field.maxLength=17;
+   }
+   field.name=key;field.style.cssText='display:block;width:100%;box-sizing:border-box;margin-top:8px;background:#17232e;color:#fff;border:1px solid #9c8268;border-radius:8px;padding:11px';
+   wrapper.append(field);revisionFields.append(wrapper);
+  }
+  if(!revisionFields.childElementCount){
+   const note=document.createElement('p');note.className='muted';note.textContent='Toutes les rubriques initiales étaient renseignées. Utilisez le texte ci-dessous pour apporter vos nouvelles précisions.';revisionFields.append(note);
+  }
+ }
+ $('ouvrir-revision').onclick=()=>{
+  if(!current||current.revisionDemandee)return;
+  showRevisionFields(current);revisionStatus.textContent='';revisionForm.hidden=false;revisionForm.scrollIntoView({block:'nearest',behavior:'smooth'});
+ };
+ $('annuler-revision').onclick=()=>{revisionForm.hidden=true;revisionStatus.textContent=''};
+ revisionForm.onsubmit=async event=>{
+  event.preventDefault();
+  if(!current||current.revisionDemandee)return;
+  const fields={};
+  for(const el of revisionFields.querySelectorAll('[name]'))if(String(el.value||'').trim())fields[el.name]=String(el.value).trim();
+  const explanation=$('revision-motif').value.trim();
+  if(!Object.keys(fields).length&&!explanation){revisionStatus.textContent='Ajoutez au moins une information ou une explication.';return}
+  if(!confirm('Demander une nouvelle étude de la formule ? Le devis actuel ne pourra plus être payé tant que Mécascope ne l’aura pas réexaminé.'))return;
+  const send=$('envoyer-revision');send.disabled=true;revisionStatus.textContent='Transmission de vos renseignements…';
+  try{const result=await api({action:'request-revision',fields,explanation});await refresh();revisionStatus.textContent=result.message||'Demande de révision transmise.'}
+  catch(e){revisionStatus.textContent=e.message}
+  finally{send.disabled=false}
+ };
+
  let current=null;
  if(!token||!/^[0-9a-f]{64}$/i.test(token)){etat.textContent='Lien manquant ou incorrect.';return}
  const euro=n=>new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(n);
@@ -75,7 +141,11 @@
   $('confirmation-sans-plafond').hidden=!data.budgetNonRenseigne;
   intro.hidden=!data.proposition;intro.textContent=data.proposition||'';
   offre.textContent='Référence : '+data.reference+(data.offre?' — '+data.offre:'');
-  if(data.statut==='devis_envoye'&&data.decision==='en_attente'&&data.optionsPayeesAvance){
+  if(data.revisionDemandee){
+   etat.textContent='Votre demande de révision a été reçue. Le devis précédent est suspendu et ne peut plus être payé. Mécascope étudie vos compléments avant de vous envoyer une proposition mise à jour.';
+   revisionForm.hidden=true;
+   conditions.textContent='Aucun paiement à effectuer tant que le nouveau devis n’est pas disponible.';
+  }else if(data.statut==='devis_envoye'&&data.decision==='en_attente'&&data.optionsPayeesAvance){
    etat.textContent='Votre proposition est disponible. Vous pouvez accepter avec les options de votre choix, ou refuser sans paiement.';
    priceTable.textContent='Formule : '+data.offre+' — '+euro(data.total)+' au total. Acompte : '+euro(data.initial)+'. Solde de '+euro(data.solde)+' uniquement si la recherche aboutit.';
    quote.hidden=false;conditions.textContent='Après validation de tous vos choix et acceptation, Stripe s’ouvrira automatiquement. Le travail commencera une fois le paiement confirmé et les informations nécessaires réunies.';
