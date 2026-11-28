@@ -195,10 +195,11 @@
   const status=document.createElement('p');status.className='meca-push-status';status.setAttribute('role','status');area.append(status);
   const enabled=document.createElement('button');enabled.className='btn orange';enabled.type='button';enabled.textContent='🔔 Activer les notifications sur ce téléphone';
   const disabled=document.createElement('button');disabled.className='btn dark';disabled.type='button';disabled.textContent='Désactiver sur ce téléphone';
+  const repair=document.createElement('button');repair.className='btn orange';repair.type='button';repair.textContent='🔧 Réparer les notifications sur ce téléphone';repair.style.marginLeft='8px';
   const test=document.createElement('button');test.className='btn dark';test.type='button';test.textContent='Envoyer une notification de test';
   const sound=document.createElement('button');sound.className='btn dark';sound.type='button';sound.textContent='🔊 Activer le signal sonore Urgence (administration ouverte)';
   const soundHint=document.createElement('p');soundHint.className='muted';soundHint.textContent='Le signal distinctif fonctionne uniquement quand cette page est ouverte et que vous l’avez activé. En arrière-plan sur Android, le son dépend du système et ne peut pas être personnalisé par le site.';
-  area.append(enabled,disabled,test,sound,soundHint);
+  area.append(enabled,disabled,repair,test,sound,soundHint);
   sound.onclick=()=>{
    if(urgentSoundEnabled){urgentSoundEnabled=false;sound.textContent='🔊 Activer le signal sonore Urgence (administration ouverte)';return}
    try{
@@ -238,6 +239,27 @@
     await api({action:'subscribe',subscription:subscription.toJSON()});
     state('Activées — les alertes Android sont enregistrées',status,enabled,disabled);test.disabled=false;
    }catch(e){state('Activation impossible : '+e.message,status,enabled,disabled);enabled.disabled=false}
+  };
+  repair.onclick=async()=>{
+   repair.disabled=true;status.textContent='Réparation de l’abonnement Push Android…';
+   try{
+    const permission=Notification.permission==='granted'?'granted':await Notification.requestPermission();
+    if(permission!=='granted')throw Error('Notifications refusées dans Chrome Android');
+    config=config||await api({action:'config'});
+    if(!config?.ready||!config?.publicKey)throw Error('Clés de notifications indisponibles');
+    const reg=registration||await updateRegistration();
+    const previous=await reg.pushManager.getSubscription();
+    if(previous){
+      // Si FCM a révoqué cet abonnement, le réutiliser ne restaure pas les alertes.
+      await previous.unsubscribe();
+    }
+    const renewed=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:bytes(config.publicKey)});
+    await api({action:'subscribe',subscription:renewed.toJSON()});
+    const check=await api({action:'test'});
+    status.textContent='Réparation effectuée. '+(check.message||'Test Push transmis au téléphone')+'. Vérifiez la notification Android.';
+    enabled.disabled=true;disabled.disabled=false;test.disabled=false;
+   }catch(e){status.textContent='Réparation incomplète : '+e.message+' — vérifiez les autorisations de notification du navigateur.'}
+   finally{repair.disabled=false}
   };
   disabled.onclick=async()=>{
    disabled.disabled=true;
