@@ -77,6 +77,18 @@ window.mecaAdminLive=async function(main,path){
     tile.onclick=go;tile.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}};
     block.append(tile);
    }
+   if(block&&!main.querySelector('#meca-revisions-tile')){
+     const revisions=document.createElement('div');revisions.className='metric';revisions.id='meca-revisions-tile';
+     revisions.style.cssText='cursor:pointer;border:2px solid #eb9a4a;background:#46311e';
+     revisions.tabIndex=0;revisions.setAttribute('role','button');
+     const labelRevision=document.createElement('div');labelRevision.className='label';labelRevision.textContent='Révisions de devis demandées par les clients';
+     const countRevision=document.createElement('div');countRevision.className='value';countRevision.textContent=String(d.revisions_en_attente||0);
+     const hint=document.createElement('small');hint.textContent='Informations complémentaires reçues · à réexaminer avant tout paiement';
+     revisions.append(labelRevision,countRevision,hint);
+     revisions.onclick=()=>{location.hash='#/admin/demandes?filtre=revision_demandee'};
+     revisions.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();revisions.click()}};
+     block.append(revisions);
+   }
   }
   if(path==='/admin'){
    const block=main.querySelector('.metrics.six');
@@ -890,7 +902,7 @@ window.mecaAdminLive=async function(main,path){
        const search=document.createElement('input');search.type='search';search.placeholder='Rechercher un dossier, client, pièce, référence…';search.setAttribute('aria-label','Rechercher toutes les demandes');
        search.style.cssText='flex:1;min-width:210px;padding:10px';
        const status=document.createElement('select');status.setAttribute('aria-label','Statut des demandes');
-       for(const [value,label] of [['tous','Tous les statuts'],['deposee','Nouvelles demandes'],['devis_en_attente','Devis en attente'],['acompte_paye','Acompte payé'],['reussite','Pièce trouvée'],['solde_paye','Terminées payées'],['refuse','Refusées']]){const o=new Option(label,value);status.append(o)}
+       for(const [value,label] of [['tous','Tous les statuts'],['deposee','Nouvelles demandes'],['devis_en_attente','Devis en attente'],['revision_demandee','Révision client demandée'],['acompte_paye','Acompte payé'],['reussite','Pièce trouvée'],['solde_paye','Terminées payées'],['refuse','Refusées']]){const o=new Option(label,value);status.append(o)}
        const type=document.createElement('select');type.setAttribute('aria-label','Type de client');
        for(const [value,label] of [['tous','Particuliers et professionnels'],['particulier','Particuliers'],['professionnel','Professionnels']])type.append(new Option(label,value));
        const clear=document.createElement('button');clear.type='button';clear.className='btn dark small';clear.textContent='Effacer les filtres';
@@ -898,7 +910,7 @@ window.mecaAdminLive=async function(main,path){
        toolbar.append(search,status,type,clear,notice);
        host.prepend(toolbar);
        const requested=new URLSearchParams(location.hash.split('?')[1]||'');
-       if(requested.get('filtre')==='devis_en_attente'){demandesStatus='devis_en_attente';status.value='devis_en_attente'}
+       if(['devis_en_attente','revision_demandee'].includes(requested.get('filtre'))){demandesStatus=requested.get('filtre');status.value=demandesStatus}
        let timer;
        search.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(()=>{demandesSearch=search.value.trim();demandesPage=1;renderDemandesTable().catch(()=>{})},280)});
        status.addEventListener('change',()=>{demandesStatus=status.value;demandesPage=1;renderDemandesTable().catch(()=>{})});
@@ -920,14 +932,14 @@ window.mecaAdminLive=async function(main,path){
        toolbar.after(counter);
        for(const row of items){
          const pro=row.type_dossier==='professionnel';
-         const tr=document.createElement('tr'),fresh=row.statut==='deposee'||(pro&&['nouvelle','deposee','soumise','en_attente'].includes(row.statut));
+         const tr=document.createElement('tr'),fresh=!!row.revision_demandee_le||row.statut==='deposee'||(pro&&['nouvelle','deposee','soumise','en_attente'].includes(row.statut));
          tr.style.cssText='background:'+(fresh?'#4b3320':'#29313b')+';color:#f5f7fa;border-left:4px solid '+(fresh?'#eda34b':'#667784');
          const vehicle=[row.details?.brand,row.details?.model,row.details?.year].filter(Boolean).join(' ')||'—';
-         const statut=row.statut==='devis_envoye'&&row.devis_decision==='en_attente'?'Devis envoyé · en attente':row.statut||'—';
+         const statut=row.revision_demandee_le?'⚠ RÉVISION DEMANDÉE':row.statut==='devis_envoye'&&row.devis_decision==='en_attente'?'Devis envoyé · en attente':row.statut||'—';
          const values=[(pro?'PRO · ':row.type_dossier==='professionnel_unitaire'?'PRO à l’unité · ':'PART · ')+(row.reference||row.id),row.contact||'—',vehicle,statut,row.cree_le?new Date(row.cree_le).toLocaleString('fr-FR'):'—'];
          for(const value of values){const td=document.createElement('td');td.textContent=value;tr.append(td)}
          const action=document.createElement('td'),open=document.createElement('button');
-         open.type='button';open.className='btn '+(fresh?'orange':'dark')+' small';open.textContent=pro?'Voir la recherche Pro':fresh?'Traiter la nouvelle demande':'Voir le dossier';
+         open.type='button';open.className='btn '+(fresh?'orange':'dark')+' small';open.textContent=pro?'Voir la recherche Pro':row.revision_demandee_le?'Réexaminer le devis':fresh?'Traiter la nouvelle demande':'Voir le dossier';
          open.onclick=()=>{
            if(pro){
              let panel=main.querySelector('.meca-pro-dossier-detail');
