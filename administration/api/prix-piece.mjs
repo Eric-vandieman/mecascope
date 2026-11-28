@@ -112,8 +112,8 @@ export default async function handler(req,res){
    sources:sources.sort((a,b)=>({exacte:0,a_verifier:1,exclue:2}[a.comparabilite]??3)-({exacte:0,a_verifier:1,exclue:2}[b.comparabilite]??3)).slice(0,12),
    date_recherche:new Date().toISOString().slice(0,10)
   };
-  const persisted=await rpc('meca_admin_estimation_piece',{p_dossier:id,p_estimation:estimation});
-  return res.status(200).json({estimation:persisted||estimation,enregistre:true});
+  const persisted=await rpc('meca_admin_estimation_piece',{p_dossier:id,p_estimation:estimate});
+  return res.status(200).json({estimation:persisted||estimate,enregistre:true});
  }catch(e){
   if(e.status===401||e.status===403)return respond(res,e.status,'Accès administrateur refusé');
   console.error('meca-piece-price',{message:String(e.message||e).slice(0,170)});
