@@ -79,11 +79,11 @@ window.mecaAdminLive=async function(main,path){
    }
    if(block&&!main.querySelector('#meca-revisions-tile')){
      const revisions=document.createElement('div');revisions.className='metric';revisions.id='meca-revisions-tile';
-     revisions.style.cssText='cursor:pointer;border:2px solid #eb9a4a;background:#46311e';
+     revisions.style.cssText='cursor:pointer;border:1px solid rgba(235,161,75,.65);min-width:0;box-sizing:border-box;overflow-wrap:anywhere';
      revisions.tabIndex=0;revisions.setAttribute('role','button');
-     const labelRevision=document.createElement('div');labelRevision.className='label';labelRevision.textContent='Révisions de devis demandées par les clients';
+     const labelRevision=document.createElement('div');labelRevision.className='label';labelRevision.textContent='Devis à réviser';labelRevision.style.cssText='white-space:normal;overflow-wrap:break-word;line-height:1.4';
      const countRevision=document.createElement('div');countRevision.className='value';countRevision.textContent=String(d.revisions_en_attente||0);
-     const hint=document.createElement('small');hint.textContent='Informations complémentaires reçues · à réexaminer avant tout paiement';
+     const hint=document.createElement('small');hint.textContent='Demandes clients à examiner';hint.style.cssText='display:block;white-space:normal;overflow-wrap:break-word;line-height:1.45';
      revisions.append(labelRevision,countRevision,hint);
      revisions.onclick=()=>{location.hash='#/admin/demandes?filtre=revision_demandee'};
      revisions.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();revisions.click()}};
