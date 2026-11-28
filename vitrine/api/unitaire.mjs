@@ -221,26 +221,37 @@ export default async function handler(req,res){
    const records=await query('meca_demandes_unitaires?id=eq.'+encodeURIComponent(b.id)+'&select=id,devis_email_resend_id,devis_email_envoye_le,devis_email_delivre_le,devis_email_delivre_confirme,devis_email_delivre_verifie_le,devis_email_ouverture_detectee_le,devis_page_consultee_le,devis_page_consultations,devis_decision,initial_paid_at,devis_version&limit=1');
    const item=records?.[0];if(!item)return res.status(404).json({message:'Dossier non trouvé'});
    const id=String(item.devis_email_resend_id||'');
-   if(/^[0-9a-f-]{36}$/i.test(id)&&process.env.RESEND_API_KEY){
-    try{
+   let source='base_de_donnees',trackingWarning=null;
+   if(/^[0-9a-f-]{36}$/i.test(id)){
+    if(!process.env.RESEND_API_KEY){
+      trackingWarning='Clé Resend manquante sur le site : impossible de vérifier le statut en direct.';
+    }else try{
      const response=await fetch('https://api.resend.com/emails/'+encodeURIComponent(id),{headers:{Authorization:'Bearer '+process.env.RESEND_API_KEY},signal:AbortSignal.timeout(7000)});
-     if(response.ok){
-      const remote=await response.json();const delivered=remote.last_event==='delivered'||remote.last_event==='opened'||remote.last_event==='clicked'||remote.last_event==='delivery_delayed'?remote.last_event!=='delivery_delayed':remote.last_event==='delivered';
-      const opened=['opened','clicked'].includes(remote.last_event);
-      if(opened&&!item.devis_email_ouverture_detectee_le){
-       const detected=new Date().toISOString();
-       await query('meca_demandes_unitaires?id=eq.'+b.id+'&devis_email_resend_id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({devis_email_ouverture_detectee_le:detected})});
-       item.devis_email_ouverture_detectee_le=detected;
-      }
-      if(delivered&&!item.devis_email_delivre_confirme){
-       const now=new Date().toISOString();
-       await query('meca_demandes_unitaires?id=eq.'+b.id+'&devis_email_resend_id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({devis_email_delivre_confirme:true,devis_email_delivre_verifie_le:now})});
-       item.devis_email_delivre_confirme=true;item.devis_email_delivre_verifie_le=now;
-      }
+     if(!response.ok)throw new Error('Resend HTTP '+response.status);
+     const remote=await response.json();
+     const state=String(remote.last_event||remote.status||'').toLowerCase();
+     if(!state)throw new Error('Réponse Resend sans état de livraison');
+     source='resend';item.resend_etat=state;
+     const delivered=['delivered','opened','clicked'].includes(state);
+     const opened=['opened','clicked'].includes(state);
+     const changes={};
+     if(delivered&&!item.devis_email_delivre_confirme){
+      changes.devis_email_delivre_confirme=true;
+      changes.devis_email_delivre_verifie_le=new Date().toISOString();
      }
-    }catch{}
+     if(opened&&!item.devis_email_ouverture_detectee_le){
+      changes.devis_email_ouverture_detectee_le=new Date().toISOString();
+     }
+     if(Object.keys(changes).length){
+      await query('meca_demandes_unitaires?id=eq.'+b.id+'&devis_email_resend_id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(changes)});
+      Object.assign(item,changes);
+     }
+    }catch(e){
+      trackingWarning='Vérification Resend indisponible : '+String(e?.message||'erreur inconnue').slice(0,100);
+      console.error('meca-devis-tracking',{id:b.id,error:trackingWarning});
+    }
    }
-   return res.status(200).json({ok:true,...item});
+   return res.status(200).json({ok:true,...item,source,trackingWarning});
   }
   if(action==='admin-list'){
    if(!(await getAdmin(req)))return res.status(403).json({message:'Accès réservé à Mécascope'});
