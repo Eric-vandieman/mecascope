@@ -564,16 +564,20 @@ window.mecaAdminLive=async function(main,path){
      if(estimate.statut==='estimation'){
        const fmt=v=>Number(v).toLocaleString('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0});
        estimateText.textContent='Fourchette indicative : '+fmt(estimate.min_eur)+' à '+fmt(estimate.max_eur)
-         +'\nConfiance : '+(estimate.confiance||'faible')+' · État : '+(estimate.etat||'non précisé')
-         +'\n'+(estimate.motif||'')+'\nPoints à confirmer : '+(estimate.points_attention||'Référence et disponibilité');
+         +(estimate.nombre_comparables>=2?'\nMoyenne des annonces comparables : '+fmt(estimate.moyenne_eur)+' · Médiane : '+fmt(estimate.mediane_eur):'\nPrix repère isolé : comparaison insuffisante')
+         +'\nAnnonces comparables : '+(estimate.nombre_comparables||1)+' · Méthode : '+(estimate.methode||'indicative')
+         +'\nConfiance : +(estimate.confiance||'faible')+' · État : '+(estimate.etat||'non précisé')
+         +'\n'+(estimate.motif||'')+'\nPoints à confirmer : '+(estimate.points_attention||'Référence et disponibilité')
+         +(estimate.alertes?.length?'\n⚠️ Prix atypiques ou annonces non comparables : '+estimate.alertes.map(a=>a.prix_eur+' € ('+a.motif+')').join(' ; '):'');
        for(const [i,src] of (estimate.sources||[]).entries()){
          const a=document.createElement('a');a.href=src.url;a.target='_blank';a.rel='noopener noreferrer';
          a.style.cssText='color:#ffc3a5;text-decoration:underline;line-height:1.45;overflow-wrap:anywhere;font-size:13px';
-         a.textContent='Source '+(i+1)+' : '+src.titre+' — '+Number(src.prix_eur).toLocaleString('fr-FR')+' € ('+src.etat+', correspondance '+src.comparabilite+')';
+         a.textContent='Source '+(i+1)+' : '+src.titre+' — '+Number(src.prix_eur).toLocaleString('fr-FR')+' € ('+[src.pays,src.type_piece,src.etat,'correspondance '+src.comparabilite,src.alerte!=='aucune'?src.alerte:''].filter(Boolean).join(' · ')+')';
          estimateSources.append(a);
        }
      }else{
        estimateText.textContent='Estimation fiable indisponible pour cette référence.\n'+(estimate.motif||'Aucun comparable public vérifié')+'\n'+(estimate.points_attention||'');
+       for(const [i,src] of (estimate.sources||[]).entries()){const a=document.createElement('a');a.href=src.url;a.target='_blank';a.rel='noopener noreferrer';a.style.cssText='color:#ffc3a5;text-decoration:underline;font-size:13px';a.textContent='Repère non retenu '+(i+1)+' : '+src.titre+' — '+src.prix_eur+' € ('+src.comparabilite+')';estimateSources.append(a)}
      }
    }
    async function estimateCurrentPrice(force=false){
