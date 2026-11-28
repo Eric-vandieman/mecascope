@@ -714,7 +714,7 @@ window.mecaAdminLive=async function(main,path){
    }
    function setPriceInfo(){const p=plans[planSelect.value]||plans.ciblee;priceInfo.textContent='Formule '+p.price+' € : acompte '+p.initial+' € + solde '+p.solde+' € si recherche aboutie. Options : Express 48 h (+20 €) ou 24 h (+50 €) payé avec l’acompte ; réservation 24 h (+10 €) ajoutée au solde seulement si elle est confirmée.'}
    function renderAssessment(q){
-     if(!q||!plans[q.formule]){assessmentBody.textContent='Analyse IA en attente. Vous pouvez néanmoins préparer votre choix ; l’envoi nécessite une analyse enregistrée.';quoteButton.disabled=true;return}
+     if(!q||!plans[q.formule]){assessmentBody.textContent='Analyse IA non disponible ou en cours. Vous pouvez choisir vous-même la formule et rédiger le devis, puis confirmer son envoi.';quoteButton.disabled=!plans[planSelect.value];return}
      const p=plans[q.formule];if(!planSelect.value||!plans[planSelect.value])planSelect.value=q.formule;planSelect.disabled=false;
      assessmentBody.textContent='Recommandation IA (modifiable par l’administrateur) : '+p.name+' — '+p.price+' €'
        +'\nDélai prévu : '+p.days+' jours ouvrés'
@@ -813,12 +813,12 @@ window.mecaAdminLive=async function(main,path){
      if(row?.devis_total_personnalise_centimes){priceInfo.textContent='DEVIS RÉVISÉ : total '+(row.devis_total_personnalise_centimes/100).toLocaleString('fr-FR')+' € · acompte '+(row.devis_acompte_personnalise_centimes/100).toLocaleString('fr-FR')+' € · solde '+((row.devis_total_personnalise_centimes-row.devis_acompte_personnalise_centimes)/100).toLocaleString('fr-FR')+' €. Les options Express éventuelles restent facultatives.'}
      if(row?.qualification_ia?.formule)renderAssessment(row.qualification_ia);
      else if(row?.statut==='deposee'){renderAssessment(null);analyzeCurrent()}
-     else{assessmentBody.textContent='Aucune qualification disponible pour ce dossier.';quoteButton.disabled=true}
+     else{assessmentBody.textContent='Aucune qualification IA disponible : choisissez et justifiez votre formule manuellement.';quoteButton.disabled=!plans[planSelect.value]}
    }
    quoteButton.onclick=async()=>{
      const row=dossiers.find(x=>x.id===select.value);if(!row)return;
      const fixed=planSelect.value;
-     if(!plans[fixed]||!row.qualification_ia?.formule){proposalStatus.textContent='Choisissez une formule et vérifiez que l’analyse IA a été enregistrée.';return}
+     if(!plans[fixed]){proposalStatus.textContent='Choisissez une formule avant d’envoyer la proposition.';return}
      const message=buildProposal();
      const negotiated=Number.isInteger(row.devis_total_personnalise_centimes)&&row.devis_total_personnalise_centimes!==null?row.devis_total_personnalise_centimes/100:plans[fixed].price;
      const requiredPrice=negotiated.toLocaleString('fr-FR',{maximumFractionDigits:2})+' €';
