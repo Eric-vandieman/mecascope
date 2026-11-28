@@ -96,10 +96,11 @@ export default async function handler(req,res){
    const wantedBlock=/bloc moteur|motorblock|engine block|blocco motore|bloc nu/.test(piece.piece.toLowerCase());
    const whole=/moteur complet|complete engine|motore completo|komplettmotor|motor komplett|silnik kompletny/.test(combined);
    const explicitBlock=/bloc moteur|bloc nu|motorblock|engine block|blocco motore|nackter motorblock|κορμος|κορμός|κορμοσ/.test(combined);
+   const blockInTitle=/bloc moteur|bloc nu|motorblock|engine block|blocco motore|κορμος|κορμός|κορμοσ/.test(title.toLowerCase());
    if(wantedBlock&&!explicitBlock)return;
    const confirmed=!!target&&ref===target;
    const compatibleType=wantedBlock?explicitBlock:true;
-   const exact=confirmed&&compatibleType&&!isListingPage&&String(x.comparabilite||'').toLowerCase()==='exacte'&&String(x.alerte||'aucune')==='aucune';
+   const exact=confirmed&&compatibleType&&(!wantedBlock||blockInTitle)&&!isListingPage&&String(x.comparabilite||'').toLowerCase()==='exacte'&&String(x.alerte||'aucune')==='aucune';
    seen.add(key);
    sources.push({titre:title.slice(0,115),url:url.href,prix_eur:Math.round(price*100)/100,etat:String(x.etat||'inconnu').slice(0,25),comparabilite:exact?'exacte':'a_verifier',reference_vue:String(x.reference_vue||'').slice(0,70),type_piece:type.slice(0,85),pays:String(x.pays||'inconnu').slice(0,35),alerte:exact?'aucune':String(isListingPage?'Page de résultats, offre directe à retrouver':x.alerte&&x.alerte!=='aucune'?x.alerte:!confirmed?'OEM non confirmé':'Configuration à vérifier').slice(0,65)});
   };
