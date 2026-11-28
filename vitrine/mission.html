@@ -208,6 +208,9 @@
   }catch(e){erreur.textContent=e.message;payer.disabled=false}
  };
  try{await refresh()}catch(e){etat.textContent=e.message}
+ if(location.hash==='#revision'&&current&&!current.revisionDemandee&&current.statut==='devis_envoye'&&current.decision==='en_attente'&&current.optionsPayeesAvance){
+   $('ouvrir-revision').click();
+ }
  if(paymentPending()){
   erreur.textContent='Retour de Stripe reçu. Vérification bancaire en cours. Ne payez pas une seconde fois.';
   let checks=0;
