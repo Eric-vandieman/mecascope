@@ -104,21 +104,26 @@ export default async function handler(req,res){
   sources.sort((a,b)=>(a.comparabilite==='exacte'?0:1)-(b.comparabilite==='exacte'?0:1));
   sources.length=Math.min(sources.length,10);
   const exact=sources.filter(x=>x.comparabilite==='exacte'&&x.alerte==='aucune');
-  const sorted=exact.map(x=>x.prix_eur).sort((a,b)=>a-b);
+  // À défaut d'annonce de bloc strictement identique, fournir séparément les prix
+  // de moteurs portant le même OEM, sans les présenter comme le prix du bloc nu.
+  const alternative=sources.filter(x=>x.comparabilite==='a_verifier'&&target&&wantedNormalized(x.reference_vue)===target&&x.prix_eur>=20);
+  const fallback=!exact.length&&alternative.length>0;
+  const priced=fallback?alternative:exact;
+  const sorted=priced.map(x=>x.prix_eur).sort((a,b)=>a-b);
   const median=a=>a.length?(a.length%2?a[(a.length-1)/2]:(a[a.length/2-1]+a[a.length/2])/2):null;
   const midpoint=median(sorted);
-  const kept=sorted.length>=3?exact.filter(x=>x.prix_eur>=midpoint/3&&x.prix_eur<=midpoint*3):exact;
-  const prices=(kept.length>=2?kept:exact).map(x=>x.prix_eur).sort((a,b)=>a-b);
+  const kept=sorted.length>=3?priced.filter(x=>x.prix_eur>=midpoint/3&&x.prix_eur<=midpoint*3):priced;
+  const prices=(kept.length>=2?kept:priced).map(x=>x.prix_eur).sort((a,b)=>a-b);
   const estimate={
-   statut:prices.length?'estimation':'indisponible',moteur_version:'v5',repere_indicatif:false,
+   statut:prices.length?'estimation':'indisponible',moteur_version:'v5',repere_indicatif:fallback,
    min_eur:prices.length?Math.round(prices[0]):null,max_eur:prices.length?Math.round(prices[prices.length-1]):null,
    moyenne_eur:prices.length>=2?Math.round(prices.reduce((a,b)=>a+b,0)/prices.length):null,
    mediane_eur:prices.length>=2?Math.round(median(prices)):null,
    nombre_comparables:prices.length,nombre_annonces:sources.filter(x=>x.comparabilite!=='exclue').length,
-   objectif_annonces:5,nombre_relances:round+1,recherche_incomplete:sources.filter(x=>x.comparabilite==='exacte').length<5,confiance:prices.length>=5?'elevee':prices.length>=3?'moyenne':'faible',etat:prices.length?'occasion':'inconnu',
-   motif:prices.length?'Prix affichés pour OEM identique, configuration à vérifier avant devis.':'Aucune annonce confirmée strictement identique en référence et nature de pièce.',
+   objectif_annonces:5,nombre_relances:round+1,recherche_incomplete:sources.filter(x=>x.comparabilite==='exacte').length<5,confiance:fallback?'faible':prices.length>=5?'elevee':prices.length>=3?'moyenne':'faible',etat:prices.length?'occasion':'inconnu',
+   motif:fallback?'Prix indicatifs pour moteur portant le même OEM, mais ensemble vendu différent ou non confirmé. Ce ne sont PAS les prix d un bloc nu.':prices.length?'Prix affichés pour OEM identique, configuration à vérifier avant devis.':'Aucune annonce confirmée strictement identique en référence et nature de pièce.',
    points_attention:errors.length?'Certaines zones ont échoué : '+errors.join('; '):'Vérifier la référence constructeur, composition, disponibilité et livraison.',
-   methode:prices.length<2?'Aucune moyenne fiable sans au moins deux offres strictement identiques':'Moyenne et médiane des offres strictement comparables',
+   methode:fallback?'Repères moteur de même référence, type de pièce différent ou incertain':prices.length<2?'Prix isolé, pas de moyenne fiable':'Moyenne et médiane des offres strictement comparables',
    alertes:sources.filter(x=>x.alerte!=='aucune'||x.comparabilite!=='exacte').slice(0,6).map(x=>({titre:x.titre,prix_eur:x.prix_eur,motif:x.alerte!=='aucune'?x.alerte:'Référence ou type à vérifier'})),
    sources:sources.slice(0,10),
    date_recherche:new Date().toISOString().slice(0,10)
