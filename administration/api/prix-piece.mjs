@@ -86,6 +86,8 @@ export default async function handler(req,res){
     const wantedBlock=/bloc moteur|motorblock|engine block|blocco motore/.test(wanted);
     const isWholeEngine=/moteur complet|complete engine|motore completo|komplettmotor|entier/.test(sourceType);
     const clearlyWrong=wantedBlock&&isWholeEngine;
+    // Ne jamais montrer un OEM différent ou un type de pièce manifestement autre.
+    if((wantedRef&&!matchesRef)||clearlyWrong)continue;
     const comparable=wantedRef&&matchesRef&&!clearlyWrong&&declared==='exacte'?'exacte':matchesRef&&!clearlyWrong&&declared!=='exclue'?'a_verifier':'exclue';
     sources.push({titre:String(x.titre||url.hostname).slice(0,115),url:canonical,prix_eur:Math.round(price*100)/100,etat:String(x.etat||'inconnu').slice(0,25),comparabilite:comparable,reference_vue:String(x.reference_vue||'').slice(0,70),type_piece:type,pays:String(x.pays||'inconnu').slice(0,35),alerte:String(x.alerte||'aucune').slice(0,65)});
    }
