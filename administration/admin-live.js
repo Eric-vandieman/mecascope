@@ -394,6 +394,50 @@ window.mecaAdminLive=async function(main,path){
    const list=document.createElement('div');list.style.cssText='display:grid;gap:10px';registry.append(list);
    const detail=document.createElement('div');detail.className='panel';detail.style.cssText='margin-top:14px;white-space:pre-wrap;line-height:1.7';detail.textContent='Sélectionnez un dossier pour afficher ses informations.';registry.append(detail);
    if(compactDemandes){registry.hidden=true;registry.style.display='none';wrap.insertBefore(detail,wrap.firstChild);detail.hidden=true}
+   const deliveryBox=document.createElement('section');deliveryBox.className='panel meca-devis-delivery';
+   deliveryBox.style.cssText='margin:12px 0;padding:16px;border:1px solid #6d879b;border-radius:12px;min-width:0;overflow-wrap:break-word';
+   const deliveryHeader=document.createElement('h3');deliveryHeader.textContent='Suivi du devis envoyé au client';
+   const deliveryLines=document.createElement('div');deliveryLines.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:10px;margin-top:12px';
+   const deliveryNote=document.createElement('small');deliveryNote.className='muted';
+   deliveryNote.textContent='« Délivré » signifie accepté par la messagerie du destinataire. « Page consultée » indique un affichage du devis, pas une preuve de lecture de son e-mail.';
+   deliveryBox.append(deliveryHeader,deliveryLines,deliveryNote);
+   detail.after(deliveryBox);deliveryBox.hidden=true;
+   let deliveryRequest=0;
+   function renderDelivery(row){
+     deliveryBox.hidden=!row||!(row.devis_email_envoye_le||row.devis_envoye_le);
+     if(deliveryBox.hidden)return;
+     deliveryLines.replaceChildren();
+     const format=stamp=>stamp?new Date(stamp).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'';
+     const item=(label,content,color)=>{
+       const card=document.createElement('div');card.style.cssText='padding:11px;border:1px solid #51687b;border-radius:9px;background:#202e3c;min-width:0';
+       const head=document.createElement('div');head.style.cssText='font-weight:650;font-size:13px;color:#d2e0eb';head.textContent=label;
+       const value=document.createElement('div');value.style.cssText='font-size:13px;line-height:1.5;margin-top:6px;color:'+(color||'#f2f4f6');value.textContent=content;card.append(head,value);deliveryLines.append(card);
+     };
+     item('1 · E-mail envoyé',format(row.devis_email_envoye_le||row.devis_envoye_le)||'Envoi non confirmé','#e7f0ff');
+     item('2 · E-mail délivré',row.devis_email_delivre_confirme?'✓ Livraison confirmée par Resend'+(row.devis_email_delivre_le?' · '+format(row.devis_email_delivre_le):' · heure exacte indisponible'):'En attente de confirmation Resend',row.devis_email_delivre_confirme?'#a4e9b6':'#f7cf94');
+     item('3 · Page du devis consultée',row.devis_page_consultee_le?'✓ '+format(row.devis_page_consultee_le):'Non constatée',row.devis_page_consultee_le?'#a4e9b6':'#f7cf94');
+     const answer=row.revision_demandee_le?'Révision demandée · '+format(row.revision_demandee_le):row.devis_decision==='accepte'?'Devis accepté':row.devis_decision==='refuse'?'Devis refusé':row.initial_paid_at?'Acompte réglé':'Réponse en attente';
+     item('4 · Réponse du client',answer,row.devis_decision==='accepte'?'#a4e9b6':'#f7cf94');
+   }
+   async function refreshDelivery(row){
+     const seq=++deliveryRequest;
+     renderDelivery(row);
+     if(!row||!(row.devis_email_resend_id||row.devis_email_envoye_le))return;
+     try{
+       const data=await call({action:'email_tracking',id:row.id});
+       if(seq!==deliveryRequest||select.value!==row.id||!data?.ok)return;
+       Object.assign(row,{
+         devis_email_envoye_le:data.devis_email_envoye_le,
+         devis_email_delivre_confirme:data.devis_email_delivre_confirme,
+         devis_email_delivre_le:data.devis_email_delivre_le,
+         devis_email_delivre_verifie_le:data.devis_email_delivre_verifie_le,
+         devis_page_consultee_le:data.devis_page_consultee_le,
+         devis_page_consultations:data.devis_page_consultations,
+         devis_decision:data.devis_decision
+       });
+       renderDelivery(row);
+     }catch{ /* Afficher les derniers statuts confirmés sans inventer une livraison. */ }
+   }
    const fields=[['Type de véhicule','vehicleType'],['Marque','brand'],['Modèle','model'],['Année','year'],['Motorisation','engine'],['Carburant','fuel'],['Boîte','gearbox'],['Finition','trim'],['Pièce recherchée','part'],['Référence de pièce','ref'],['VIN','vin'],['Budget maximum d’achat de la pièce','budget'],['Remarques','notes']];
    function showDossier(row){
      if(!row){detail.textContent='Sélectionnez un dossier.';return}
@@ -874,7 +918,7 @@ window.mecaAdminLive=async function(main,path){
    select.onchange=async()=>{
     const row=dossiers.find(x=>x.id===select.value);
     form.elements.ref.value=row?.reference||'';
-    showDossier(row);showOptions();updateCloseDossierButton();
+    showDossier(row);showOptions();updateCloseDossierButton();refreshDelivery(row).catch(()=>{});
     if(path==='/admin/messages'){
       wrap.hidden=!row;
       if(row){
