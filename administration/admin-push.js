@@ -39,10 +39,20 @@
   await registration.update();
   return registration;
  }
- async function fetchCenter(host,button){
-  const details=host.querySelector('.meca-push-items');if(!details)return;
+ let centerBusy=false;
+ async function fetchCenter(host,button,markViewed=false){
+  const details=host.querySelector('.meca-push-items');if(!details||centerBusy)return;
+  centerBusy=true;
   try{
-   const data=await api({action:'center'});
+   let data=await api({action:'center'});
+   if(markViewed){
+    // Opening the bell acknowledges unread notifications, without deleting their history.
+    for(const notification of (data.notifications||[]).filter(n=>!n.lu_le&&n.id)){
+     try{await api({action:'center',mark:notification.id})}
+     catch(error){console.warn('Marquage de notification impossible',error)}
+    }
+    data=await api({action:'center'});
+   }
    button.textContent='🔔 '+Number(data.unread||0);
    details.replaceChildren();
    const items=data.notifications||[];
@@ -69,6 +79,7 @@
     details.append(entry);
    }
   }catch(e){details.textContent='Notifications indisponibles : '+e.message}
+  finally{centerBusy=false}
  }
  async function addCenter(){
   if(document.querySelector('#meca-push-bell'))return;
@@ -82,7 +93,7 @@
   const list=document.createElement('div');list.className='meca-push-items';panel.append(list);
   const refresh=document.createElement('button');refresh.type='button';refresh.textContent='Actualiser';
   refresh.onclick=()=>fetchCenter(panel,button);panel.append(refresh);
-  button.onclick=()=>{panel.hidden=!panel.hidden;if(!panel.hidden)fetchCenter(panel,button)};
+  button.onclick=()=>{panel.hidden=!panel.hidden;if(!panel.hidden)fetchCenter(panel,button,true)};
   wrap.append(button,panel);top.append(wrap);
   fetchCenter(panel,button);
   if(interval)clearInterval(interval);
